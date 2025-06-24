@@ -13,14 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
 		limitations under the License.
 ]]
---!strict
+
 --!optimize 2
+plugin.Name="Hierarchy Saver (plugin)"
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
+local Selection = game:GetService("Selection")
 local Heartbeat = RunService.Heartbeat
+local Types = require(script:WaitForChild("Types"))
 --[[
 Inverse Lerp Interpolation
 Example:
@@ -31,7 +34,7 @@ local function iLerp(value:number, minimum:number, maximum:number):number
 	return (value - minimum) / (maximum - minimum)
 end
 
-if RunService:IsRunMode() then return end
+--if RunService:IsRunMode() then return end
 
 
 --*********************Just more convinient warn for plugin
@@ -77,91 +80,9 @@ local function MathClampValue(value:number,min:number,max:number,clamp:number):n
 end
 
 --********************* Just types for raw class
-type SecurityMethods = "None"|"LocalUserSecurity"|"NotAccessibleSecurity"|"PluginSecurity"|"RobloxScriptSecurity"|"RobloxSecurity"
-type Class_Tags = {
-	[number]:"CanYield"|"CustomLuaState"|"Deprecated"|"Hidden"|"NoYield"|"NotBrowsable"|"NotCreatable"|"NotReplicated"|"NotScriptable"|"PlayerReplicated"|"ReadOnly"|"Service"|"Settings"|"UserSettings"|"Yields"
-}
-type Thread_Safety = "ReadSafe"|"Safe"|"Unsafe"
-type Capabilities = "Animation"|"Assistant"|"Audio"|"Avatar"|"Basic"|"CSG"|"CapabilityControl"|"Chat"|"CreateInstances"|"DataStore"|"Environment"|"Input"|"InternalTest"|"LegacySound"|"Network"|"Physics"|"Players"|"PluginOrOpenCloud"|"RemoteEvent"|"UI"
-local Selection = game:GetService("Selection")
 
---------^^^^^^ is basically Enum.SecurityCapability
-
-type Value_Type = {
-	["Name"]:string;
-	["Category"]:string;
-}
-type AllRobloxClasses = {
-	[number]:{
-		["Tags"]: Class_Tags?;
-		["Superclass"]:string;
-		["Name"]:string;
-		["MemoryCategory"]:"Animation"|"GraphicsTexture"|"Gui"|"Instances"|"Internal"|"PhysicsParts"|"Script"; 
-		["Members"]:{
-			[number]:{
-				["Capabilities"]:{
-					[number]:{
-						[number]:Capabilities
-					}|{
-						["Read"]:{
-							[number]:Capabilities
-						};
-						["Write"]:{
-							[number]:Capabilities
-						}
-					}	
-				}?;
-				["Category"]:string?;
-				["MemberType"]:"Callback"|"Event"|"Function"|"Property";
-				["Name"]:string;
-				["Parameters"]:{
-					[number]:{
-						["Name"]:string;
-						["Type"]:Value_Type
-					}
-				}?;
-				["ReturnType"]:Value_Type?;
-				["Security"]:SecurityMethods|{
-					["Read"]:SecurityMethods|{SecurityMethods};
-					["Write"]:SecurityMethods|{SecurityMethods}
-				};
-				["Serialization"]:{
-					["CanLoad"]:boolean;
-					["CanSave"]:boolean
-				}?;
-				["Tags"]:Class_Tags?;
-				["ThreadSafety"]:Thread_Safety;
-				["ValueType"]:{
-					["Category"]:"Class"|"DataType"|"Enum"|"Primitive";
-					["Name"]:string;
-				}?;
-			}
-		};
-	}
-}
-type AllRobloxEnums = {
-	[number]:{
-		Name:string;
-		Items:{
-			[number]:{Name:string;Value:number}
-		};
-		Tags:Class_Tags?
-	}
-}
-type API_Dump = {
-	Classes:AllRobloxClasses;
-	Enums:AllRobloxEnums;
-	Version:number
-}
-
-type FormattedClass = {
-	[string]:string
-}
-type FormattedClasses = {
-	[string]:FormattedClass
-}
 --*********************Voodoo C++ data types into Luau types
-local TranslateProperties:FormattedClass = {
+local TranslateProperties:Types.FormattedClass = {
 	["bool"]="boolean";
 	["int"]="number";
 	["float"]="number";
@@ -173,21 +94,21 @@ local TranslateProperties:FormattedClass = {
 }
 
 --*********************Assembling class
-local Data:API_Dump? = nil
-local Classes:FormattedClasses = {}
+local Data:Types.API_Dump? = nil
+local Classes:Types.FormattedClasses = {}
 local WaitForData = coroutine.running()
 
 local LasestCache:number = tonumber(plugin:GetSetting("HierarchySaver_LatestCache_Valid")) or 0
 local GET_SAVE:string? = plugin:GetSetting("HierarchySaver_CLASSES")
 
 local function SuccessResult(ret:string):()
-	Data = HttpService:JSONDecode(ret)
-	local raw_Classes:AllRobloxClasses = Data.Classes
-	local Enums:AllRobloxEnums = Data.Enums
+	Data = HttpService:JSONDecode(ret)::Types.API_Dump
+	local raw_Classes:Types.AllRobloxClasses = (Data :: Types.API_Dump).Classes
+	local Enums:Types.AllRobloxEnums = (Data :: Types.API_Dump).Enums
 	for i,v in raw_Classes do
 		--if v.MemoryCategory~="Instances" then continue end
 		if v.Tags~=nil and (table.find(v.Tags,"NotCreatable")~=nil or table.find(v.Tags,"NotScriptable")~=nil) then continue end
-		local tab:FormattedClass = {}
+		local tab:Types.FormattedClass = {}
 		local Superclass:string? = v.Name
 		while Superclass~=nil do
 			local search:number? = nil
@@ -199,7 +120,7 @@ local function SuccessResult(ret:string):()
 				if vv.MemberType~="Property" then continue end
 				if (type(vv.Security)=="string" and vv.Security~="None") or (type(vv.Security)=="table" and (vv.Security.Write~="None" or vv.Security.Read~="None")) then continue end
 				if vv.ValueType==nil then continue end
-				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"Hidden")~=nil or table.find(vv.Tags,"Not Replicated")~=nil) then continue end
+				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil or table.find(vv.Tags,"Hidden")~=nil or table.find(vv.Tags,"Not Replicated")~=nil) then continue end
 				tab[vv.Name]=(vv.ValueType.Category=="Class" and "Instance") or (vv.ValueType.Category=="Enum" and `Enum.{vv.ValueType.Name}`) or (TranslateProperties[vv.ValueType.Name] or vv.ValueType.Name)
 			end
 			Superclass=raw_Classes[search].Superclass
@@ -227,11 +148,27 @@ local Elements = script:WaitForChild("Components")
 local TabButton = Elements:WaitForChild("TabButton")--Button to open tab
 local TabNameHere = Elements:WaitForChild("TabNameHere")--Tab itself
 local ErrorHTTP_UI = Elements:WaitForChild("ErrorHTTP_UI")
+local LightThemeColor_List:{Frame} = table.create(3)::{Frame}
+local Tab_EnumColor_List:{Frame} = table.create(1)::{Frame}
+local ScriptWhitespaceColorList_FOR_UI_STROKE:{UIStroke} = table.create(3)::{UIStroke}
+local TextButtons_Theme:{TextLabel|TextBox|TextButton} = table.create(20)::{TextLabel|TextBox|TextButton}
+local BrightestText_Theme:{TextLabel|TextBox|TextButton} = table.create(10)::{TextLabel|TextBox|TextButton}
 --Display
 local Main = script:WaitForChild("Main")
 local LowerBar = Main:WaitForChild("LowerBar")
 local UpperBar = Main:WaitForChild("UpperBar")
 local ViewTabs = Main:WaitForChild("ViewTabs")
+local Import_Base = Main:WaitForChild("Import_Base")
+local Ignored_Properies = Main:WaitForChild("IgnoredProperties")
+local Hint = Main:WaitForChild("Hint")
+local Hint_Label = Hint:WaitForChild("Label")
+table.insert(TextButtons_Theme,LowerBar:WaitForChild("Credit")::TextLabel)
+table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Hint:WaitForChild("UIStroke")::UIStroke)
+table.insert(Tab_EnumColor_List,Hint)
+table.insert(TextButtons_Theme,Hint_Label)
+table.insert(LightThemeColor_List,UpperBar)
+table.insert(LightThemeColor_List,ViewTabs)
+table.insert(LightThemeColor_List,Import_Base)
 --Lists
 local TabViewports:{Frame} = {}
 
@@ -256,6 +193,8 @@ local Collapse = Elements:WaitForChild("Collapse")
 local Property_NumberRange = Elements:WaitForChild("NumberRange")
 local Property_EnumList = Elements:WaitForChild("EnumList")
 local Property_EnumList_Sample = Elements:WaitForChild("EnumListSample")
+local CodeOutput = Elements:WaitForChild("CodeOutput")
+local Parser =require(script:WaitForChild("Parser"))
 
 --Configs
 local Y_heightPX = UDim2.new(1,0,0,Property_Y_SizePX)
@@ -274,7 +213,7 @@ local function HashMapLevelScan_Func(TrueParent:GuiObject):()
 	for i,v in HashMapLevel[TrueParent] do
 		local object:GuiObject = i
 		while object~=TrueParent and object.Visible==true do
-			object=object.Parent
+			object=object.Parent::GuiObject
 		end
 		if object.Visible==false then continue end
 		if v>max then max=v end
@@ -291,7 +230,8 @@ local StudioTheme = _theme::StudioTheme
 local Checkmarks:{TextButton} = table.create(15)::{TextButton}
 local Properties_ItemColor:{GuiObject} = table.create(15)::{GuiObject}
 local UI_Strokes:{UIStroke} = table.create(15)::{UIStroke}
-local TextButtons_Theme:{TextLabel|TextBox|TextButton} = table.create(20)::{TextLabel|TextBox|TextButton}
+
+
 local ItemColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item)
 local ItemColor_Hover:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item,Enum.StudioStyleGuideModifier.Hover)
 local ItemColor_Selected:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item,Enum.StudioStyleGuideModifier.Selected)
@@ -319,6 +259,7 @@ local DialogColorList:{TextButton} = table.create(5)::{TextButton}
 local ItemHoverList:{ImageButton} = table.create(10)::{ImageButton}
 local ScriptWhitespaceColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptWhitespace)
 local ScriptWhitespaceColorList:{TextButton} = table.create(5)::{TextButton}
+
 local ScrollBar_Color:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScrollBar)
 local ScrollBar_Color_Hover:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScrollBar,Enum.StudioStyleGuideModifier.Hover)
 local ScrollingFramesScrollBar:{ScrollingFrame} = table.create(3)::{ScrollingFrame}
@@ -328,6 +269,30 @@ local MainBackground_List:{TextButton} = table.create(3)::{TextButton}
 local ScrollBarBackground:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScrollBarBackground)
 local InputFieldBorder:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder)
 local InputFieldBorder_List:{Frame} = table.create(1)::{Frame}
+local ScriptBackground:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground)
+local ScriptBackground_List:{GuiObject} = table.create(1)::{GuiObject}
+local ScriptTextColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptText)
+local ScriptTextColor_List:{TextLabel|TextBox} = table.create(1)::{TextLabel|TextBox}
+local Tab_EnumColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tab)
+local BorderColorUI_StrokeList:{UIStroke} = table.create(6)::{UIStroke}
+
+--SCRIPT EDITOR
+local ScriptComment:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptComment)
+local ScriptBool:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBool)
+local ScriptFunction:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunction)
+local ScriptFunctionName:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunctionName)
+local ScriptLuauKeyword:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLuauKeyword)
+local ScriptLocal:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLocal)
+local ScriptNil:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNil)
+local ScriptNumber:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNumber)
+local ScriptSelf:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptSelf)
+local ScriptString:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptString)
+local ScriptBuiltInFunction:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBuiltInFunction)
+local ScriptProperty:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptProperty)
+---
+local LightThemeColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Light)
+
+local ScriptComment_List:{TextLabel} = table.create(1)::{TextLabel}
 
 --NumberRange
 local SelectedValue:Frame? = nil
@@ -347,7 +312,9 @@ local function ThemeChanged():()
 	TextColor_Selected = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText,Enum.StudioStyleGuideModifier.Selected)
 	TextLittleGreyColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DiffFilePathText)
 
+	local BrightText:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.BrightText)
 	local Mid:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Mid)
+	local BorderColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Border)
 	ItemColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item)
 	ItemColor_Hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item,Enum.StudioStyleGuideModifier.Hover)
 	ItemColor_Selected = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Item,Enum.StudioStyleGuideModifier.Selected)
@@ -363,6 +330,44 @@ local function ThemeChanged():()
 	MainBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
 	ScrollBarBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScrollBarBackground)
 	InputFieldBorder = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder)
+	ScriptBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground)
+	ScriptTextColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptText)
+	ScriptComment = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptComment)
+	ScriptBool = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBool)
+	ScriptFunction = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunction)
+	ScriptFunctionName = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunctionName)
+	ScriptLuauKeyword = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLuauKeyword)
+	ScriptLocal = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLocal)
+	ScriptNil = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNil)
+	ScriptNumber = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNumber)
+	ScriptSelf = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptSelf)
+	ScriptString = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptString)
+	ScriptBuiltInFunction = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBuiltInFunction)
+	ScriptProperty = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptProperty)
+	-------------
+	LightThemeColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Light)
+	Tab_EnumColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tab)
+	for i,v in BrightestText_Theme do
+		v.TextColor3=BrightText
+	end
+	for i,v in BorderColorUI_StrokeList do
+		v.Color = BorderColor
+	end
+	for i,v in Tab_EnumColor_List do
+		v.BackgroundColor3=Tab_EnumColor
+	end
+	for i,v in LightThemeColor_List do
+		v.BackgroundColor3=LightThemeColor
+	end
+	for i,v in ScriptComment_List do
+		v.TextColor3=ScriptComment
+	end
+	for i,v in ScriptTextColor_List do
+		v.TextColor3=ScriptTextColor
+	end
+	for i,v in ScriptBackground_List do
+		v.BackgroundColor3=ScriptBackground
+	end
 	for i,v in InputFieldBorder_List do
 		v.BackgroundColor3=InputFieldBorder
 	end
@@ -379,6 +384,9 @@ local function ThemeChanged():()
 	end
 	for i,v in ScriptWhitespaceColorList do
 		v.BackgroundColor3=ScriptWhitespaceColor
+	end
+	for i,v in ScriptWhitespaceColorList_FOR_UI_STROKE do
+		v.Color=ScriptWhitespaceColor
 	end
 	for i,v in ItemHoverList do
 		v.BackgroundColor3 = ItemColor_Hover
@@ -443,8 +451,11 @@ LowerBar_Convert.MouseButton1Up:Connect(function()
 end)
 
 
-
+local function HideHint():()
+	Hint.Visible=false
+end
 local function RemoveSelectionButton():()
+	HideHint()
 	if SelectedValue~=nil then
 		SelectedValue.BackgroundTransparency=1
 		SelectedValue=nil
@@ -492,6 +503,103 @@ local function DeleteTab(Name:string):()
 		Tab:Destroy()
 	end
 end
+local CurrentConvertType:string = "Hierarchy Builder"
+local function SelectButtonByName(name:string):()
+	local button = UpperBar:FindFirstChild(name)::Frame?
+	local viewport = ViewTabs:FindFirstChild(name)::Frame?
+	for i,v in TabViewports do
+		if v==viewport then continue end
+		v.Visible = false
+	end
+	for i,v in UpperBar:GetChildren() do
+		if v==button then continue end
+		if not v:IsA("Frame") then continue end
+		v:SetAttribute("Enabled",false)
+		v.BackgroundColor3=ItemColor
+	end
+	if viewport~=nil then viewport.Visible=true end
+	if button~=nil then
+		button:SetAttribute("Enabled",true)
+		button.BackgroundColor3=ViewPortBackground
+	end
+	RemoveSelectionButton()
+	if name~="Converted Code" then CurrentConvertType = name end
+end
+local OnConvert:BindableEvent = Instance.new("BindableEvent")
+local UncollapseCategoryies:BindableEvent = Instance.new("BindableEvent")
+local AllPropertyRelatives:{[TextLabel]:GuiObject} = {}--TextLabel.Text -> Target
+do
+	local SearchKeybind = plugin:CreatePluginAction("HB_StartSearch","Search","Search for property","rbxassetid://75358548882112",true)
+	SearchKeybind.Name = "Search for property"
+	local CancelKeybind = plugin:CreatePluginAction("HB_CancelSearch","Cancel Search","Cancel Search for property","rbxassetid://75358548882112",true)
+	CancelKeybind.Name = "Cancel Search for property"
+	local SearchBox = Main:WaitForChild("Search")::TextBox
+	local SearchButton = LowerBar:WaitForChild("Search")
+	local CancelSearch = SearchButton:WaitForChild("Cancel")
+	local AspectRatioSearchButton:UIAspectRatioConstraint? = Instance.new("UIAspectRatioConstraint",SearchButton)
+	CancelSearch:SetAttribute("Enabled",true)
+	SearchButton:SetAttribute("Enabled",true)
+	SearchBox:SetAttribute("Enabled",true)
+	table.insert(Properties_ItemColor,CancelSearch)
+	table.insert(Properties_ItemColor,SearchButton)
+	table.insert(Properties_ItemColor,SearchBox)
+	--text
+	table.insert(BrightestText_Theme,SearchButton)
+	table.insert(BrightestText_Theme,SearchBox)
+	local function BegginTheSearch():()
+		if SearchBox.Visible==true then return end
+		SearchBox.Visible = true
+		if AspectRatioSearchButton~=nil then AspectRatioSearchButton:Destroy() end
+		AspectRatioSearchButton=nil
+		SearchBox:CaptureFocus()
+		CancelSearch.Visible = true
+	end
+	local function CancelTheSearch():()
+		SearchBox.Visible = false
+		SearchButton.Text="🔍"
+		SearchBox.Text = ""
+		CancelSearch.Visible = false
+		if AspectRatioSearchButton~=nil then AspectRatioSearchButton:Destroy() end
+		AspectRatioSearchButton = Instance.new("UIAspectRatioConstraint",SearchButton)
+	end
+	SearchBox.FocusLost:Connect(function()
+		SearchBox.Visible = false
+		if SearchBox.Text=="" then
+			CancelTheSearch()
+		end
+	end)
+	SearchBox:GetPropertyChangedSignal("Text"):Connect(function():()
+		UncollapseCategoryies:Fire()
+		local txt:string = string.lower(SearchBox.Text)
+		if SearchBox.Visible==true then
+			SearchButton.Text=txt
+		end
+		if txt=="" then
+			for i,v in AllPropertyRelatives do
+				v.Visible = true
+			end
+		else
+			for i,v in AllPropertyRelatives do
+				v.Visible = false
+			end
+			for i,v in AllPropertyRelatives do
+				if string.find(string.lower(i.Text),txt)~=nil then
+					v.Visible=true
+				end
+			end
+		end
+	end)
+	CancelKeybind.Triggered:Connect(CancelTheSearch)
+	CancelSearch.MouseButton1Click:Connect(CancelTheSearch)
+	SearchKeybind.Triggered:Connect(BegginTheSearch)
+	SearchButton.MouseButton1Click:Connect(BegginTheSearch)
+end
+plugin.Unloading:Once(function()
+	OnConvert:Destroy()
+	UncollapseCategoryies:Destroy()
+end)
+
+local TabIndex:number = 0
 -- Returns New window and container for this window!
 local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 	--Grabbing elements
@@ -508,20 +616,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 	Tab_Button.Visible=true
 	table.insert(TextButtons_Theme,TextButton)
 	local function HideButtons():()
-		for i,v in TabViewports do
-			if v==Tab then continue end
-			v.Visible = false
-		end
-		for i,v in UpperBar:GetChildren() do
-			if v==Tab_Button then continue end
-			if not v:IsA("Frame") then continue end
-			v:SetAttribute("Enabled",false)
-			v.BackgroundColor3=ItemColor
-		end
-		Tab.Visible = true
-		Tab_Button:SetAttribute("Enabled",true)
-		Tab_Button.BackgroundColor3=ViewPortBackground
-		RemoveSelectionButton()
+		SelectButtonByName(Name)
 	end
 	Tab_Button.MouseEnter:Connect(function()
 		Tab_Button.BackgroundColor3=ViewPortBackground
@@ -540,14 +635,18 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 	local Tab_Upper = Tab.Upper
 	local Tab_Lower = Tab.Lower
 	local Tab_Right = Tab.Right
+	table.insert(CollapserColor_Lighter_List,Tab_Left)
+	table.insert(CollapserColor_Lighter_List,Tab_Right)
+	table.insert(CollapserColor_Lighter_List,Tab_Lower)
+	table.insert(CollapserColor_Lighter_List,Tab_Upper)
 	local List = Tab_Scroll.List
 	local List_Layout = List.UIListLayout
 	local Bottom_Outline = Tab.Bottom_Outline
 	local Right_Outline = Tab.Right_Outline
 	Bottom_Outline.Size = UDim2.new(1,0,0.0000001,Thickness)--Hack to make it draw over scrollbar
-	table.insert(UI_Strokes,Bottom_Outline:WaitForChild("UIStroke")::UIStroke)
+	table.insert(BorderColorUI_StrokeList,Bottom_Outline:WaitForChild("UIStroke")::UIStroke)
 	Right_Outline.Size = UDim2.new(0.0000001,Thickness,1,0)--Hack to make it draw over scrollbar
-	table.insert(UI_Strokes,Right_Outline:WaitForChild("UIStroke")::UIStroke)
+	table.insert(BorderColorUI_StrokeList,Right_Outline:WaitForChild("UIStroke")::UIStroke)
 	table.insert(ScrollingFramesScrollBar,Tab_Scroll)
 	table.insert(MainBackground_List,List)
 	table.insert(ScrollbarButtons,Tab_Left)
@@ -583,7 +682,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		Tab_Lower.BackgroundColor3=ScrollBar_Color_Hover
 		Tab_Scroll.ScrollBarImageColor3=ScrollBar_Color
 	end)
-	
+
 	Tab_Left.MouseLeave:Connect(function()
 		ButtonHover=false
 		Tab_Left.BackgroundColor3=ScrollBar_Color
@@ -600,9 +699,9 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		ButtonHover=false
 		Tab_Lower.BackgroundColor3=ScrollBar_Color
 	end)
-	
-	
-	
+
+
+
 	local HighlightedScrollbar:boolean = false
 	Tab.MouseLeave:Connect(function():()
 		if Tab.Visible==false or not HighlightedScrollbar then return end
@@ -643,7 +742,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 			Tab_Scroll.ScrollBarImageColor3=ScrollBar_Color
 			HighlightedScrollbar=false
 		end
-		
+
 	end)
 
 	List.MouseButton1Click:Connect(RemoveSelectionButton)
@@ -712,16 +811,17 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 			if Content_Frame==nil then continue end
 			Content_Frame.Size=Size
 		end
+		local Size_X_Offset = Size.X.Offset
 
 		for i,v in List:GetChildren() do
 			if not v:IsA("GuiObject") or not v:IsA("GuiBase2d") or v.Visible==false then continue end
 			sumY+=v.AbsoluteSize.Y
-			local MaxSize:number? = (tonumber(v:GetAttribute("MaxSize")::number?) and (tonumber(v:GetAttribute("MaxSize")::number?)::number)+(Size.X.Offset*0.5)) or nil
-			local v_Content = v:FindFirstChild("Content")::Frame?
-			if MaxSize==nil or v_Content~=nil and v_Content.Size.X.Offset>=(MaxSize or 0) then
-				
-				if v_Content==nil then continue end
-				MaxSize=v_Content.Size.X.Offset	
+			local MaxSize:number? = (tonumber(v:GetAttribute("MaxSize")::number?)~=nil and (tonumber(v:GetAttribute("MaxSize")::number?)::number)+(Size_X_Offset*0.5)) or nil
+			--local v_Content = v:FindFirstChild("Content")::Frame?
+			if MaxSize==nil or (Size_X_Offset>=(MaxSize or 0)) then
+
+				--if v_Content==nil then continue end
+				MaxSize=Size_X_Offset
 			end
 			if MaxSize::number>highestX then highestX=MaxSize::number end
 		end
@@ -729,7 +829,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		local Size_X_Offset = Size.X.Offset
 		List:SetAttribute("Offset_True_X",Size_X_Offset)
 		List:SetAttribute("HighestX",highestX)
-		local scaled = UDim2.new(0,highestX-(Size_X_Offset/2)+((Size_X_Offset<highestX and 5) or 0),1,0)
+		local scaled = UDim2.new(0,highestX-(Size_X_Offset*0.5)+((Size_X_Offset<highestX and 6) or 0),1,0)
 		for i,v in List:GetChildren() do
 			if not v:IsA("GuiObject") then continue end
 			local v_Content = v:FindFirstChild("Content")::Frame?
@@ -739,7 +839,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 			value.Size=scaled
 
 		end
-		Tab_Scroll.CanvasSize=UDim2.new(0,highestX+2+((Size.X.Offset<highestX and 6) or 0),0,sumY+2)
+		Tab_Scroll.CanvasSize=UDim2.new(0,highestX+1--[[+2+((Size_X_Offset<highestX and 6) or 0)+((sumY>AbsoluteWindowSize.Y and -1) or 0)]],0,sumY+2)
 		VisualizeSliders()
 	end
 
@@ -786,7 +886,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		Tab_Scroll.CanvasPosition+=Button_SlideBy_Y
 		local run:RBXScriptConnection
 		local yieldTime:number = 0
-		run = RunService.Heartbeat:Connect(function(delta:number):()
+		run = Heartbeat:Connect(function(delta:number):()
 			yieldTime+=delta
 			if not Lower_DB then
 				run:Disconnect()
@@ -802,7 +902,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		Tab_Scroll.CanvasPosition-=Button_SlideBy_Y
 		local run:RBXScriptConnection
 		local yieldTime:number = 0
-		run = RunService.Heartbeat:Connect(function(delta:number):()
+		run = Heartbeat:Connect(function(delta:number):()
 			yieldTime+=delta
 			if not Upper_DB then
 				run:Disconnect()
@@ -818,7 +918,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		Tab_Scroll.CanvasPosition+=Button_SlideBy_X
 		local run:RBXScriptConnection
 		local yieldTime:number = 0
-		run = RunService.Heartbeat:Connect(function(delta:number):()
+		run = Heartbeat:Connect(function(delta:number):()
 			yieldTime+=delta
 			if not Right_DB then
 				run:Disconnect()
@@ -834,7 +934,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		Tab_Scroll.CanvasPosition-=Button_SlideBy_X
 		local run:RBXScriptConnection
 		local yieldTime:number = 0
-		run = RunService.Heartbeat:Connect(function(delta:number):()
+		run = Heartbeat:Connect(function(delta:number):()
 			yieldTime+=delta
 			if not Left_DB then
 				run:Disconnect()
@@ -847,15 +947,17 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 	end)
 	table.insert(TabViewports,Tab)
 	--Parenting
+	Tab_Button.LayoutOrder=TabIndex
 	Tab_Button.Parent = UpperBar
 	Tab.Parent=ViewTabs
 	ScaleCanvas()
+	TabIndex+=1
 	return Tab,List
 end
 
 --*********************Obtaining classes
 if LasestCache>workspace:GetServerTimeNow() and type(GET_SAVE)=="string" then
-	Classes = HttpService:JSONDecode(GET_SAVE)::FormattedClasses
+	Classes = HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
 	if WaitForData then coroutine.resume(WaitForData) end
 else
 	local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
@@ -864,7 +966,7 @@ else
 	else
 		-- No perms but has a backup
 		if type(GET_SAVE)=="string" then
-			Classes = HttpService:JSONDecode(GET_SAVE)::FormattedClasses
+			Classes = HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
 			warn(`Unable to send HTTP request; Using latest backup`)
 		else
 			--No perms and no backup
@@ -956,45 +1058,62 @@ local function GetProperties(instance:any):cache_prop
 	return prop
 end
 
-local PropertiesThatExist:{[string]:string|number|boolean} = {
-	HB_SaveMeshes = true;
-	HB_CyclicProperties = true;
-	HB_NamingSubtag = "";
-	TestIdk=0;
+local SessionData = require(script:WaitForChild("SessionData"))
 
-}
+--local RecursionFunctionIncld__1,RecursionFunctionIncld__2 = [[local function ]],[[(self:Instance,Up:number,Path:{string}):()
+--	local dir:Instance = self
+--	for i=1,Up do
+--		dir=dir.Parent::Instance
+--	end
+--	for i,v in Path do
+--		dir=dir[v]
+--	end
+--	self.Parent=dir
+--end
 
-local SessionData = HttpService:JSONDecode(plugin:GetSetting("HierarchySaver_Settings") or "{}")::typeof(PropertiesThatExist)
-for i,v in PropertiesThatExist do
-	if SessionData[i]==nil then
-		SessionData[i]=v
-	end
-end
-plugin.Unloading:Once(function()
-	plugin:SetSetting("HierarchySaver_Settings",HttpService:JSONEncode(SessionData))
-end)
+--]]
+
+--[[Make meshparts cache  OR NOT and ability to add function for caching method
+Using :ApplyMesh resets the texture!!
+
+
+]]
+
+local _ss_module = require(script:WaitForChild("ss"))
+local ss,UpdateSS = _ss_module.ss,_ss_module.Update
 
 
 
-local Types = require(script:WaitForChild("Types"))
-
-local OffsetBy:number = 16
-
-local function BlankPropertyCreate(Name:string,DisplayName:string?,Description:string?,OffsetLevel:number?):(TextButton,Frame,Frame)
+local function BlankPropertyCreate(Name:string,DisplayName:string?,Description:string?,OffsetLevel:number?,Relative:GuiObject?):(TextButton,Frame,Frame)
 	local Property = Property:Clone()::TextButton
 	local Property_Content = Property:WaitForChild("Content")::Frame
 	local LabelFrame = Property_Content:WaitForChild("LabelFrame")::Frame
 	--[[Content offset]]
 	if OffsetLevel~=nil then
-		LabelFrame.Size=UDim2.new(0.5,-(OffsetBy*OffsetLevel),1, 0)
+		LabelFrame.Size=UDim2.new(0.5,-(16--[[OffsetBy]]*OffsetLevel),1, 0)
 	end
 	---
-
 	local Label = LabelFrame:WaitForChild("Label")::TextLabel
 	local Gap = LabelFrame:WaitForChild("Gap")::Frame
 	table.insert(UI_Strokes,Property:WaitForChild("UIStroke")::UIStroke)
 	table.insert(Properties_ItemColor,Property)
 	table.insert(TextButtons_Theme,Label)
+	AllPropertyRelatives[Label] = (Relative~=nil and Relative) or Property
+	if Description~=nil then
+		local function UpdateHint():()
+			if Property:GetAttribute("Selected")==true then return end
+			local pos:Vector2 = Widget:GetRelativeMousePosition()
+			Hint.Position = UDim2.new(0,pos.X,0,pos.Y+20)
+			local bounds:Vector2 = TextService:GetTextSize(Description,Hint_Label.TextSize,Hint_Label.Font,Vector2.new(Widget.AbsoluteSize.X-pos.X,Widget.AbsoluteSize.Y-pos.Y))
+			Hint.Size=UDim2.new(0,bounds.X+6,0,bounds.Y+6)
+			Hint.AnchorPoint = (pos.X>Widget.AbsoluteSize.X*0.5 and Vector2.xAxis) or Vector2.zero
+			Hint_Label.Text=Description
+			Hint.Visible=true
+		end
+		LabelFrame.MouseEnter:Connect(UpdateHint)
+		LabelFrame.MouseMoved:Connect(UpdateHint)
+		LabelFrame.MouseLeave:Connect(HideHint)
+	end
 	Property.MouseEnter:Connect(function()
 		if Property:GetAttribute("Selected") then return end
 		Property.BackgroundColor3=ItemColor_Hover
@@ -1063,6 +1182,7 @@ local function PropertyTypeInitiator(Property:TextButton,Property_Content:Frame,
 		local Bar = _Slider:WaitForChild("Bar")
 		local Slider = _Slider:WaitForChild("Slider")
 		table.insert(UI_Strokes,Slider:WaitForChild("UIStroke")::UIStroke)
+		table.insert(TextButtons_Theme,Input)
 		table.insert(ItemHoverList,Input_UP)
 		table.insert(ItemHoverList,Input_DOWN)
 		table.insert(DialogColorList,Slider)
@@ -1173,7 +1293,7 @@ local function PropertyTypeInitiator(Property:TextButton,Property_Content:Frame,
 		end)
 		Slider.Position=UDim2.new(iLerp(tonumber(SessionData[i] or Min) or Min,Min,Max),0,0.5,0)
 		drag.Parent=Slider
-		
+
 		local function InputEnded(key:InputObject):()
 			if key.KeyCode~=Enum.KeyCode.Return then return end
 			--Pressed enter
@@ -1304,7 +1424,7 @@ local function PropertyTypeInitiator(Property:TextButton,Property_Content:Frame,
 		table.insert(TextButtons_Theme,value_input)
 		local function ScaleTextToFit()
 			local sz:number = TextService:GetTextSize(value_input.Text,value_input.TextSize,value_input.Font,Vector2.new(math.huge,value_input.TextSize)).X
-			Property:SetAttribute("MaxSize",sz)
+			Property:SetAttribute("MaxSize",sz+6)
 			if TrueParent~=nil then HashMapLevel[TrueParent][Property]=sz end
 		end
 		value_input:GetPropertyChangedSignal("AbsoluteSize"):Connect(ScaleTextToFit)
@@ -1340,7 +1460,7 @@ local function PropertyTypeInitiator(Property:TextButton,Property_Content:Frame,
 		table.insert(TextButtons_Theme,value_input)
 		local function ScaleTextToFit()
 			local sz:number = TextService:GetTextSize(value_input.Text,value_input.TextSize,value_input.Font,Vector2.new(math.huge,value_input.TextSize)).X
-			Property:SetAttribute("MaxSize",sz)
+			Property:SetAttribute("MaxSize",sz+6)
 			if TrueParent~=nil then HashMapLevel[TrueParent][Property]=sz end
 		end
 		value_input:GetPropertyChangedSignal("AbsoluteSize"):Connect(ScaleTextToFit)
@@ -1377,11 +1497,11 @@ local function SumSizeY(Parent:GuiObject):number
 	return sum
 end
 
-local function TreeRecursive(Parent:GuiObject,Data:Types.RecursiveRoot,Updater:BindableEvent,Layer:number,TrueParent:GuiObject):()
+local function TreeRecursive(Parent:GuiObject,Data:Types.RecursiveRoot,Updater:BindableEvent,Layer:number,TrueParent:GuiObject,Relative:GuiObject?):()
 	local ParentProperty_Content = Parent.Parent::Frame
 	local ParentPropertyBox = ParentProperty_Content.Parent::Frame
 	for _,Tree in Data do
-		local Property,Property_Content,Gap = BlankPropertyCreate(Tree.Name,Tree.DisplayName,Tree.Description,Layer)
+		local Property,Property_Content,Gap = BlankPropertyCreate(Tree.Name,Tree.DisplayName,Tree.Description,Layer,Relative)
 		PropertyTypeInitiator(Property,Property_Content,Tree.Type,Tree.Name,Updater,TrueParent,Tree)
 		if Tree.Tree~=nil then
 			Property.Size=Y_height23_SUBSTRACTED--Hacky to fix weird roblox scaling glitch
@@ -1401,7 +1521,7 @@ local function TreeRecursive(Parent:GuiObject,Data:Types.RecursiveRoot,Updater:B
 				ParentPropertyBox:SetAttribute("YSize",SumSizeY(Parent))
 			end
 			table.insert(CollapserColor_List,Collapse)
-			TreeRecursive(Box_Nest,Tree.Tree,Updater,Layer+1,TrueParent)
+			TreeRecursive(Box_Nest,Tree.Tree,Updater,Layer+1,TrueParent,Relative)
 			local Collapse = Collapse:Clone()
 			local Collapse_Expanded:boolean = false
 			Collapse.MouseButton1Click:Connect(function()
@@ -1433,7 +1553,7 @@ local function TreeRecursive(Parent:GuiObject,Data:Types.RecursiveRoot,Updater:B
 	end
 end
 
-local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
+local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):()
 	local Index:number = 0
 	local Updater = Parent:WaitForChild("Updater")::BindableEvent
 	for CategoryName__,ArrayOfProperties__ in Data do
@@ -1456,10 +1576,14 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
 		Category.MouseLeave:Connect(function()
 			Category.BackgroundColor3=CategoryItem
 		end)
+		UncollapseCategoryies.Event:Connect(function():()
+			Category_Collapser.Image="rbxassetid://134054819148055"
+			Expanded=true
+		end)
 		Category.MouseButton1Click:Connect(function()
-			local state = not Expanded
-			Expanded = state
-			if state==true then
+			task.defer(RemoveSelectionButton)
+			Expanded = not Expanded
+			if Expanded==true then
 				--Expanded
 				Category_Collapser.Image="rbxassetid://134054819148055"
 				for i,v in CategoryDescendants do
@@ -1480,16 +1604,18 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
 		Index += 1
 		for _,v in ArrayOfProperties do
 			local i = v.Name
-			local Property,Property_Content,Gap = BlankPropertyCreate(i,v.DisplayName,v.Description)
-			PropertyTypeInitiator(Property,Property_Content,v.Type,i,Updater,nil,v)
 			if v.Tree==nil then
+				local Property,Property_Content,Gap = BlankPropertyCreate(i,v.DisplayName,v.Description)
+				PropertyTypeInitiator(Property,Property_Content,v.Type,i,Updater,nil,v)
 				table.insert(CategoryDescendants,Property)
 				Property.LayoutOrder=Index
 				Property.Visible=true
 				Property.Parent=Parent
 			else
-				Property.Size=Y_height23_SUBSTRACTED--Hacky to fix weird roblox scaling glitch
+				Property.Size=Y_heightPX--Hacky to fix weird roblox scaling glitch
 				local Box = PropertyBox:Clone()
+				local Property,Property_Content,Gap = BlankPropertyCreate(i,v.DisplayName,v.Description,nil,Box)
+				PropertyTypeInitiator(Property,Property_Content,v.Type,i,Updater,nil,v)
 				local Box_Content = Box:WaitForChild("Content")::Frame
 				local Box_Nest = Box_Content:WaitForChild("NestedProperties")::Frame
 				local Collapse = Collapse:Clone()
@@ -1510,12 +1636,10 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
 						elseif v.Name=="Value" then
 							v.Size=ValueProductSize
 						end
-
-
 					end
 				end
 				table.insert(CollapserColor_List,Collapse)
-				TreeRecursive(Box_Nest,v.Tree,Updater,1,Box)
+				TreeRecursive(Box_Nest,v.Tree,Updater,1,Box,Box)
 				Collapse.MouseButton1Click:Connect(function()
 					local state = not Collapse_Expanded
 					Collapse_Expanded=state
@@ -1529,6 +1653,7 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
 					Box:SetAttribute("YSize",SumSizeY(Box_Nest))
 					task.defer(Updater.Fire,Updater)
 				end)
+				Box:SetAttribute("YSize",Property_Y_SizePX)
 				Box_Nest.Visible=false
 				Collapse.Parent=Gap
 				table.insert(CategoryDescendants,Box)
@@ -1551,16 +1676,613 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties)
 	end
 	task.defer(Updater.Fire,Updater)
 end
+local escape:{[string]:string} = {
+	['&'] = '&amp;',
+	['<'] = '&lt;',
+	['>'] = '&gt;',
+	['"'] = '&quot;',
+	['\''] = '&apos;',
+}
+local function WriteRichText(str:string,color:Color3):string
+	return `<font color = "#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
+end
+
+local ConstructorTostring_Switch:{[string]:(data:any,number?)->(string,string)}
+local function ConstructorTostring(type:string,data:any):(string,string)
+	return (ConstructorTostring_Switch[type] or ConstructorTostring_Switch["_Default"])(data)
+end
+--[[Number you want to round]]
+local function Round(x:number):number
+	if ss.Rounding==false then return x end
+	local Precision:number = 10^ss.Precision
+	return math.round(x*Precision)/Precision
+end
+local function ToMatrixUnit(x:number):(string,string)
+	local deg:number = math.round(math.deg(x)*1000)/1000
+	x = math.rad(deg)
+	if ss.MatrixCFrameMeasurements=="Degrees" then
+		return `math{(ss.IndexingBy=="Dots" and ".rad") or "[\"rad\"]"}({deg})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
+	elseif ss.MatrixCFrameMeasurements=="Raw" or x==0 or x==math.pi then
+		if x==math.pi then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}` end
+		return tostring(x),select(2,ConstructorTostring("number",x))
+	elseif ss.MatrixCFrameMeasurements=="Balance" then
+		local mul = x/math.pi
+		if #tostring(mul%1)<6 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+
+		local sub = math.pi/x
+		if #tostring(sub%1)<6 then 
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+		else
+			return `math{(ss.IndexingBy=="Dots" and ".rad") or "[\"rad\"]"}({deg})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
+		end
+	else--Radians
+		local mul = x/math.pi
+		if #tostring(mul%1)<6 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+
+		local sub = math.pi/x
+		if #tostring(sub%1)<6 then 
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+		else
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
+		end
+	end
+end
+ConstructorTostring_Switch = {
+	EnumItem = function(data:EnumItem):(string,string)
+		if ss.IndexingBy=="Dots" then
+			return tostring(data),`{WriteRichText("Enum",ScriptBuiltInFunction)}.{WriteRichText(tostring(data.EnumType),ScriptBuiltInFunction)}.{WriteRichText(data.Name,ScriptProperty)}`
+		else
+			return `Enum[{ConstructorTostring("string",tostring(data.EnumType))}][{ConstructorTostring("string",tostring(data.Name))}]`,`{WriteRichText("Enum",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string",tostring(data.EnumType)))}][{select(2,ConstructorTostring("string",tostring(data.Name)))}]`
+		end
+	end;
+	number = function(data:number):(string,string)
+		return tostring(data),WriteRichText(tostring(data),ScriptNumber)
+	end;
+	boolean = function(data:boolean):(string,string)
+		return tostring(data),WriteRichText(tostring(data),ScriptBool)
+	end;
+	["nil"] = function(data:nil):(string,string)
+		return "nil",WriteRichText("nil",ScriptNil)
+	end;
+	Vector2 = function(data:Vector2):(string,string)
+		local X,Y = Round(data.X),Round(data.Y)
+		if ss.IndexingBy=="Dots" then
+			return `Vector2.new({X}{ss.FuncSeparator}{Y})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}.{WriteRichText("new",ScriptBuiltInFunction)}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))})`
+		else
+			return `Vector2[{ConstructorTostring("string","new")}]({X}{ss.FuncSeparator}{Y})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","new"))}]({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))})`
+		end
+	end;
+	Vector3 = function(data:Vector3):(string,string)
+		local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
+		if ss.VectorLibUse=="vector" then
+			if ss.IndexingBy=="Dots" then
+				return `vector.create({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("vector",ScriptBuiltInFunction)}.{WriteRichText("create",ScriptBuiltInFunction)}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			else
+				return `vector[{ConstructorTostring("string","create")}]({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("vector",ScriptBuiltInFunction)}[{WriteRichText("\"create\"",ScriptString)}]({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			end
+		else
+			--Vector3
+			if ss.IndexingBy=="Dots" then
+				return `Vector3.new({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}.{WriteRichText("new",ScriptBuiltInFunction)}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			else
+				return `Vector3[{ConstructorTostring("string","new")}]({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","new"))}]({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			end
+		end
+	end;
+	BrickColor = function(data:BrickColor):(string,string)
+		if ss.IndexingBy=="Dots" then
+			return `BrickColor.new({ConstructorTostring("string",data.Name)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}.{WriteRichText("new",ScriptBuiltInFunction)}({select(2,ConstructorTostring("string",data.Name))})`
+		else
+			return `BrickColor.new({ConstructorTostring("string",data.Name)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","new"))}]({select(2,ConstructorTostring("string",data.Name))})`
+		end
+	end;
+	Color3 = function(data:Color3):(string,string)
+		if ss.Color3Format=="Color3_new" then
+			local R,G,B = math.round(data.R*1_000_000)/1_000_000,math.round(data.G*1_000_000)/1_000_000,math.round(data.B*1_000_000)/1_000_000
+			if ss.IndexingBy=="Dots" then
+				return `Color3.new({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}.{WriteRichText("new",ScriptBuiltInFunction)}({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			else
+				return `Color3[{ConstructorTostring("string","new")}]({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","new"))}]({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			end
+		elseif ss.Color3Format=="Color3_fromRGB" then
+			local R,G,B = math.round(data.R*255),math.round(data.G*255),math.round(data.B*255)
+			if ss.IndexingBy=="Dots" then
+				return `Color3.fromRGB({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}.{WriteRichText("fromRGB",ScriptBuiltInFunction)}({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			else
+				return `Color3[{ConstructorTostring("string","fromRGB")}]({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","fromRGB"))}]({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			end
+		elseif ss.Color3Format=="Color3_fromHEX" then
+			local HEX:string = `#{data:ToHex()}`
+			if ss.IndexingBy=="Dots" then
+				return `Color3.fromHex({HEX})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}.{WriteRichText("fromHex",ScriptBuiltInFunction)}({select(2,ConstructorTostring("string",HEX))})`
+			else
+				return `Color3[{ConstructorTostring("string","fromHex")}]({ConstructorTostring("string",HEX)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string","fromHex"))}]({select(2,ConstructorTostring("string",HEX))})`
+			end
+		else--Color3_fromHSV
+			local H,S,V = data:ToHSV()
+			H,S,V = math.round(H*1_000_000)/1_000_000,math.round(S*1_000_000)/1_000_000,math.round(V*1_000_000)/1_000_000
+			return `Color3{(ss.IndexingBy=="Dots" and ".fromHSV") or `["fromHSV"]`}({H}{ss.FuncSeparator}{S}{ss.FuncSeparator}{V})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHSV",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHSV"))}]`}({select(2,ConstructorTostring("number",H))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",S))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",V))})`
+		end
+	end;
+	CFrame = function(data:CFrame):(string,string)
+		local x,y,z = data:ToOrientation()
+		if x==0 and y==0 and z==0 then--No rotation
+			local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
+			return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+		elseif data.Position.Magnitude==0 then--No position
+			if ss.CFrameFormatting=="CFrameNewYXZRotation" then
+				local rX,rX_rich = ToMatrixUnit(x)
+				local rY,rY_rich = ToMatrixUnit(y)
+				local rZ,rZ_rich = ToMatrixUnit(z)
+				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `["fromEulerAnglesYXZ"]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ"))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+			elseif ss.CFrameFormatting=="CFrameNewPlusAngles" then
+				x,y,z = data:ToEulerAnglesXYZ()
+				local rX,rX_rich = ToMatrixUnit(x)
+				local rY,rY_rich = ToMatrixUnit(y)
+				local rZ,rZ_rich = ToMatrixUnit(z)
+				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `["Angles"]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles"))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+			else--RawCFrameNew
+				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}{ss.FuncSeparator}{R00}{ss.FuncSeparator}{R01}{ss.FuncSeparator}{R02}{ss.FuncSeparator}{R10}{ss.FuncSeparator}{R11}{ss.FuncSeparator}{R12}{ss.FuncSeparator}{R20}{ss.FuncSeparator}{R21}{ss.FuncSeparator}{R22})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22))})`
+			end
+		else--Has rotation and position
+			if ss.CFrameFormatting=="CFrameNewYXZRotation" or ss.CFrameFormatting=="CFrameNewPlusAngles" then
+				local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
+				local txt,rich = ConstructorTostring("CFrame",data.Rotation)
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}){ss.Mult}{txt}`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}){ss.Mult}{rich}`
+			else--RawCFrameNew
+				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}{ss.FuncSeparator}{R00}{ss.FuncSeparator}{R01}{ss.FuncSeparator}{R02}{ss.FuncSeparator}{R10}{ss.FuncSeparator}{R11}{ss.FuncSeparator}{R12}{ss.FuncSeparator}{R20}{ss.FuncSeparator}{R21}{ss.FuncSeparator}{R22})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22))})`
+			end
+		end
+	end;
+	Axes = function(data:Axes):(string,string)
+		return `Axes{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}()`,`{WriteRichText("Axes",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}()`
+	end;
+	ColorSequenceKeypoint = function(data:ColorSequenceKeypoint):(string,string)
+		local color,rich = ConstructorTostring("Color3",data.Value)
+		return `ColorSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Time}{ss.FuncSeparator}{color})`,`{WriteRichText("ColorSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Time))}{ss.FuncSeparator}{rich})`
+	end;
+	ColorSequence = function(data:ColorSequence):(string,string)
+		local txt,rich = "{","{"
+		for i,v in data.Keypoints do
+			local t,r = ConstructorTostring("ColorSequenceKeypoint",v)
+			txt..=`{t}{ss._Separator}`
+			rich..=`{r}{ss._Separator}`
+		end
+		txt..="}";rich..="}"
+		return `ColorSequence{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("ColorSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+	end;
+	Faces = function(data:Faces):(string,string)
+		local txt,rich = "",""
+		for i,v in Enum.NormalId:GetEnumItems() do
+			if (data :: any)[v.Name] then
+				if txt~="" then
+					txt..=ss.FuncSeparator
+					rich..=ss.FuncSeparator
+				end
+				txt..=ConstructorTostring("EnumItem",v);rich..=select(2,ConstructorTostring("EnumItem",v))
+			end
+		end
+		return `Faces{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("Faces",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+	end;
+	FloatCurveKey = function(data:FloatCurveKey):(string,string)
+		return `FloatCurveKey{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Time}{ss.FuncSeparator}{data.Value}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Interpolation)})`,`{WriteRichText("FloatCurveKey",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Time))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Interpolation))})`	
+	end;
+	UDim = function(data:UDim):(string,string)
+		return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Scale}{ss.FuncSeparator}{data.Offset})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset))})`
+	end;
+	UDim2 = function(data:UDim2):(string,string)
+		return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.X.Scale}{ss.FuncSeparator}{data.X.Offset}{ss.FuncSeparator}{data.Y.Scale}{ss.FuncSeparator}{data.Y.Offset})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.X.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset))})`
+	end;
+	string = function(data:string):(string,string)
+		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f")
+		return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
+	end;
+	_Default = function(data:any):(string,string)
+		return tostring(data),WriteRichText(tostring(data),ScriptLuauKeyword)
+	end
+}::typeof(ConstructorTostring_Switch)
+
+do
+	local function TableTostring(tbl:{[any]:any},Level:number?):(string,string)
+		local Level = (Level or 1)::number
+		local tbl_txt,tbl_rich = "{\n","{\n"
+		for i,v in tbl do
+			if type(i)~="number" then
+				local regular,rich = ConstructorTostring(typeof(i),i)
+				tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
+				tbl_rich..=`{string.rep("\t",Level)}[{rich}]{ss._Equal}`
+			else
+				tbl_txt..=string.rep("\t",Level)
+				tbl_rich..=string.rep("\t",Level)
+			end
+			if type(v)=="table" then
+				local regular,rich = TableTostring(v::{[any]:any},Level+1)
+				tbl_txt..=regular..`{ss._Separator}\n`
+				tbl_rich..=rich..`{ss._Separator}\n`
+			else
+				local regular,rich = ConstructorTostring(typeof(v),v)
+				tbl_txt..=regular..`{ss._Separator}\n`
+				tbl_rich..=rich..`{ss._Separator}\n`
+			end
+		end
+		tbl_txt..=string.rep("\t",Level-1).."}"
+		tbl_rich..=string.rep("\t",Level-1).."}"
+		return tbl_txt,tbl_rich
+	end
+	ConstructorTostring_Switch.table=TableTostring
+end
+
+local IgnoredPropertiesList:{[any]:any}
+do
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";}]])
+	if _try and type(ret)=="table" then
+		IgnoredPropertiesList = ret
+	else
+		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";}}
+	end
+end
+
+do
+	local IgnoredProperties_Button_Frame = LowerBar:WaitForChild("Ignored_Properties")
+	local Frame1 = IgnoredProperties_Button_Frame:WaitForChild("Frame1")
+	local Frame2 = IgnoredProperties_Button_Frame:WaitForChild("Frame2")
+	local Button = IgnoredProperties_Button_Frame:WaitForChild("Button")
+	local Exit = Ignored_Properies:WaitForChild("Exit")
+	local EFrame,EFrame1,EFrame2 = Exit:WaitForChild("Frame"),Exit:WaitForChild("Frame1"),Exit:WaitForChild("Frame2")
+	local Import = Ignored_Properies:WaitForChild("Import")
+	local IFrame,IFrame1,IFrame2 = Import:WaitForChild("Frame"),Import:WaitForChild("Frame1"),Import:WaitForChild("Frame2")
+	local ContentScroll = Ignored_Properies:WaitForChild("Content")
+	local Input_txt = ContentScroll:WaitForChild("TextBox")
+	local Input_Rich = Input_txt:WaitForChild("Rich")
+	local function AdjustCanvas():()
+		local sz:Vector2 = TextService:GetTextSize(Input_txt.Text,Input_txt.TextSize,Input_txt.Font,Vector2.new(math.huge,math.huge))
+		ContentScroll.CanvasSize=UDim2.new(0,sz.X,0,sz.Y)
+	end
+	local function AdjustTextSize():()
+		Input_txt.TextSize=ss.CodeOutputTextSize
+		Input_Rich.TextSize=ss.CodeOutputTextSize
+	end
+	Input_txt:GetPropertyChangedSignal("Text"):Connect(AdjustCanvas)
+	Input_txt.Focused:Connect(function()
+		Input_Rich.Visible = false
+		Input_txt.TextTransparency=0
+	end)
+	Input_txt.FocusLost:Connect(function()
+		Input_Rich.Visible = true
+		Input_txt.TextTransparency=0.99
+	end)
+	OnConvert.Event:Connect(AdjustTextSize)
+	task.defer(AdjustCanvas)
+	task.defer(AdjustTextSize)
+	table.insert(BrightestText_Theme,Import)
+	table.insert(BrightestText_Theme,Exit)
+	table.insert(BrightestText_Theme,Button)
+	table.insert(ScriptTextColor_List,Input_txt)
+	table.insert(ScriptTextColor_List,Input_Rich)
+	table.insert(LightThemeColor_List,Ignored_Properies)
+	ContentScroll:SetAttribute("Enabled",true)
+	table.insert(Properties_ItemColor,ContentScroll)
+	local Import_IsHower:boolean = false
+	local Exit_IsHower:boolean = false
+	Button.MouseEnter:Connect(function():()
+		IgnoredProperties_Button_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+	end)
+	Button.MouseLeave:Connect(function():()
+		IgnoredProperties_Button_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+	Exit.MouseEnter:Connect(function():()
+		EFrame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		EFrame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		EFrame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Exit_IsHower=true
+	end)
+	Import.MouseEnter:Connect(function():()
+		IFrame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		IFrame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		IFrame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Import_IsHower=true
+	end)
+	Exit.MouseLeave:Connect(function():()
+		EFrame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		EFrame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		EFrame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Exit_IsHower=false
+	end)
+	Exit.MouseButton1Down:Connect(function()
+		EFrame.BackgroundColor3=LowerBar_Convert_Color_Click
+		EFrame1.BackgroundColor3=LowerBar_Convert_Color_Click
+		EFrame2.BackgroundColor3=LowerBar_Convert_Color_Click
+	end)
+	Exit.MouseButton1Up:Connect(function()
+		if Exit_IsHower then
+			EFrame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			EFrame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			EFrame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		else
+			EFrame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			EFrame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			EFrame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end
+	end)
+	Import.MouseLeave:Connect(function():()
+		IFrame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		IFrame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		IFrame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Import_IsHower=false
+	end)
+	Import.MouseButton1Down:Connect(function()
+		IFrame.BackgroundColor3=LowerBar_Convert_Color_Click
+		IFrame1.BackgroundColor3=LowerBar_Convert_Color_Click
+		IFrame2.BackgroundColor3=LowerBar_Convert_Color_Click
+	end)
+	Import.MouseButton1Up:Connect(function()
+		if Import_IsHower then
+			IFrame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			IFrame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			IFrame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		else
+			IFrame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			IFrame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			IFrame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end
+	end)
+	Button.MouseButton1Click:Connect(function():()
+		task.defer(RemoveSelectionButton)
+		SelectButtonByName(CurrentConvertType)
+		local tab = ViewTabs:FindFirstChild(CurrentConvertType)::Frame?
+		if tab~=nil then
+			tab.Visible = false
+		end
+		Ignored_Properies.Visible=true
+		LowerBar.Visible=false
+	end)
+	Exit.MouseButton1Click:Connect(function():()
+		task.defer(RemoveSelectionButton)
+		SelectButtonByName(CurrentConvertType)
+		Ignored_Properies.Visible=false
+		LowerBar.Visible=true
+	end)
+	local function ApplyTable(tbl:{[any]:any},str:string?):()
+		local tab,tab_rich = ConstructorTostring("table",tbl)
+		Input_txt.Text=tab
+		Input_Rich.Text=tab_rich
+		if str~=nil then
+			IgnoredPropertiesList=tbl
+			plugin:SetSetting("HB_IgnoreProperties",str)
+		end
+	end
+
+	ApplyTable(IgnoredPropertiesList)
+	Import.MouseButton1Click:Connect(function():()
+		--Parse table
+		local txt:string = Input_txt.Text
+		local try,res = pcall(Parser,txt)
+		if try and type(res)=="table" then
+			for i,v in res::{[any]:any} do
+				if type(i)~="string" or type(v)~="table" then
+					warn("Ensure you formatted table properly:",`Type has to be table: \{\n\tClassName{ss._Equal}\{...Banned properties here in array\}\n\}`,"Your example were:",res)
+					return
+				else
+					for ii,vv in v do
+						if type(ii)=="number" and type(vv)=="string" then continue end
+						warn("Ensure you formatted table properly:",`Type has to be table: \{\n\tClassName{ss._Equal}\{...Banned properties here in array\}\n\}`,"Your example were:",res)
+						return
+					end
+				end
+			end
+			ApplyTable(res,txt)
+		elseif try then
+			warn(`Type has to be table: \{\n\tClassName{ss._Equal}\{...Banned properties here in array\}\n\}`)
+		else
+			warn(res)
+		end
+	end)
+end
+local _baseImports:{[number]:{string:any}}
+do
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_BaseImports") or "{}")
+	if _try and type(ret)=="table" then
+		_baseImports=ret
+	else
+		_baseImports = {}
+	end
+end
 
 
-local Hierarchy_Builder,Hierarchy_Builder_Content = CreateTab("Hierarchy Builder","rbxassetid://72069099688057")
-local Raw_Luau,Raw_Luau_Content = CreateTab("Raw Luau","rbxassetid://18606791059")
+local Import_Exit_Frame = Import_Base:WaitForChild("Exit_Frame")
+local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
+local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
+local _backImport_Exit_Frame = Import_Base:WaitForChild("Exit_Back")
+local _backImport_Frame1,_backImport_Frame2 = _backImport_Exit_Frame:WaitForChild("Frame1"),_backImport_Exit_Frame:WaitForChild("Frame2")
+local _backImport_Button = _backImport_Exit_Frame:WaitForChild("Button")
+local _goImport_Exit_Frame = LowerBar:WaitForChild("Open_Base_Frame")
+local _goImport_Frame1,_goImport_Frame2 = _goImport_Exit_Frame:WaitForChild("Frame1"),_goImport_Exit_Frame:WaitForChild("Frame2")
+local _goImport_Button = _goImport_Exit_Frame:WaitForChild("Button")
+table.insert(BrightestText_Theme,_goImport_Button)
+do
+	local Import_box = Import_Base:WaitForChild("Import")
+	local Import_Label = Import_box:WaitForChild("Label")
+	local Insert_Scroll = Import_Base:WaitForChild("Insert_Scroll")
+	local Insert = Insert_Scroll:WaitForChild("Insert")
+	local Imported_Scroll = Import_Base:WaitForChild("Imported_Scroll")
+	local Imported = Imported_Scroll:WaitForChild("Imported")
+	local Rich = Imported:WaitForChild("Rich")
+	local EnterState:boolean = false
+	table.insert(BrightestText_Theme,Import_Label)
+	table.insert(BrightestText_Theme,Import_Button)
+	table.insert(BrightestText_Theme,_backImport_Button)
+	----||Visuals||----
+	Import_box.MouseEnter:Connect(function()
+		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+	end)
+	Import_box.MouseLeave:Connect(function()
+		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+	Import_box.MouseButton1Down:Connect(function()
+		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Click
+	end)
+	Import_box.MouseButton1Up:Connect(function()
+		if EnterState then
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+		else
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end
+	end)
+	local function AdjustTextSize():()
+		Imported.TextSize=ss.CodeOutputTextSize
+		Rich.TextSize=ss.CodeOutputTextSize
+		Insert.TextSize=ss.CodeOutputTextSize
+	end
+	OnConvert.Event:Connect(AdjustTextSize)
+	task.defer(AdjustTextSize)
+	--table.insert(ScriptBackground_List,Insert_Scroll)
+	table.insert(ScriptBackground_List,Insert_Scroll)
+	table.insert(ScriptTextColor_List,Rich)
+	table.insert(ScriptTextColor_List,Imported)
+	table.insert(ScriptTextColor_List,Insert)
+	--strokes
+	table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
+	table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
+	----||-----------------------------------------------||----
+	Insert:GetPropertyChangedSignal("Text"):Connect(function():()
+		local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
+		Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+	end)
+	Insert_Scroll.CanvasSize = UDim2_zero
+	local function ScaleImported():()
+		local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
+		Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+	end
+	Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+	task.defer(ScaleImported)
+
+	Import_box.MouseButton1Click:Connect(function():()
+		--Parse
+		local Insert_txt:string = Insert.Text
+		local try,parsed = pcall(Parser,Insert_txt)
+		if try and type(parsed)=="table" then
+			--Type validation
+			for i,v in parsed::{[any]:any} do
+				if type(i)~="string" or type(v)~="table"  then
+					warn("Ensure you formatted table properly:",`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`,"Your example were:",parsed)
+					return
+				end
+			end
+			_baseImports = parsed
+			local tbl,rich_tbl = ConstructorTostring("table",parsed)
+			Imported.Text = tbl
+			Rich.Text = rich_tbl
+			plugin:SetSetting("HB_BaseImports",Insert_txt)
+		elseif try then
+			warn(`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`)
+		else
+			warn(parsed)
+		end
+	end)
+	local tbl,rich_tbl = ConstructorTostring("table",_baseImports)
+	Imported.Text = tbl
+	Rich.Text = rich_tbl
+
+end
+_goImport_Button.MouseEnter:Connect(function()
+	_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter 
+end)
+_goImport_Button.MouseLeave:Connect(function()
+	_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+end)
+_goImport_Button.MouseButton1Click:Connect(function()
+	task.defer(RemoveSelectionButton)
+	SelectButtonByName(CurrentConvertType)
+	local tab = ViewTabs:FindFirstChild(CurrentConvertType)::Frame?
+	if tab~=nil then
+		tab.Visible = false
+	end
+	Import_Base.Visible=true
+	LowerBar.Visible=false
+end)
+
+_backImport_Button.MouseEnter:Connect(function()
+	_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+	_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+end)
+Import_Button.MouseEnter:Connect(function()
+	Import_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+	Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+	Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+	Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+end)
+_backImport_Button.MouseLeave:Connect(function()
+	_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+	_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+end)
+Import_Button.MouseLeave:Connect(function()
+	Import_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+	Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+	Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+	Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+end)
+Import_Button.MouseButton1Click:Connect(function()
+	task.defer(RemoveSelectionButton)
+	SelectButtonByName(CurrentConvertType)
+	Import_Base.Visible=false
+	LowerBar.Visible=true
+end)
+_backImport_Button.MouseButton1Click:Connect(function()
+	task.defer(RemoveSelectionButton)
+	SelectButtonByName(CurrentConvertType)
+	Import_Base.Visible=false
+	LowerBar.Visible=true
+end)
+
+
+
+
+do
+	local Hierarchy_Builder,Hierarchy_Builder_Content = CreateTab("Hierarchy Builder","rbxassetid://72069099688057")
+	local Raw_Luau,Raw_Luau_Content = CreateTab("Raw Luau","rbxassetid://18606791059")
+	Hierarchy_Builder.Visible=true
+	BuildPropertiesList(Hierarchy_Builder_Content,require(script:WaitForChild("Properties_HierarchyBuilder")))
+	BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
+end
 local Converted_Code,Converted_Code_Content = CreateTab("Converted Code","rbxassetid://46342657")
-Hierarchy_Builder.Visible=true
-BuildPropertiesList(Hierarchy_Builder_Content,require(script:WaitForChild("Properties_HierarchyBuilder")))
-BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
-
-
+do
+	local EvilScroll = Converted_Code_Content.Parent::ScrollingFrame
+	EvilScroll:Destroy()
+end
+--game.Selection:Set{Hierarchy_Builder_Content}
+local CodeOutput_Title = CodeOutput:WaitForChild("TextLabel")::TextLabel	
+local CodeOutput_Scrolling = CodeOutput:WaitForChild("ScrollingFrame")
+local Code = CodeOutput_Scrolling:WaitForChild("Code")::TextBox
+local Rich = CodeOutput_Scrolling:WaitForChild("Rich")::TextLabel
+CodeOutput_Title.TextSize=ss.CodeOutputTextSize
+Rich.TextSize = ss.CodeOutputTextSize
+Code.TextSize = ss.CodeOutputTextSize
+CodeOutput_Title.Text="--CTRL+A and then CTRL+C code below:"
+table.insert(ScriptBackground_List,CodeOutput)
+table.insert(ScriptTextColor_List,Rich)
+table.insert(ScriptTextColor_List,Code)
+table.insert(ScriptComment_List,CodeOutput_Title)
+table.insert(ScrollingFramesScrollBar,CodeOutput_Scrolling)
+CodeOutput.Visible=true
+CodeOutput.Parent=Converted_Code
 
 warn("YAY",Classes,Data)
 for i,v in ViewTabs:GetChildren()::{Frame} do
@@ -1572,30 +2294,81 @@ for i,v in ViewTabs:GetChildren()::{Frame} do
 end
 ThemeChanged()
 
+local function GetTypeOfInstance(ins:Instance):string
+	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
+end
+
+local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,Layer:number,Initiator:true?):(string,string)
+	for i,v in GetProperties(ins) do
+		if i=="Parent" then continue end
+		local type:string = typeof(v)
+		if type=="Instance" then
 
 
-LowerBar_Convert.MouseButton1Click:Connect(function()
-	for i,v in ViewTabs:GetChildren() do
-		if not v:IsA("GuiObject") then continue end
-		v.Visible=false
-		local Button = UpperBar:FindFirstChild(v.Name)::Frame?
-		if Button==nil then continue end
-		Button:SetAttribute("Enabled",false)
-		Button.BackgroundColor3=ItemColor
+			continue
+		end
+		local c_code,c_rich = ConstructorTostring(type,v)
+		code..=`{string.rep("\t",Layer)}{i}{ss._Equal}{c_code}{ss._Separator}\n`
+		riched_code..=`{string.rep("\t",Layer)}{i}{ss._Equal}{c_rich}{ss._Separator}\n`
 	end
-	Converted_Code.Visible=true
-	local Button = UpperBar:FindFirstChild(Converted_Code.Name)::Frame?
-	if Button~=nil then
-		Button:SetAttribute("Enabled",true)
-		Button.BackgroundColor3=ViewPortBackground
+
+	for i,v in ins:GetChildren() do
+		HB_BuildProperties(v,code,riched_code,Layer+1)
 	end
-	print("Converting")
-	
-	
-end)
+	if Initiator~=true then
+		code..=`\n{string.rep("\t",Layer-1)}\}`
+		riched_code..=`\n{string.rep("\t",Layer-1)}\}`
+	end
+	return code,riched_code
+end
+
+local function HierarchyBuilder_Convert(ins:Instance):()
+	local Type:string = GetTypeOfInstance(ins)
+	local code:string = `{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{{(ss._HB_Prop_Type_Newline==false and `Type{ss._Equal}"{Type}"{ss._Separator}`) or ""}\n`
+	local riched_code:string = `{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptFunctionName)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{{(ss._HB_Prop_Type_Newline==false and `Type{ss._Equal}{WriteRichText(`"{Type}"`,ScriptString)}{ss._Separator}`) or ""}\n`
+	code..=(ss._HB_Prop_Type_Newline==true and `\tType{ss._Equal}"{Type}"{ss._Separator}\n`) or ""
+	riched_code..=(ss._HB_Prop_Type_Newline==true and `\tType{ss._Equal}{WriteRichText(`"{Type}"`,ScriptString)}{ss._Separator}\n`) or ""
+	code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)	
+	code..=`\n\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`;riched_code..=`\n\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
+	Rich.Text = riched_code
+	Code.Text = code
+end
+local function RawLuau_Convert(ins:Instance):()
+	Rich.Text = "WIP"
+	Code.Text = "WIP"
+end
+
+local function BegginConvert():()
+	--Mutate variables
+	UpdateSS()
+	OnConvert:Fire()
+	--Configs init
+	Rich.TextSize = ss.CodeOutputTextSize
+	Code.TextSize = ss.CodeOutputTextSize
+	CodeOutput_Title.TextSize=ss.CodeOutputTextSize
+	--
+	local ins = Selection:Get()[1]
+	if ins==nil then warn("Please select any instance to convert") return end
+	if CurrentConvertType=="Hierarchy Builder" then
+		HierarchyBuilder_Convert(ins)
+	elseif CurrentConvertType=="Raw Luau" then
+		RawLuau_Convert(ins)
+	else
+		error("Something unexpected heppened somehow")
+	end
+	local bounds = TextService:GetTextSize(Code.Text,Code.TextSize,Code.Font,Vector2.new(math.huge,math.huge))
+	CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
+	SelectButtonByName("Converted Code")
+end
 
 
-
+do
+	--Connecting convert stuff
+	local ConvertKeybind = plugin:CreatePluginAction("HB_Convert","Convert","Convert","rbxassetid://75358548882112",true)
+	ConvertKeybind.Name = "Convert"
+	LowerBar_Convert.MouseButton1Click:Connect(BegginConvert)
+	ConvertKeybind.Triggered:Connect(BegginConvert)
+end
 
 
 
