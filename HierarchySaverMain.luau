@@ -1763,7 +1763,9 @@ ConstructorTostring_Switch = {
 	end;
 	number = function(data:number,Bypass:true?):(string,string)
 		--constants
-		if data==math.pi then
+		if ss.NanConstant==true and data~=data then
+			return ss.NanConstant_Name,ss.NanConstant_Name
+		elseif data==math.pi then
 			return `math{(ss.IndexingBy=="Dots" and ".pi") or `["pi"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
 		elseif data==math.huge then
 			return `math{(ss.IndexingBy=="Dots" and ".huge") or `["huge"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
