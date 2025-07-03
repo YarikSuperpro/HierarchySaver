@@ -22,8 +22,10 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Selection = game:GetService("Selection")
+local SelectedInstance:Instance? = nil
 local Heartbeat = RunService.Heartbeat
 local Types = require(script:WaitForChild("Types"))
+
 --[[
 Inverse Lerp Interpolation
 Example:
@@ -152,13 +154,13 @@ local LightThemeColor_List:{Frame} = table.create(3)::{Frame}
 local Tab_EnumColor_List:{Frame} = table.create(1)::{Frame}
 local ScriptWhitespaceColorList_FOR_UI_STROKE:{UIStroke} = table.create(3)::{UIStroke}
 local TextButtons_Theme:{TextLabel|TextBox|TextButton} = table.create(20)::{TextLabel|TextBox|TextButton}
-local BrightestText_Theme:{TextLabel|TextBox|TextButton} = table.create(10)::{TextLabel|TextBox|TextButton}
+local BrightestText_Theme:{TextLabel|TextBox|TextButton|ImageLabel|ImageButton} = table.create(10)::{TextLabel|TextBox|TextButton}
 --Display
 local Main = script:WaitForChild("Main")
 local LowerBar = Main:WaitForChild("LowerBar")
 local UpperBar = Main:WaitForChild("UpperBar")
 local ViewTabs = Main:WaitForChild("ViewTabs")
-local Import_Base = Main:WaitForChild("Import_Base")
+
 local Ignored_Properies = Main:WaitForChild("IgnoredProperties")
 local Hint = Main:WaitForChild("Hint")
 local Hint_Label = Hint:WaitForChild("Label")
@@ -168,7 +170,7 @@ table.insert(Tab_EnumColor_List,Hint)
 table.insert(TextButtons_Theme,Hint_Label)
 table.insert(LightThemeColor_List,UpperBar)
 table.insert(LightThemeColor_List,ViewTabs)
-table.insert(LightThemeColor_List,Import_Base)
+
 --Lists
 local TabViewports:{Frame} = {}
 
@@ -282,6 +284,7 @@ local ScriptComment:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Scr
 local ScriptBool:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBool)
 local ScriptFunction:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunction)
 local ScriptFunctionName:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunctionName)
+local ScriptMethod:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptMethod)
 local ScriptLuauKeyword:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLuauKeyword)
 local ScriptLocal:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLocal)
 local ScriptNil:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNil)
@@ -337,6 +340,7 @@ local function ThemeChanged():()
 	ScriptBool = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBool)
 	ScriptFunction = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunction)
 	ScriptFunctionName = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptFunctionName)
+	ScriptMethod = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptMethod)
 	ScriptLuauKeyword = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLuauKeyword)
 	ScriptLocal = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptLocal)
 	ScriptNil = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptNil)
@@ -349,6 +353,10 @@ local function ThemeChanged():()
 	LightThemeColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Light)
 	Tab_EnumColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tab)
 	for i,v in BrightestText_Theme do
+		if v:IsA("ImageLabel") or v:IsA("ImageButton") then
+			v.ImageColor3=BrightText
+			continue
+		end
 		v.TextColor3=BrightText
 	end
 	for i,v in BorderColorUI_StrokeList do
@@ -524,7 +532,7 @@ local function SelectButtonByName(name:string):()
 		button.BackgroundColor3=ViewPortBackground
 	end
 	RemoveSelectionButton()
-	if name~="Converted Code" then CurrentConvertType = name end
+	if name~="Converted Code" and name~="Shared Settings" then CurrentConvertType = name end
 end
 local OnConvert:BindableEvent = Instance.new("BindableEvent")
 local UncollapseCategoryies:BindableEvent = Instance.new("BindableEvent")
@@ -1677,6 +1685,17 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):(
 	end
 	task.defer(Updater.Fire,Updater)
 end
+local CachedConstants:{[any]:string}
+do
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_cachedConstants") or "{}")
+	if _try and type(ret)=="table" then
+		CachedConstants=ret
+	else
+		CachedConstants = {}
+	end
+end
+
+
 local escape:{[string]:string} = {
 	['&'] = '&amp;',
 	['<'] = '&lt;',
@@ -1688,9 +1707,14 @@ local function WriteRichText(str:string,color:Color3):string
 	return `<font color = "#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
 end
 
-local ConstructorTostring_Switch:{[string]:(data:any,number?)->(string,string)}
-local function ConstructorTostring(type:string,data:any):(string,string)
-	return (ConstructorTostring_Switch[type] or ConstructorTostring_Switch["_Default"])(data)
+local ConstructorTostring_Switch:{[string]:(data:any,true?)->(string,string)}
+local function ConstructorTostring(type:string,data:any,Bypass:true?):(string,string)
+	if Bypass~=true then
+		for i,v in CachedConstants do
+			if data==i then return tostring(v),tostring(v) end
+		end
+	end
+	return (ConstructorTostring_Switch[type] or ConstructorTostring_Switch["_Default"])(data,Bypass)
 end
 --[[Number you want to round]]
 local function Round(x:number):number
@@ -1709,20 +1733,20 @@ local function ToMatrixUnit(x:number):(string,string)
 		return tostring(x),select(2,ConstructorTostring("number",x))
 	elseif ss.MatrixCFrameMeasurements=="Balance" then
 		local mul = x/math.pi
-		if #tostring(mul%1)<6 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 		local sub = math.pi/x
-		if #tostring(sub%1)<6 then 
+		if #tostring(sub%1)<7 then 
 			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 		else
 			return `math{(ss.IndexingBy=="Dots" and ".rad") or "[\"rad\"]"}({deg})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
 		end
 	else--Radians
 		local mul = x/math.pi
-		if #tostring(mul%1)<6 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 		local sub = math.pi/x
-		if #tostring(sub%1)<6 then 
+		if #tostring(sub%1)<7 then 
 			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 		else
 			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
@@ -1730,14 +1754,24 @@ local function ToMatrixUnit(x:number):(string,string)
 	end
 end
 ConstructorTostring_Switch = {
-	EnumItem = function(data:EnumItem):(string,string)
+	EnumItem = function(data:EnumItem,Bypass:true?):(string,string)
 		if ss.IndexingBy=="Dots" then
 			return tostring(data),`{WriteRichText("Enum",ScriptBuiltInFunction)}.{WriteRichText(tostring(data.EnumType),ScriptBuiltInFunction)}.{WriteRichText(data.Name,ScriptProperty)}`
 		else
-			return `Enum[{ConstructorTostring("string",tostring(data.EnumType))}][{ConstructorTostring("string",tostring(data.Name))}]`,`{WriteRichText("Enum",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string",tostring(data.EnumType)))}][{select(2,ConstructorTostring("string",tostring(data.Name)))}]`
+			return `Enum[{ConstructorTostring("string",tostring(data.EnumType),Bypass)}][{ConstructorTostring("string",tostring(data.Name),Bypass)}]`,`{WriteRichText("Enum",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string",tostring(data.EnumType),Bypass))}][{select(2,ConstructorTostring("string",tostring(data.Name),Bypass))}]`
 		end
 	end;
-	number = function(data:number):(string,string)
+	number = function(data:number,Bypass:true?):(string,string)
+		--constants
+		if data==math.pi then
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or `["pi"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
+		elseif data==math.huge then
+			return `math{(ss.IndexingBy=="Dots" and ".huge") or `["huge"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
+		elseif data~=data then
+			return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
+		end
+		--Numbers
+		data = math.round(data*1_000_000)/1_000_000
 		return tostring(data),WriteRichText(tostring(data),ScriptNumber)
 	end;
 	boolean = function(data:boolean):(string,string)
@@ -1746,105 +1780,140 @@ ConstructorTostring_Switch = {
 	["nil"] = function(data:nil):(string,string)
 		return "nil",WriteRichText("nil",ScriptNil)
 	end;
-	Vector2 = function(data:Vector2):(string,string)
+	Vector2 = function(data:Vector2,Bypass:true?):(string,string)
+		--Constants
+		if data==Vector2.one then
+			return `Vector2{(ss.IndexingBy=="Dots" and ".one") or `["one"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one"))}]`}`
+		elseif data==Vector2.zero then
+			return `Vector2{(ss.IndexingBy=="Dots" and ".zero") or `["zero"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero"))}]`}`
+		elseif data==Vector2.xAxis then
+			return `Vector2{(ss.IndexingBy=="Dots" and ".xAxis") or `["xAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis"))}]`}`
+		elseif data==Vector2.yAxis then
+			return `Vector2{(ss.IndexingBy=="Dots" and ".yAxis") or `["yAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis"))}]`}`
+		end
+		--Vector2
 		local X,Y = Round(data.X),Round(data.Y)
-		return `Vector2{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))})`
+		return `Vector2{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))})`
 	end;
-	Vector2int16 = function(data:Vector2):(string,string)
-		return `Vector2int16{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({data.X}{ss.FuncSeparator}{data.Y})`,`{WriteRichText("Vector2int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y))})`
+	Vector2int16 = function(data:Vector2,Bypass:true?):(string,string)
+		return `Vector2int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)})`,`{WriteRichText("Vector2int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))})`
 	end;
-	Vector3 = function(data:Vector3):(string,string)
+	Vector3 = function(data:Vector3,Bypass:true?):(string,string)
 		local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
 		if ss.VectorLibUse=="vector" then
-			return `vector{(ss.IndexingBy=="Dots" and ".create") or `["create"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("create",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","create"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			--constants
+			if data==Vector3.one then
+				return `vector{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
+			elseif data==Vector3.zero then
+				return `vector{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
+			end
+			--vectors
+			return `vector{(ss.IndexingBy=="Dots" and ".create") or `[{ConstructorTostring("string","create",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("create",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","create",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
 		else
+			--constants
+			if data==Vector3.one then
+				return `Vector3{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
+			elseif data==Vector3.zero then
+				return `Vector3{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
+			elseif data==Vector3.xAxis then
+				return `Vector3{(ss.IndexingBy=="Dots" and ".xAxis") or `[{ConstructorTostring("string","xAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis",Bypass))}]`}`
+			elseif data==Vector3.yAxis then
+				return `Vector3{(ss.IndexingBy=="Dots" and ".yAxis") or `[{ConstructorTostring("string","yAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis",Bypass))}]`}`
+			elseif data==Vector3.zAxis then
+				return `Vector3{(ss.IndexingBy=="Dots" and ".zAxis") or `[{ConstructorTostring("string","zAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zAxis",Bypass))}]`}`
+			end
 			--Vector3
-			return `Vector3{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			return `Vector3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
 		end
 	end;
-	Vector3int16 = function(data:Vector3int16):(string,string)
-		return `Vector3int16{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({data.X}{ss.FuncSeparator}{data.Y}{ss.FuncSeparator}{data.Z})`,`{WriteRichText("Vector3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Z))})`
+	Vector3int16 = function(data:Vector3int16,Bypass:true?):(string,string)
+		return `Vector3int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Z,Bypass)})`,`{WriteRichText("Vector3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Z,Bypass))})`
 	end;
-	BrickColor = function(data:BrickColor):(string,string)
-		return `BrickColor{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({ConstructorTostring("string",data.Name)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",data.Name))})`
+	BrickColor = function(data:BrickColor,Bypass:true?):(string,string)
+		return `BrickColor{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Name,Bypass)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Name,Bypass))})`
 	end;
-	Color3 = function(data:Color3):(string,string)
+	Color3 = function(data:Color3,Bypass:true?):(string,string)
 		if ss.Color3Format=="Color3_new" then
 			local R,G,B = math.round(data.R*1_000_000)/1_000_000,math.round(data.G*1_000_000)/1_000_000,math.round(data.B*1_000_000)/1_000_000
-			return `Color3{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			return `Color3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
 		elseif ss.Color3Format=="Color3_fromRGB" then
 			local R,G,B = math.round(data.R*255),math.round(data.G*255),math.round(data.B*255)
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromRGB") or `["fromRGB"]`}({R}{ss.FuncSeparator}{G}{ss.FuncSeparator}{B})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromRGB",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromRGB"))}]`}({select(2,ConstructorTostring("number",R))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B))})`
+			return `Color3{(ss.IndexingBy=="Dots" and ".fromRGB") or `[{ConstructorTostring("string","fromRGB",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromRGB",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromRGB",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
 		elseif ss.Color3Format=="Color3_fromHEX" then
 			local HEX:string = `#{data:ToHex()}`
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromHex") or `["fromHex"]`}({HEX})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHex",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHex"))}]`}({select(2,ConstructorTostring("string",HEX))})`
+			return `Color3{(ss.IndexingBy=="Dots" and ".fromHex") or `[{ConstructorTostring("string","fromHex",Bypass)}]`}({ConstructorTostring("string",HEX,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHex",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHex",Bypass))}]`}({select(2,ConstructorTostring("string",HEX,Bypass))})`
 		else--Color3_fromHSV
 			local H,S,V = data:ToHSV()
 			H,S,V = math.round(H*1_000_000)/1_000_000,math.round(S*1_000_000)/1_000_000,math.round(V*1_000_000)/1_000_000
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromHSV") or `["fromHSV"]`}({H}{ss.FuncSeparator}{S}{ss.FuncSeparator}{V})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHSV",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHSV"))}]`}({select(2,ConstructorTostring("number",H))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",S))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",V))})`
+			return `Color3{(ss.IndexingBy=="Dots" and ".fromHSV") or `[{ConstructorTostring("string","fromHSV",Bypass)}]`}({ConstructorTostring("number",H,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",S,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",V,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHSV",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHSV",Bypass))}]`}({select(2,ConstructorTostring("number",H,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",S,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",V,Bypass))})`
 		end
 	end;
-	CFrame = function(data:CFrame):(string,string)
+	CFrame = function(data:CFrame,Bypass:true?):(string,string)
+		--Empty cframe
+		if data==CFrame.identity then
+			return `CFrame{(ss.IndexingBy=="Dots" and ".identity") or `[{ConstructorTostring("string","identity",Bypass)}]`}`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("identity",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","identity",Bypass))}]`}`
+		end
+		--CFrame
 		local x,y,z = data:ToOrientation()
 		if x==0 and y==0 and z==0 then--No rotation
 			local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
-			return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))})`
+			return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
 		elseif data.Position.Magnitude==0 then--No position
 			if ss.CFrameFormatting=="CFrameNewYXZRotation" then
 				local rX,rX_rich = ToMatrixUnit(x)
 				local rY,rY_rich = ToMatrixUnit(y)
 				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `["fromEulerAnglesYXZ"]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ"))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `[{ConstructorTostring("string","fromEulerAnglesYXZ",Bypass)}]`}({ConstructorTostring("number",rX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rZ,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ",Bypass))}]`}({select(2,ConstructorTostring("number",rX_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rY_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rZ_rich,Bypass))})`
 			elseif ss.CFrameFormatting=="CFrameNewPlusAngles" then
 				x,y,z = data:ToEulerAnglesXYZ()
 				local rX,rX_rich = ToMatrixUnit(x)
 				local rY,rY_rich = ToMatrixUnit(y)
 				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `["Angles"]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles"))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({ConstructorTostring("number",rX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rZ,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({select(2,ConstructorTostring("number",rX_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rY_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rZ_rich,Bypass))})`
 			else--RawCFrameNew
 				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
 				X,Y,Z = Round(X),Round(Y),Round(Z)
-				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}{ss.FuncSeparator}{R00}{ss.FuncSeparator}{R01}{ss.FuncSeparator}{R02}{ss.FuncSeparator}{R10}{ss.FuncSeparator}{R11}{ss.FuncSeparator}{R12}{ss.FuncSeparator}{R20}{ss.FuncSeparator}{R21}{ss.FuncSeparator}{R22})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22))})`
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
 			end
 		else--Has rotation and position
 			if ss.CFrameFormatting=="CFrameNewYXZRotation" or ss.CFrameFormatting=="CFrameNewPlusAngles" then
 				local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
 				local txt,rich = ConstructorTostring("CFrame",data.Rotation)
-				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}){ss.Mult}{txt}`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}){ss.Mult}{rich}`
+				return `{(ss.FastNamecall==true and `{ss.NC_CfrMul}(`) or ""}CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{txt}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}CFrame`) or ""}`) or ""}`,`{(ss.FastNamecall==true and `{WriteRichText(ss.NC_CfrMul,ScriptMethod)}(`) or ""}{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{rich}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("CFrame",Color3.new(0,1,1))}`) or ""}`) or ""}`
 			else--RawCFrameNew
 				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
 				X,Y,Z = Round(X),Round(Y),Round(Z)
-				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}({X}{ss.FuncSeparator}{Y}{ss.FuncSeparator}{Z}{ss.FuncSeparator}{R00}{ss.FuncSeparator}{R01}{ss.FuncSeparator}{R02}{ss.FuncSeparator}{R10}{ss.FuncSeparator}{R11}{ss.FuncSeparator}{R12}{ss.FuncSeparator}{R20}{ss.FuncSeparator}{R21}{ss.FuncSeparator}{R22})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22))})`
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
 			end
 		end
 	end;
-	Axes = function(data:Axes):(string,string)
-		return `Axes{(ss.IndexingBy=="Dots" and ".new") or `["new"]`}()`,`{WriteRichText("Axes",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}()`
+	Axes = function(data:Axes,Bypass:true?):(string,string)
+		return `Axes{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}()`,`{WriteRichText("Axes",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}()`
 	end;
-	ColorSequenceKeypoint = function(data:ColorSequenceKeypoint):(string,string)
+	ColorSequenceKeypoint = function(data:ColorSequenceKeypoint,Bypass:true?):(string,string)
 		local color,rich = ConstructorTostring("Color3",data.Value)
-		return `ColorSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Time}{ss.FuncSeparator}{color})`,`{WriteRichText("ColorSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Time))}{ss.FuncSeparator}{rich})`
+		return `ColorSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{color})`,`{WriteRichText("ColorSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{rich})`
 	end;
-	ColorSequence = function(data:ColorSequence):(string,string)
+	ColorSequence = function(data:ColorSequence,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		if #data.Keypoints>=3 then
 			txt,rich = "{","{"
 			for i,v in data.Keypoints do
-				local t,r = ConstructorTostring("ColorSequenceKeypoint",v)
+				local t,r = ConstructorTostring("ColorSequenceKeypoint",v,Bypass)
 				txt..=`{t}{ss._Separator}`
 				rich..=`{r}{ss._Separator}`
 			end
 			txt..="}";rich..="}"
 		elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
-			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value)}{ss.FuncSeparator}{ConstructorTostring("Color3",data.Keypoints[2].Value)}`
-			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value))}{ss.FuncSeparator}{select(2,ConstructorTostring("Color3",data.Keypoints[2].Value))}`
+			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass)}`
+			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass))}`
 		else--1
-			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value)}`
-			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value))}`
+			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}`
+			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}`
 		end
-		return `ColorSequence{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("ColorSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `ColorSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("ColorSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	Faces = function(data:Faces):(string,string)
+	Faces = function(data:Faces,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		for i,v in Enum.NormalId:GetEnumItems() do
 			if (data :: any)[v.Name] then
@@ -1852,105 +1921,128 @@ ConstructorTostring_Switch = {
 					txt..=ss.FuncSeparator
 					rich..=ss.FuncSeparator
 				end
-				txt..=ConstructorTostring("EnumItem",v);rich..=select(2,ConstructorTostring("EnumItem",v))
+				txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
 			end
 		end
-		return `Faces{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("Faces",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `Faces{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Faces",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	FloatCurveKey = function(data:FloatCurveKey):(string,string)
-		return `FloatCurveKey{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Time}{ss.FuncSeparator}{data.Value}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Interpolation)})`,`{WriteRichText("FloatCurveKey",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Time))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Interpolation))})`	
+	FloatCurveKey = function(data:FloatCurveKey,Bypass:true?):(string,string)
+		return `FloatCurveKey{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Interpolation,Bypass)})`,`{WriteRichText("FloatCurveKey",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Interpolation,Bypass))})`	
 	end;
-	Font = function(data:Font):(string,string)
-		return `Font{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({ConstructorTostring("string",data.Family)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Weight)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Style)})`,`{WriteRichText("Font",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",data.Family))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Weight))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Style))})`
+	Font = function(data:Font,Bypass:true?):(string,string)
+		return `Font{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Family,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Weight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Style,Bypass)})`,`{WriteRichText("Font",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Family,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Weight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Style,Bypass))})`
 	end;
-	NumberRange = function(data:NumberRange):(string,string)
-		return `NumberRange{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({(data.Min==data.Max and `{data.Max}`) or `{data.Min}{ss.FuncSeparator}{data.Max}`})`,`{WriteRichText("NumberRange",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({(data.Min==data.Max and `{select(2,ConstructorTostring("number",data.Max))}`) or `{select(2,ConstructorTostring("number",data.Min))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max))}`})`
+	NumberRange = function(data:NumberRange,Bypass:true?):(string,string)
+		return `NumberRange{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({(data.Min==data.Max and `{ConstructorTostring("number",data.Max,Bypass)}`) or `{ConstructorTostring("number",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max,Bypass)}`})`,`{WriteRichText("NumberRange",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({(data.Min==data.Max and `{select(2,ConstructorTostring("number",data.Max,Bypass))}`) or `{select(2,ConstructorTostring("number",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max,Bypass))}`})`
 	end;
-	NumberSequenceKeypoint = function(data:NumberSequenceKeypoint):(string,string)
-		return `NumberSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Time}{ss.FuncSeparator}{data.Value}{(data.Envelope~=0 and `{ss.FuncSeparator}{data.Envelope}`) or ""})`,`{WriteRichText("NumberSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Time))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value))}{(data.Envelope~=0 and `{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Envelope))}`) or ""})`
+	NumberSequenceKeypoint = function(data:NumberSequenceKeypoint,Bypass:true?):(string,string)
+		return `NumberSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{(data.Envelope~=0 and `{ss.FuncSeparator}{ConstructorTostring("number",data.Envelope,Bypass)}`) or ""})`,`{WriteRichText("NumberSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{(data.Envelope~=0 and `{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Envelope,Bypass))}`) or ""})`
 	end;
-	NumberSequence = function(data:NumberSequence):(string,string)
+	NumberSequence = function(data:NumberSequence,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		if #data.Keypoints>=3 then
 			txt,rich = "{","{"
 			for i,v in data.Keypoints do
-				local t,r = ConstructorTostring("NumberSequenceKeypoint",v)
+				local t,r = ConstructorTostring("NumberSequenceKeypoint",v,Bypass)
 				txt..=`{t}{ss._Separator}`
 				rich..=`{r}{ss._Separator}`
 			end
 			txt..="}";rich..="}"
 		elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
-			txt = `{data.Keypoints[1].Value}{ss.FuncSeparator}{data.Keypoints[2].Value}`
-			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Keypoints[2].Value))}`
+			txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Keypoints[2].Value,Bypass)}`
+			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Keypoints[2].Value,Bypass))}`
 		else--1
-			txt = `{data.Keypoints[1].Value}`
-			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value))}`
+			txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}`
+			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}`
 		end
-		return `NumberSequence{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("NumberSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `NumberSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("NumberSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	Path2DControlPoint = function(data:Path2DControlPoint):(string,string)
+	Path2DControlPoint = function(data:Path2DControlPoint,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		if data.LeftTangent~=UDim2_zero and data.RightTangent~=UDim2_zero then
 			--Full constructor
-			txt = `{ConstructorTostring("UDim2",data.Position)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.LeftTangent)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.RightTangent)}`
-			rich = `{select(2,ConstructorTostring("UDim2",data.Position))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.LeftTangent))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.RightTangent))}`
+			txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.LeftTangent,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.RightTangent,Bypass)}`
+			rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.LeftTangent,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.RightTangent,Bypass))}`
 		elseif data.Position~=UDim2_zero then
 			--Position only
-			txt = `{ConstructorTostring("UDim2",data.Position)}`
-			rich = `{select(2,ConstructorTostring("UDim2",data.Position))}`
+			txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}`
+			rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}`
 		end
-		return `Path2DControlPoint{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("Path2DControlPoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `Path2DControlPoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Path2DControlPoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	PathWaypoint = function(data:PathWaypoint):(string,string)
-		return `PathWaypoint{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({ConstructorTostring("Vector3",data.Position)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Action)}{(data.Label~="" and `{ss.FuncSeparator}{ConstructorTostring("string",data.Label)}`) or ""})`,`{WriteRichText("PathWaypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("Vector3",data.Position))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Action))}{(data.Label~="" and `{ss.FuncSeparator}{select(2,ConstructorTostring("string",data.Label))}`) or ""})`
+	PathWaypoint = function(data:PathWaypoint,Bypass:true?):(string,string)
+		return `PathWaypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Action,Bypass)}{(data.Label~="" and `{ss.FuncSeparator}{ConstructorTostring("string",data.Label,Bypass)}`) or ""})`,`{WriteRichText("PathWaypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Action,Bypass))}{(data.Label~="" and `{ss.FuncSeparator}{select(2,ConstructorTostring("string",data.Label,Bypass))}`) or ""})`
 	end;
-	PhysicalProperties = function(data:PhysicalProperties):(string,string)
+	PhysicalProperties = function(data:PhysicalProperties,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		for i,v in Enum.Material:GetEnumItems() do
 			if data==PhysicalProperties.new(v) then
-				txt = `{ConstructorTostring("EnumItem",v)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",v))}`
+				txt = `{ConstructorTostring("EnumItem",v,Bypass)}`
+				rich = `{select(2,ConstructorTostring("EnumItem",v,Bypass))}`
 				break
 			end
 		end
 		if txt=="" then
 			if data.FrictionWeight==1 and data.ElasticityWeight==1 then--3 args
-				txt = `{ConstructorTostring("EnumItem",data.Density)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",data.Density))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity))}`
+				txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}`
+				rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}`
 			else--All args
-				txt = `{ConstructorTostring("EnumItem",data.Density)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.FrictionWeight)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.ElasticityWeight)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",data.Density))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.FrictionWeight))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.ElasticityWeight))}`
+				txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.FrictionWeight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass)}`
+				rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.FrictionWeight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass))}`
 			end
 		end
-		return `PhysicalProperties{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("PhysicalProperties",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `PhysicalProperties{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("PhysicalProperties",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	Ray = function(data:Ray):(string,string)
-		return `Ray{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({ConstructorTostring("Vector3",data.Origin)}{ss.FuncSeparator}{ConstructorTostring("Vector3",data.Direction)})`,`{WriteRichText("Ray",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("Vector3",data.Origin))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",data.Direction))})`
+	Ray = function(data:Ray,Bypass:true?):(string,string)
+		return `Ray{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Origin,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",data.Direction,Bypass)})`,`{WriteRichText("Ray",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Origin,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",data.Direction,Bypass))})`
 	end;
-	Rect = function(data:Rect):(string,string)
+	Rect = function(data:Rect,Bypass:true?):(string,string)
 		local txt,rich = "",""
 		if data~=Rect_zero then
-			txt = `{data.Min.X}{ss.FuncSeparator}{data.Min.Y}{ss.FuncSeparator}{data.Max.X}{ss.FuncSeparator}{data.Max.Y}`
-			rich = `{select(2,ConstructorTostring("number",data.Min.X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Min.Y))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.X))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.Y))}`
+			txt = `{ConstructorTostring("number",data.Min.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Min.Y)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.Y,Bypass)}`
+			rich = `{select(2,ConstructorTostring("number",data.Min.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Min.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.Y,Bypass))}`
 		end
-		return `Rect{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({txt})`,`{WriteRichText("Rect",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({rich})`
+		return `Rect{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Rect",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
-	Region3 = function(data:Region3):(string,string)
+	Region3 = function(data:Region3,Bypass:true?):(string,string)
 		local min,max = data.CFrame.Position-data.Size*0.5,data.CFrame.Position+data.Size*0.5
-		return `Region3{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({ConstructorTostring("Vector3",min)}{ss.FuncSeparator}{ConstructorTostring("Vector3",max)})`,`{WriteRichText("Region3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("Vector3",min))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",max))})`
+		return `Region3{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",max,Bypass)})`,`{WriteRichText("Region3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",max,Bypass))})`
 	end;
-	Region3int16 = function(data:Region3int16):(string,string)
-		return `Region3int16{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({ConstructorTostring("Vector3int16",data.Min)}{ss.FuncSeparator}{ConstructorTostring("Vector3int16",data.Max)})`,`{WriteRichText("Region3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("Vector3int16",data.Min))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3int16",data.Max))})`
+	Region3int16 = function(data:Region3int16,Bypass:true?):(string,string)
+		return `Region3int16{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3int16",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3int16",data.Max,Bypass)})`,`{WriteRichText("Region3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3int16",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3int16",data.Max,Bypass))})`
 	end;
-	UDim = function(data:UDim):(string,string)
-		return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.Scale}{ss.FuncSeparator}{data.Offset})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset))})`
+	UDim = function(data:UDim,Bypass:true?):(string,string)
+		return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Offset,Bypass)})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset,Bypass))})`
 	end;
-	UDim2 = function(data:UDim2):(string,string)
-		return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `["new"]`}({data.X.Scale}{ss.FuncSeparator}{data.X.Offset}{ss.FuncSeparator}{data.Y.Scale}{ss.FuncSeparator}{data.Y.Offset})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("number",data.X.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset))})`
+	UDim2 = function(data:UDim2,Bypass:true?):(string,string)
+		return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
 	end;
 	string = function(data:string):(string,string)
-		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f")
+		--Its for a joke mainly idk why i added that
+		if ss.HexademicalString==true then
+			local ret:string = ""
+			for char in string.gmatch(data, ".") do
+				ret ..= `\\x{string.format("%x", utf8.codepoint(char))}`
+			end
+			return `"{ret}"`,WriteRichText(`"{ret}"`,ScriptString)
+		end
+		-------------------------------------
+		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"","\\\"")
 		return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
+	end;
+	SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
+		local txt,rich = "",""
+		for i,v in Enum.SecurityCapability:GetEnumItems() do
+			if data:Contains(v) then
+				if txt~="" then
+					txt..=ss.FuncSeparator
+					rich..=ss.FuncSeparator
+				end
+				txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
+			end
+		end
+		txt=string.sub(txt,#ss.FuncSeparator,-1);rich=string.sub(rich,#ss.FuncSeparator,-1)
+		return `SecurityCapabilities{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("SecurityCapabilities",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
 	end;
 	_Default = function(data:any):(string,string)
 		return tostring(data),WriteRichText(tostring(data),ScriptLuauKeyword)
@@ -1958,12 +2050,12 @@ ConstructorTostring_Switch = {
 }::typeof(ConstructorTostring_Switch)
 
 do
-	local function TableTostring(tbl:{[any]:any},Level:number?):(string,string)
+	local function TableTostring(tbl:{[any]:any},Bypass:true?,Level:number?):(string,string)
 		local Level = (Level or 1)::number
 		local tbl_txt,tbl_rich = "{\n","{\n"
 		for i,v in tbl do
 			if type(i)~="number" then
-				local regular,rich = ConstructorTostring(typeof(i),i)
+				local regular,rich = ConstructorTostring(typeof(i),i,true)
 				tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
 				tbl_rich..=`{string.rep("\t",Level)}[{rich}]{ss._Equal}`
 			else
@@ -1971,11 +2063,11 @@ do
 				tbl_rich..=string.rep("\t",Level)
 			end
 			if type(v)=="table" then
-				local regular,rich = TableTostring(v::{[any]:any},Level+1)
+				local regular,rich = TableTostring(v::{[any]:any},Bypass,Level+1)
 				tbl_txt..=regular..`{ss._Separator}\n`
 				tbl_rich..=rich..`{ss._Separator}\n`
 			else
-				local regular,rich = ConstructorTostring(typeof(v),v)
+				local regular,rich = ConstructorTostring(typeof(v),v,true)
 				tbl_txt..=regular..`{ss._Separator}\n`
 				tbl_rich..=rich..`{ss._Separator}\n`
 			end
@@ -1984,7 +2076,20 @@ do
 		tbl_rich..=string.rep("\t",Level-1).."}"
 		return tbl_txt,tbl_rich
 	end
-	ConstructorTostring_Switch.table=TableTostring
+	
+	ConstructorTostring_Switch.table=function(tbl:{[any]:any},Bypass:true?):(string,string)
+		return TableTostring(tbl,Bypass)
+	end
+end
+local pathMacro:{[Instance]:string}
+do
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_pathMacro") or "{}")
+	if _try and type(ret)=="table" then
+		pathMacro=ret
+	else
+		pathMacro = {}
+	end
+
 end
 
 local IgnoredPropertiesList:{[any]:any}
@@ -2124,7 +2229,7 @@ do
 		LowerBar.Visible=true
 	end)
 	local function ApplyTable(tbl:{[any]:any},str:string?):()
-		local tab,tab_rich = ConstructorTostring("table",tbl)
+		local tab,tab_rich = ConstructorTostring("table",tbl,true)
 		Input_txt.Text=tab
 		Input_Rich.Text=tab_rich
 		if str~=nil then
@@ -2159,7 +2264,7 @@ do
 		end
 	end)
 end
-local _baseImports:{[number]:{string:any}}
+local _baseImports:{[string]:{string:any}}
 do
 	local _try,ret = pcall(Parser,plugin:GetSetting("HB_BaseImports") or "{}")
 	if _try and type(ret)=="table" then
@@ -2169,169 +2274,525 @@ do
 	end
 end
 
-
-local Import_Exit_Frame = Import_Base:WaitForChild("Exit_Frame")
-local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
-local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
-local _backImport_Exit_Frame = Import_Base:WaitForChild("Exit_Back")
-local _backImport_Frame1,_backImport_Frame2 = _backImport_Exit_Frame:WaitForChild("Frame1"),_backImport_Exit_Frame:WaitForChild("Frame2")
-local _backImport_Button = _backImport_Exit_Frame:WaitForChild("Button")
-local _goImport_Exit_Frame = LowerBar:WaitForChild("Open_Base_Frame")
-local _goImport_Frame1,_goImport_Frame2 = _goImport_Exit_Frame:WaitForChild("Frame1"),_goImport_Exit_Frame:WaitForChild("Frame2")
-local _goImport_Button = _goImport_Exit_Frame:WaitForChild("Button")
-table.insert(BrightestText_Theme,_goImport_Button)
-do
-	local Import_box = Import_Base:WaitForChild("Import")
-	local Import_Label = Import_box:WaitForChild("Label")
-	local Insert_Scroll = Import_Base:WaitForChild("Insert_Scroll")
-	local Insert = Insert_Scroll:WaitForChild("Insert")
-	local Imported_Scroll = Import_Base:WaitForChild("Imported_Scroll")
-	local Imported = Imported_Scroll:WaitForChild("Imported")
-	local Rich = Imported:WaitForChild("Rich")
-	local EnterState:boolean = false
-	table.insert(BrightestText_Theme,Import_Label)
-	table.insert(BrightestText_Theme,Import_Button)
-	table.insert(BrightestText_Theme,_backImport_Button)
-	----||Visuals||----
-	Import_box.MouseEnter:Connect(function()
-		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
-	end)
-	Import_box.MouseLeave:Connect(function()
-		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
-	end)
-	Import_box.MouseButton1Down:Connect(function()
-		Import_Label.BackgroundColor3=LowerBar_Convert_Color_Click
-	end)
-	Import_box.MouseButton1Up:Connect(function()
-		if EnterState then
-			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
-		else
-			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
-		end
-	end)
-	local function AdjustTextSize():()
-		Imported.TextSize=ss.CodeOutputTextSize
-		Rich.TextSize=ss.CodeOutputTextSize
-		Insert.TextSize=ss.CodeOutputTextSize
-	end
-	OnConvert.Event:Connect(AdjustTextSize)
-	task.defer(AdjustTextSize)
-	--table.insert(ScriptBackground_List,Insert_Scroll)
-	table.insert(ScriptBackground_List,Insert_Scroll)
-	table.insert(ScriptTextColor_List,Rich)
-	table.insert(ScriptTextColor_List,Imported)
-	table.insert(ScriptTextColor_List,Insert)
-	--strokes
-	table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
-	table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
-	----||-----------------------------------------------||----
-	Insert:GetPropertyChangedSignal("Text"):Connect(function():()
-		local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
-		Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
-	end)
-	Insert_Scroll.CanvasSize = UDim2_zero
-	local function ScaleImported():()
-		local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
-		Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
-	end
-	Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
-	task.defer(ScaleImported)
-
-	Import_box.MouseButton1Click:Connect(function():()
-		--Parse
-		local Insert_txt:string = Insert.Text
-		local try,parsed = pcall(Parser,Insert_txt)
-		if try and type(parsed)=="table" then
-			--Type validation
-			for i,v in parsed::{[any]:any} do
-				if type(i)~="string" or type(v)~="table"  then
-					warn("Ensure you formatted table properly:",`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`,"Your example were:",parsed)
-					return
-				end
+(function()-- Import_Base (register limit)
+	local Import_Base = Main:WaitForChild("Import_Base")
+	local Import_Constants = Main:WaitForChild("Import_Constants")
+	local Import_Macro = Main:WaitForChild("Import_PathMacro")
+	local _base = Import_Base:WaitForChild("_base")
+	table.insert(LightThemeColor_List,Import_Base)
+	table.insert(LightThemeColor_List,Import_Constants)
+	table.insert(LightThemeColor_List,Import_Macro)
+	do--Buttons
+		local __Buttons = Import_Base:WaitForChild("Buttons")
+		local Buttons = __Buttons:WaitForChild("Buttons")
+		local CachedConsts = Buttons:WaitForChild("CachedConsts")
+		local PathMacro = Buttons:WaitForChild("PathMacro")
+		local _txtCachedConsts = CachedConsts:WaitForChild("TextLabel")
+		local _txtPathMacro = PathMacro:WaitForChild("TextLabel")
+		local db_PathMacro:boolean = false
+		local db_CachedConsts:boolean = false
+		local PathMacro_Frame = PathMacro:WaitForChild("Frame")
+		local PathMacro_Frame2 = PathMacro:WaitForChild("Frame2")
+		table.insert(BrightestText_Theme,_txtCachedConsts)
+		table.insert(BrightestText_Theme,_txtPathMacro)
+		CachedConsts.MouseEnter:Connect(function()
+			db_CachedConsts=true
+			_txtCachedConsts.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		CachedConsts.MouseLeave:Connect(function()
+			db_CachedConsts=false
+			_txtCachedConsts.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		CachedConsts.MouseButton1Down:Connect(function()
+			_txtCachedConsts.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		CachedConsts.MouseButton1Up:Connect(function()
+			if db_CachedConsts==true then
+				_txtCachedConsts.BackgroundColor3=LowerBar_Convert_Color_Enter
+			else
+				_txtCachedConsts.BackgroundColor3=LowerBar_Convert_Color_Leave
 			end
-			_baseImports = parsed
-			local tbl,rich_tbl = ConstructorTostring("table",parsed)
-			Imported.Text = tbl
-			Rich.Text = rich_tbl
-			plugin:SetSetting("HB_BaseImports",Insert_txt)
-		elseif try then
-			warn(`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`)
-		else
-			warn(parsed)
-		end
-	end)
-	local tbl,rich_tbl = ConstructorTostring("table",_baseImports)
-	Imported.Text = tbl
-	Rich.Text = rich_tbl
-
-end
-_goImport_Button.MouseEnter:Connect(function()
-	_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter 
-end)
-_goImport_Button.MouseLeave:Connect(function()
-	_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
-end)
-_goImport_Button.MouseButton1Click:Connect(function()
-	task.defer(RemoveSelectionButton)
-	SelectButtonByName(CurrentConvertType)
-	local tab = ViewTabs:FindFirstChild(CurrentConvertType)::Frame?
-	if tab~=nil then
-		tab.Visible = false
+		end)
+		PathMacro.MouseEnter:Connect(function()
+			db_PathMacro=true
+			_txtPathMacro.BackgroundColor3=LowerBar_Convert_Color_Enter
+			PathMacro_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			PathMacro_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		PathMacro.MouseLeave:Connect(function()
+			db_PathMacro=false
+			_txtPathMacro.BackgroundColor3=LowerBar_Convert_Color_Leave
+			PathMacro_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			PathMacro_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		PathMacro.MouseButton1Down:Connect(function()
+			_txtPathMacro.BackgroundColor3=LowerBar_Convert_Color_Click
+			PathMacro_Frame.BackgroundColor3=LowerBar_Convert_Color_Click
+			PathMacro_Frame2.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		PathMacro.MouseButton1Up:Connect(function()
+			if db_PathMacro==true then
+				_txtPathMacro.BackgroundColor3=LowerBar_Convert_Color_Enter
+				PathMacro_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+				PathMacro_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			else
+				_txtPathMacro.BackgroundColor3=LowerBar_Convert_Color_Leave
+				PathMacro_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+				PathMacro_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			end
+		end)
+		CachedConsts.MouseButton1Click:Connect(function()
+			Import_Base.Visible = false
+			Import_Constants.Visible=true
+		end)
+		PathMacro.MouseButton1Click:Connect(function()
+			Import_Base.Visible = false
+			Import_Macro.Visible=true
+		end)	
 	end
-	Import_Base.Visible=true
-	LowerBar.Visible=false
-end)
+	do--Constants
+		local _pathMacro = Import_Macro:WaitForChild("Constants")
+		table.insert(Tab_EnumColor_List,_pathMacro)
+		table.insert(Tab_EnumColor_List,_pathMacro:WaitForChild("Frame")::Frame)
+		table.insert(BrightestText_Theme,_pathMacro:WaitForChild("Title")::TextLabel)
+		-------
+		local Import_Exit_Frame = Import_Constants:WaitForChild("Exit_Frame")
+		local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
+		local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
+		local _backImport_Exit_Frame = Import_Constants:WaitForChild("Exit_Back")
+		local _backImport_Frame1,_backImport_Frame2 = _backImport_Exit_Frame:WaitForChild("Frame1"),_backImport_Exit_Frame:WaitForChild("Frame2")
+		local _backImport_Button = _backImport_Exit_Frame:WaitForChild("Button")
 
-_backImport_Button.MouseEnter:Connect(function()
-	_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
-	_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
-end)
-Import_Button.MouseEnter:Connect(function()
-	Import_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
-	Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
-	Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
-	Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
-end)
-_backImport_Button.MouseLeave:Connect(function()
-	_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
-	_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
-end)
-Import_Button.MouseLeave:Connect(function()
-	Import_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
-	Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
-	Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
-	Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
-end)
-Import_Button.MouseButton1Click:Connect(function()
-	task.defer(RemoveSelectionButton)
-	SelectButtonByName(CurrentConvertType)
-	Import_Base.Visible=false
-	LowerBar.Visible=true
-end)
-_backImport_Button.MouseButton1Click:Connect(function()
-	task.defer(RemoveSelectionButton)
-	SelectButtonByName(CurrentConvertType)
-	Import_Base.Visible=false
-	LowerBar.Visible=true
-end)
+		--adding highlights
+		local Import_box = _pathMacro:WaitForChild("Import")
+		local Import_Label = Import_box:WaitForChild("Label")
+		local Insert_Scroll = _pathMacro:WaitForChild("Insert_Scroll")
+		local Insert = Insert_Scroll:WaitForChild("Insert")
+		local Imported_Scroll = _pathMacro:WaitForChild("Imported_Scroll")
+		local Imported = Imported_Scroll:WaitForChild("Imported")
+		local Rich = Imported:WaitForChild("Rich")
+		local EnterState:boolean = false
+		table.insert(BrightestText_Theme,Import_Label)
+		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
+		table.insert(BrightestText_Theme,Import_Button)
+		table.insert(BrightestText_Theme,_backImport_Button)
+		----
+		----||Visuals||----
+		Import_box.MouseEnter:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		Import_box.MouseLeave:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_box.MouseButton1Down:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		Import_box.MouseButton1Up:Connect(function()
+			if EnterState then
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+			else
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+			end
+		end)
+		local function AdjustTextSize():()
+			Imported.TextSize=ss.CodeOutputTextSize
+			Rich.TextSize=ss.CodeOutputTextSize
+			Insert.TextSize=ss.CodeOutputTextSize
+		end
+		OnConvert.Event:Connect(AdjustTextSize)
+		task.defer(AdjustTextSize)
+		--table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptTextColor_List,Rich)
+		table.insert(ScriptTextColor_List,Imported)
+		table.insert(ScriptTextColor_List,Insert)
+		--strokes
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
+		----||-----------------------------------------------||----
+		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
+			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
+			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end)
+		Insert_Scroll.CanvasSize = UDim2_zero
+		local function ScaleImported():()
+			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
+			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end
+		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+		task.defer(ScaleImported)
+
+		Import_box.MouseButton1Click:Connect(function():()
+			--Parse
+			local Insert_txt:string = Insert.Text
+			local try,parsed = pcall(Parser,Insert_txt)
+			if try and type(parsed)=="table" then
+				--Type validation
+				for i,v in parsed::{[any]:any} do
+					if type(v)~="string"  then
+						warn("Ensure you formatted table properly:",`Type has to be table: \{\n\tValue{ss._Equal}string\n\}`,"Your example were:",parsed)
+						return
+					end
+				end
+				CachedConstants = parsed
+				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
+				Imported.Text = tbl
+				Rich.Text = rich_tbl
+				plugin:SetSetting("HB_cachedConstants",Insert_txt)
+			elseif try then
+				warn(`Type has to be table: \{\n\tValue{ss._Equal}string\n\}`)
+			else
+				warn(parsed)
+			end
+		end)
+		local tbl,rich_tbl = ConstructorTostring("table",CachedConstants,true)
+		Imported.Text = tbl
+		Rich.Text = rich_tbl
 
 
+		_backImport_Button.MouseEnter:Connect(function()
+			_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		Import_Button.MouseEnter:Connect(function()
+			Import_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		_backImport_Button.MouseLeave:Connect(function()
+			_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_Button.MouseLeave:Connect(function()
+			Import_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_Button.MouseButton1Click:Connect(function()
+			task.defer(RemoveSelectionButton)
+			SelectButtonByName(CurrentConvertType)
+			Import_Constants.Visible=false
+			LowerBar.Visible=true
+		end)
+		_backImport_Button.MouseButton1Click:Connect(function()
+			Import_Base.Visible=true
+			Import_Constants.Visible=false
+		end)
+	end
+	do--PathMacro
+		local _constants = Import_Constants:WaitForChild("Constants")
+		table.insert(Tab_EnumColor_List,_constants)
+		table.insert(Tab_EnumColor_List,_constants:WaitForChild("Frame")::Frame)
+		table.insert(BrightestText_Theme,_constants:WaitForChild("Title")::TextLabel)
+		-------
+		local Import_Exit_Frame = Import_Constants:WaitForChild("Exit_Frame")
+		local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
+		local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
+		local _backImport_Exit_Frame = Import_Constants:WaitForChild("Exit_Back")
+		local _backImport_Frame1,_backImport_Frame2 = _backImport_Exit_Frame:WaitForChild("Frame1"),_backImport_Exit_Frame:WaitForChild("Frame2")
+		local _backImport_Button = _backImport_Exit_Frame:WaitForChild("Button")
+
+		--adding highlights
+		local Import_box = _constants:WaitForChild("Import")
+		local Import_Label = Import_box:WaitForChild("Label")
+		local Insert_Scroll = _constants:WaitForChild("Insert_Scroll")
+		local Insert = Insert_Scroll:WaitForChild("Insert")
+		local Imported_Scroll = _constants:WaitForChild("Imported_Scroll")
+		local Imported = Imported_Scroll:WaitForChild("Imported")
+		local Rich = Imported:WaitForChild("Rich")
+		local EnterState:boolean = false
+		table.insert(BrightestText_Theme,Import_Label)
+		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
+		table.insert(BrightestText_Theme,Import_Button)
+		table.insert(BrightestText_Theme,_backImport_Button)
+		----
+		----||Visuals||----
+		Import_box.MouseEnter:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		Import_box.MouseLeave:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_box.MouseButton1Down:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		Import_box.MouseButton1Up:Connect(function()
+			if EnterState then
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+			else
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+			end
+		end)
+		local function AdjustTextSize():()
+			Imported.TextSize=ss.CodeOutputTextSize
+			Rich.TextSize=ss.CodeOutputTextSize
+			Insert.TextSize=ss.CodeOutputTextSize
+		end
+		OnConvert.Event:Connect(AdjustTextSize)
+		task.defer(AdjustTextSize)
+		--table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptTextColor_List,Rich)
+		table.insert(ScriptTextColor_List,Imported)
+		table.insert(ScriptTextColor_List,Insert)
+		--strokes
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
+		----||-----------------------------------------------||----
+		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
+			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
+			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end)
+		Insert_Scroll.CanvasSize = UDim2_zero
+		local function ScaleImported():()
+			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
+			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end
+		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+		task.defer(ScaleImported)
+
+		Import_box.MouseButton1Click:Connect(function():()
+			--Parse
+			local Insert_txt:string = Insert.Text
+			local try,parsed = pcall(Parser,Insert_txt)
+			if try and type(parsed)=="table" then
+				--Type validation
+				for i,v in parsed::{[any]:any} do
+					if type(v)~="string" or typeof(i)~="Instance" then
+						warn("Ensure you formatted table properly:",`Type has to be table: \{\n\tPath.To.Instance{ss._Equal}string\n\}`,"Your example were:",parsed)
+						return
+					end
+				end
+				pathMacro = parsed
+				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
+				Imported.Text = tbl
+				Rich.Text = rich_tbl
+				plugin:SetSetting("HB_pathMacro",Insert_txt)
+			elseif try then
+				warn(`Type has to be table: \{\n\tPath.To.Instance{ss._Equal}string\n\}`)
+			else
+				warn(parsed)
+			end
+		end)
+		local tbl,rich_tbl = ConstructorTostring("table",CachedConstants,true)
+		Imported.Text = tbl
+		Rich.Text = rich_tbl
+
+
+		_backImport_Button.MouseEnter:Connect(function()
+			_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		Import_Button.MouseEnter:Connect(function()
+			Import_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		_backImport_Button.MouseLeave:Connect(function()
+			_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_Button.MouseLeave:Connect(function()
+			Import_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_Button.MouseButton1Click:Connect(function()
+			task.defer(RemoveSelectionButton)
+			SelectButtonByName(CurrentConvertType)
+			Import_Macro.Visible=false
+			LowerBar.Visible=true
+		end)
+		_backImport_Button.MouseButton1Click:Connect(function()
+			Import_Base.Visible=true
+			Import_Macro.Visible=false
+		end)
+	end
+
+	table.insert(Tab_EnumColor_List,_base)
+	table.insert(Tab_EnumColor_List,_base:WaitForChild("Frame")::Frame)
+	
+	local Import_Exit_Frame = Import_Base:WaitForChild("Exit_Frame")
+	local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
+	local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
+	local _backImport_Exit_Frame = Import_Base:WaitForChild("Exit_Back")
+	local _backImport_Frame1,_backImport_Frame2 = _backImport_Exit_Frame:WaitForChild("Frame1"),_backImport_Exit_Frame:WaitForChild("Frame2")
+	local _backImport_Button = _backImport_Exit_Frame:WaitForChild("Button")
+	local _goImport_Exit_Frame = LowerBar:WaitForChild("Open_Base_Frame")
+	local _goImport_Frame1,_goImport_Frame2 = _goImport_Exit_Frame:WaitForChild("Frame1"),_goImport_Exit_Frame:WaitForChild("Frame2")
+	local _goImport_Button = _goImport_Exit_Frame:WaitForChild("Button")
+	table.insert(BrightestText_Theme,_goImport_Button)
+
+	table.insert(BrightestText_Theme,_base:WaitForChild("Title"))
+
+	do--_base
+		local Import_box = _base:WaitForChild("Import")
+		local Import_Label = Import_box:WaitForChild("Label")
+		local Insert_Scroll = _base:WaitForChild("Insert_Scroll")
+		local Insert = Insert_Scroll:WaitForChild("Insert")
+		local Imported_Scroll = _base:WaitForChild("Imported_Scroll")
+		local Imported = Imported_Scroll:WaitForChild("Imported")
+		local Rich = Imported:WaitForChild("Rich")
+		local EnterState:boolean = false
+		table.insert(BrightestText_Theme,Import_Label)
+		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
+		table.insert(BrightestText_Theme,Import_Button)
+		table.insert(BrightestText_Theme,_backImport_Button)
+		----||Visuals||----
+		Import_box.MouseEnter:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+		end)
+		Import_box.MouseLeave:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+		Import_box.MouseButton1Down:Connect(function()
+			Import_Label.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		Import_box.MouseButton1Up:Connect(function()
+			if EnterState then
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Enter
+			else
+				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
+			end
+		end)
+		local function AdjustTextSize():()
+			Imported.TextSize=ss.CodeOutputTextSize
+			Rich.TextSize=ss.CodeOutputTextSize
+			Insert.TextSize=ss.CodeOutputTextSize
+		end
+		OnConvert.Event:Connect(AdjustTextSize)
+		task.defer(AdjustTextSize)
+		--table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptTextColor_List,Rich)
+		table.insert(ScriptTextColor_List,Imported)
+		table.insert(ScriptTextColor_List,Insert)
+		--strokes
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
+		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
+		----||-----------------------------------------------||----
+		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
+			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
+			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end)
+		Insert_Scroll.CanvasSize = UDim2_zero
+		local function ScaleImported():()
+			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
+			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		end
+		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+		task.defer(ScaleImported)
+
+		Import_box.MouseButton1Click:Connect(function():()
+			--Parse
+			local Insert_txt:string = Insert.Text
+			local try,parsed = pcall(Parser,Insert_txt)
+			if try and type(parsed)=="table" then
+				--Type validation
+				for i,v in parsed::{[any]:any} do
+					if type(i)~="string" or type(v)~="table"  then
+						warn("Ensure you formatted table properly:",`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`,"Your example were:",parsed)
+						return
+					end
+				end
+				_baseImports = parsed
+				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
+				Imported.Text = tbl
+				Rich.Text = rich_tbl
+				plugin:SetSetting("HB_BaseImports",Insert_txt)
+			elseif try then
+				warn(`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`)
+			else
+				warn(parsed)
+			end
+		end)
+		local tbl,rich_tbl = ConstructorTostring("table",_baseImports,true)
+		Imported.Text = tbl
+		Rich.Text = rich_tbl
+
+	end
+	--Base
+	_goImport_Button.MouseEnter:Connect(function()
+		_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter 
+	end)
+	_goImport_Button.MouseLeave:Connect(function()
+		_goImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_goImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_goImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_goImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+	_goImport_Button.MouseButton1Click:Connect(function()
+		task.defer(RemoveSelectionButton)
+		SelectButtonByName(CurrentConvertType)
+		local tab = ViewTabs:FindFirstChild(CurrentConvertType)::Frame?
+		if tab~=nil then
+			tab.Visible = false
+		end
+		Import_Base.Visible=true
+		LowerBar.Visible=false
+	end)
+
+	_backImport_Button.MouseEnter:Connect(function()
+		_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+	end)
+	Import_Button.MouseEnter:Connect(function()
+		Import_Button.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+		Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+	end)
+	_backImport_Button.MouseLeave:Connect(function()
+		_backImport_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_backImport_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_backImport_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		_backImport_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+	Import_Button.MouseLeave:Connect(function()
+		Import_Button.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Import_Frame1.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Import_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		Import_Exit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+	Import_Button.MouseButton1Click:Connect(function()
+		task.defer(RemoveSelectionButton)
+		SelectButtonByName(CurrentConvertType)
+		Import_Base.Visible=false
+		LowerBar.Visible=true
+	end)
+	_backImport_Button.MouseButton1Click:Connect(function()
+		task.defer(RemoveSelectionButton)
+		SelectButtonByName(CurrentConvertType)
+		Import_Base.Visible=false
+		LowerBar.Visible=true
+	end)
+
+end)()
 
 
 do
+	local sharedSettings,sharedSettings_Content = CreateTab("Shared Settings","rbxassetid://7059346373")
 	local Hierarchy_Builder,Hierarchy_Builder_Content = CreateTab("Hierarchy Builder","rbxassetid://72069099688057")
 	local Raw_Luau,Raw_Luau_Content = CreateTab("Raw Luau","rbxassetid://18606791059")
 	Hierarchy_Builder.Visible=true
+	BuildPropertiesList(sharedSettings_Content,require(script:WaitForChild("SharedSettings")))
 	BuildPropertiesList(Hierarchy_Builder_Content,require(script:WaitForChild("Properties_HierarchyBuilder")))
 	BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
 end
@@ -2371,12 +2832,113 @@ local function GetTypeOfInstance(ins:Instance):string
 	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
 end
 
+local GoToIndexPath:(ins:Instance)->(string,string)
+do
+	local function ___IsAProperty(ins:any,prop:string):any
+		return ins[prop]
+	end
+	local function IsAProperty(ins:any|Instance,prop:string):boolean
+		local try,res = pcall(___IsAProperty,ins,prop)
+		return (try and ins:FindFirstChild(prop) ~= res) or ins:IsA("ObjectValue")
+	end
+	GoToIndexPath = function(ins:Instance):(string,string)
+		local txt,rich = "",""
+		local Mode:"SafeIndex"|"Index"|"WaitForChild" = ss.OutsideHierarchyInstances
+		--Hierarchy
+		local arraySize:number = 0
+		local path:Instance? = ins
+		while path~=nil do
+			arraySize += 1
+			path = path.Parent
+		end
+		local Hierarchy:{Instance} = table.create(arraySize)::{Instance}
+		path = ins
+		while path~=nil do
+			table.insert(Hierarchy,1,path)
+			if type(select(2,pcall(game.FindService,game,path.ClassName)))=="userdata" or pathMacro[path]~=nil then
+				break
+			end
+			--Move up
+			path=path.Parent::Instance
+		end
+		--Top-Bottom
+		for i,v in Hierarchy do
+			if v==game then
+				txt = "game"
+				rich = "game"
+			elseif pathMacro[v]~=nil then
+				--pathMacro
+				txt = pathMacro[v]
+				rich = pathMacro[v]
+			elseif type(select(2,pcall(game.FindService,game,v.ClassName)))=="userdata" then
+				--service
+				if v==workspace then
+					txt = "workspace"
+					rich = WriteRichText("workspace",ScriptBuiltInFunction)
+					continue
+				end
+				txt = v.ClassName
+				rich = v.ClassName
+			else--Instances
+				if Mode=="SafeIndex" then
+					if ss.FastNamecall==true then
+						txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
+						rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
+					else
+						txt = `{txt}:FindFirstChild({ConstructorTostring("string",v.Name)})`
+						rich = `{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
+					end
+				elseif Mode=="WaitForChild" then
+					if ss.FastNamecall==true then
+						txt = `WaitForChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
+						rich = `{WriteRichText("WaitForChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
+					else
+						txt = `{txt}:WaitForChild({ConstructorTostring("string",v.Name)})`
+						rich = `{rich}:{WriteRichText("WaitForChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
+					end
+				else--Index
+					--Make sure to check for peoperties
+					if IsAProperty(Hierarchy[i-1],v.Name)==true then
+						--Using FindFirstChild Instead
+						if ss.FastNamecall==true then
+							txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+							rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+						else
+							txt = `{(ss.Typechecking==true and "(") or ""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+							rich = `{(ss.Typechecking==true and "(") or ""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						end
+						continue
+					end
+					if ss.FastNamecall==true then
+						txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+						rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+					else
+						if ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+							txt = `{txt}.{v.Name}`
+							rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
+						else--Brackets
+							txt = `{txt}[{ConstructorTostring("string",v.Name)}]`
+							rich = `{rich}[{select(2,ConstructorTostring("string",v.Name))}]`
+						end
+					end
+				end
+			end
+		end
+		return txt,rich
+	end
+
+end
+
+
+
 local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,Layer:number,Initiator:true?):(string,string)
 	local properties = GetProperties(ins)
+	local Tags = ins:GetTags()
+	local Attributes = ins:GetAttributes()
 	--Brackets
 	if Initiator~=true then
-		code..=`{string.rep("\t",Layer-1)}\{`
-		riched_code..=`{string.rep("\t",Layer-1)}\{`
+		code..=`\n{string.rep("\t",Layer-1)}\{`
+		riched_code..=`\n{string.rep("\t",Layer-1)}\{`
 	end
 	--Declearing ClassName
 	if ss._HB_Prop_Type_Newline==true then
@@ -2384,40 +2946,190 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		riched_code..=`\n{string.rep("\t",Layer)}`
 	end
 	local Type:string = GetTypeOfInstance(ins)
-	code..=`{ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-	riched_code..=`{ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+	if properties.Name==nil then
+		--Type
+		code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+		riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+	else
+		--Name
+		code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
+		riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
+		--Type
+		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+	end
 	----------------------
+	---_base---
+	local baseImport:string? = nil
+	if ss.Use_Base_Imports and Classes[Type]~=nil then
+		--Grabbing best match for _base
+		local persentage:number = 0
+		for _base,tab in _baseImports do
+			local Matches:number = 0
+			local PropertyCount:number = 0
+			if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
+				for i,v in tab._exec.SetAttribute do
+					if Attributes[i]==v then Matches+=1 end
+					PropertyCount+=1
+				end
+			end
+			if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
+				for i,v in tab._exec.AddTag do
+					if table.find(Tags,v)~=nil then Matches+=1 end
+					PropertyCount+=1
+				end
+			end
+			for i,v in tab do
+				if Classes[Type][i]==nil then break end
+				if properties[i]==v and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
+				if i=="_exec" then continue end
+				PropertyCount+=1
+			end
 
-	---------------------
-	
-	
-	
+			if Matches~=0 and PropertyCount~=0 then
+				local _procentage:number = PropertyCount/Matches*100
+				if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
+					baseImport = _base
+					persentage = _procentage
+				end
+			end
+		end
+		--Setting _base
+		if baseImport~=nil then
+			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+		end
+	end
+	----------
 	for i,v in properties do
+		if i=="Name" then continue end
+		local foundBreak:boolean = false
+		for ii,vv in IgnoredPropertiesList do
+			if ins:IsA(ii) and table.find(vv,i)~=nil then
+				foundBreak=true
+				break
+			end
+		end
+		--Ignore List
+		if foundBreak then continue end
+		--Already in _base
+		if baseImport~=nil and _baseImports[baseImport][i]==v then continue end
+
+
 		local type:string = typeof(v)
-		if ConstructorTostring_Switch[type]==nil then continue end
 		if type=="Instance" then
-
-
+			if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or ((v :: Instance)~=ins and ((v :: Instance).Parent==game--[[Assume its a service]] or ((v :: Instance).Parent :: Instance).Parent==game)--[[Assume that its a child of a service]])) then
+				--Outside of hierarchy
+				local c_code,c_rich = GoToIndexPath(v)
+				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
+			end
 			continue
 		end
+		if ConstructorTostring_Switch[type]==nil then continue end
+
 		local c_code,c_rich = ConstructorTostring(type,v)
-		code..=`\n{string.rep("\t",Layer)}{i}{ss._Equal}{c_code}{ss._Separator}`
-		riched_code..=`\n{string.rep("\t",Layer)}{i}{ss._Equal}{c_rich}{ss._Separator}`
+		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 	end
-	local children = ins:GetChildren()
-	if #children~=0 then
+	local _baseIncludesAllTagsAndAttributes:boolean = baseImport~=nil
+	local IncludesAllTags:boolean = _baseIncludesAllTagsAndAttributes
+	local IncludesAllAttributes:boolean = _baseIncludesAllTagsAndAttributes
+	if _baseIncludesAllTagsAndAttributes then
+		local import = _baseImports[baseImport::string]
+		if type(import._exec)=="table" then
+			local _exec:{[any]:any} = import._exec
+			_baseIncludesAllTagsAndAttributes=((type(_exec.SetAttribute)=="table" or type(_exec.AddTag)=="table") and true )or false
+			if _baseIncludesAllTagsAndAttributes then
+				if type(_exec.SetAttribute)=="table" then
+					for i,v in Attributes do
+						if _exec.SetAttribute[i]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
+					end
+				end
+				if type(_exec.AddTag)=="table" then
+					for i,v in Tags do
+						if table.find(_exec.AddTag,v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
+					end
+				end
+			end
+		else
+			_baseIncludesAllTagsAndAttributes=false
+		end
+	end
+	--_init--
+	--IncludeInit?
+	local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (Type=="MeshPart" and properties.MeshId~=nil)
+	if IncludeInit==false then
+		for i,v in properties do
+			if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==SelectedInstance or ss.OutsideHierarchyInstances=="SafeIndex") then IncludeInit=true break end
+		end
+	end
+	--Actual _init here
+	--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
+	--Note that Instance property could be self
+	if IncludeInit then
 		code..=`\n`
 		riched_code..=`\n`
+	end
+
+
+	---_exec---
+	if ss._HB_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
+		if _baseIncludesAllTagsAndAttributes==false then
+			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
+			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
+			if #Tags~=0 and IncludesAllTags==false then
+				local txt,rich = "",""
+				local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+				for i,v in Tags do
+					if table.find(IncludedTags,v)~=nil then continue end
+					txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
+				end
+				code..=`\n{string.rep("\t",Layer+1)}AddTag{ss._Equal}\{{txt}\}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer+1)}AddTag{ss._Equal}\{{rich}\}{ss._Separator}`
+			end
+			if next(Attributes)~=nil and IncludesAllAttributes==false then
+				code..=`\n{string.rep("\t",Layer+1)}SetAttribute{ss._Equal}\{`
+				riched_code..=`\n{string.rep("\t",Layer+1)}SetAttribute{ss._Equal}\{`
+				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+				for i,v in Attributes do
+					if IncludedAttributes[i]~=nil then continue end
+					code..=`\n{string.rep("\t",Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
+					riched_code..=`\n{string.rep("\t",Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
+				end
+				code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
+			end
+			--Closing _exec
+			code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
+			riched_code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
+		end	
+	end
+	-------
+	--Children----
+	local children = ins:GetChildren()
+	if #children~=0 then
 		for i,v in children do
+			if ss.RespectArchivable==true and v.Archivable==false then continue end
 			local c,r = HB_BuildProperties(v,code,riched_code,Layer+1)
 			code,riched_code= `{c}`,`{r}`
 		end
-		
 	end
+	-----
 	if Initiator~=true then
-		code..=`\n{string.rep("\t",Layer-1)}\};\n`
-		riched_code..=`\n{string.rep("\t",Layer-1)}\};\n`
+		--Step out from Type/Name
+		if next(properties)~=nil then
+			code..=`\n{string.rep("\t",Layer-1)}`
+			riched_code..=`\n{string.rep("\t",Layer-1)}`
+		end
+		--Step out from instance constructor and close it
+		code..=`\}{ss._Separator}`
+		riched_code..=`\}{ss._Separator}`
+	elseif Initiator==true and ((#children==0 and next(properties)~=nil) or #children>0) then
+		code..=`\n`
+		riched_code..=`\n`
 	end
+	-----
 	return code,riched_code
 end
 
@@ -2425,7 +3137,7 @@ local function HierarchyBuilder_Convert(ins:Instance):()
 	local code:string = ``
 	local riched_code:string = ``
 	code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-	riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptFunctionName)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
+	riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
 	code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)
 	code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
 	riched_code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
@@ -2446,14 +3158,14 @@ local function BegginConvert():()
 	Code.TextSize = ss.CodeOutputTextSize
 	CodeOutput_Title.TextSize=ss.CodeOutputTextSize
 	--
-	local ins = Selection:Get()[1]
-	if ins==nil then warn("Please select any instance to convert") return end
+	SelectedInstance = Selection:Get()[1]
+	if SelectedInstance==nil then warn("Please select any instance to convert") return end
 	if CurrentConvertType=="Hierarchy Builder" then
-		HierarchyBuilder_Convert(ins)
+		HierarchyBuilder_Convert(SelectedInstance)
 	elseif CurrentConvertType=="Raw Luau" then
-		RawLuau_Convert(ins)
+		RawLuau_Convert(SelectedInstance)
 	else
-		error("Something unexpected heppened somehow")
+		error("Something unexpected heppened somehow, This tab converter does not exist")
 	end
 	local bounds = TextService:GetTextSize(Code.Text,Code.TextSize,Code.Font,Vector2.new(math.huge,math.huge))
 	CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
