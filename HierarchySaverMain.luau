@@ -1704,7 +1704,7 @@ local escape:{[string]:string} = {
 	['\''] = '&apos;',
 }
 local function WriteRichText(str:string,color:Color3):string
-	return `<font color = "#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
+	return `<font color="#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
 end
 
 local ConstructorTostring_Switch:{[string]:(data:any,true?)->(string,string)}
@@ -2029,7 +2029,7 @@ ConstructorTostring_Switch = {
 			return `"{ret}"`,WriteRichText(`"{ret}"`,ScriptString)
 		end
 		-------------------------------------
-		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"","\\\"")
+		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"",`\"`)
 		return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
 	end;
 	SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
@@ -2078,7 +2078,7 @@ do
 		tbl_rich..=string.rep("\t",Level-1).."}"
 		return tbl_txt,tbl_rich
 	end
-	
+
 	ConstructorTostring_Switch.table=function(tbl:{[any]:any},Bypass:true?):(string,string)
 		return TableTostring(tbl,Bypass)
 	end
@@ -2625,7 +2625,7 @@ end
 
 	table.insert(Tab_EnumColor_List,_base)
 	table.insert(Tab_EnumColor_List,_base:WaitForChild("Frame")::Frame)
-	
+
 	local Import_Exit_Frame = Import_Base:WaitForChild("Exit_Frame")
 	local Import_Frame1,Import_Frame2 = Import_Exit_Frame:WaitForChild("Frame1"),Import_Exit_Frame:WaitForChild("Frame2")
 	local Import_Button = Import_Exit_Frame:WaitForChild("Exit")
@@ -2834,7 +2834,7 @@ local function GetTypeOfInstance(ins:Instance):string
 	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
 end
 
-local GoToIndexPath:(ins:Instance)->(string,string)
+local GoToIndexPath:(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?)->(string,string)
 do
 	local function ___IsAProperty(ins:any,prop:string):any
 		return ins[prop]
@@ -2843,8 +2843,13 @@ do
 		local try,res = pcall(___IsAProperty,ins,prop)
 		return (try and ins:FindFirstChild(prop) ~= res) or ins:IsA("ObjectValue")
 	end
-	GoToIndexPath = function(ins:Instance):(string,string)
+	GoToIndexPath = function(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?):(string,string)
+		RSK_rich = (RSK_rich~=nil and RSK_rich) or RecursionStartKeyword
+		local IsRecursive:boolean = (Recursive~=nil and (Recursive:IsDescendantOf(SelectedInstance::Instance) or ins==Recursive or SelectedInstance==Recursive)) or false
 		local txt,rich = "",""
+		if RecursionStartKeyword~=nil then
+			txt,rich = RecursionStartKeyword,RSK_rich
+		end
 		local Mode:"SafeIndex"|"Index"|"WaitForChild" = ss.OutsideHierarchyInstances
 		--Hierarchy
 		local arraySize:number = 0
@@ -2855,15 +2860,54 @@ do
 		end
 		local Hierarchy:{Instance} = table.create(arraySize)::{Instance}
 		path = ins
-		while path~=nil do
-			table.insert(Hierarchy,1,path)
-			if type(select(2,pcall(game.FindService,game,path.ClassName)))=="userdata" or pathMacro[path]~=nil then
-				break
+		if IsRecursive==false then--Regular from top to bottom
+			while path~=nil do
+				table.insert(Hierarchy,1,path)
+				if type(select(2,pcall(game.FindService,game,path.ClassName)))=="userdata" or pathMacro[path]~=nil then
+					break
+				end
+				--Move up
+				path=path.Parent::Instance
 			end
-			--Move up
-			path=path.Parent::Instance
+		elseif Recursive~=nil then --Recursive
+			while path~=Recursive and path~=nil do
+				if Recursive:IsDescendantOf(path) then
+					--go down
+					for i,v in path:GetChildren() do
+						if Recursive:IsDescendantOf(v) or v==Recursive then
+							path=v::Instance
+							table.insert(Hierarchy,path)
+							break
+						end
+					end
+				else
+					--go up
+					path=path.Parent::Instance
+					table.insert(Hierarchy,path)
+				end
+			end
 		end
-		--Top-Bottom
+		--Recursive
+		if IsRecursive and Recursive~=nil then--Recursive
+			print("recursion",Hierarchy)
+			for i,v in Hierarchy do
+				if v:IsAncestorOf(ins) then
+					--Down
+					txt..=`.Parent`
+					rich..=`.Parent`
+				else--Up
+					txt..=`.{v.Name}`
+					rich..=`.{v.Name}`
+				end
+			end
+			return txt,rich
+		elseif Recursive~=nil then--Safe index
+			print("safeindex")
+
+			return txt,rich
+		end
+		print("------")
+		--Top- to-Bottom
 		for i,v in Hierarchy do
 			if v==game then
 				txt = "game"
@@ -3020,7 +3064,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 
 		local type:string = typeof(v)
 		if type=="Instance" then
-			if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or ((v :: Instance)~=ins and ((v :: Instance).Parent==game--[[Assume its a service]] or ((v :: Instance).Parent :: Instance).Parent==game)--[[Assume that its a child of a service]])) then
+			if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName)))=="Instance"))) then
 				--Outside of hierarchy
 				local c_code,c_rich = GoToIndexPath(v)
 				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
@@ -3063,17 +3107,72 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 	local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (Type=="MeshPart" and properties.MeshId~=nil)
 	if IncludeInit==false then
 		for i,v in properties do
-			if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==SelectedInstance or ss.OutsideHierarchyInstances=="SafeIndex") then IncludeInit=true break end
+			if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName)))~="Instance")))) then IncludeInit=true break end
 		end
 	end
 	--Actual _init here
 	--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
 	--Note that Instance property could be self
 	if IncludeInit then
-		code..=`\n`
-		riched_code..=`\n`
-	end
+		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+		--Recursive Hierarchy
+		for key,value in properties do
+			if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
+				--Recursive hierarchy 
+				local c,r = GoToIndexPath(ins,value,"self",WriteRichText("self",ScriptSelf))
+				code..=`\n{string.rep("\t",Layer+1)}self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}{ss._Equal}{c}`
+				riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}{ss._Equal}{r}`
+			end
+		end
 
+
+
+
+
+
+		--Tags and attributes
+		if ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
+			--tags
+			if #Tags~=0 and IncludesAllTags==false then
+				local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+				if ss.FastNamecall==true then
+					for i,v in Tags do
+						if table.find(IncludedTags,v)~=nil then continue end
+						code..=`\n{string.rep("\t",Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
+					end
+				else
+					for i,v in Tags do
+						if table.find(IncludedTags,v)~=nil then continue end
+						code..=`\n{string.rep("\t",Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
+					end
+				end
+			end
+			--Attributes
+			if next(Attributes)~=nil and IncludesAllAttributes==false then
+				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+				if ss.FastNamecall==true then
+					for i,v in Attributes do
+						if IncludedAttributes[i]~=nil then continue end
+						code..=`\n{string.rep("\t",Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+					end
+				else
+					for i,v in Attributes do
+						if IncludedAttributes[i]~=nil then continue end
+						code..=`\n{string.rep("\t",Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+					end
+				end
+			end
+		end
+
+
+		code..=`\n{string.rep("\t",Layer)}end{ss._Separator}`
+		riched_code..=`\n{string.rep("\t",Layer)}{WriteRichText("end",ScriptLuauKeyword)}{ss._Separator}`
+	end
 
 	---_exec---
 	if ss._HB_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
@@ -3120,7 +3219,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 	-----
 	if Initiator~=true then
 		--Step out from Type/Name
-		if next(properties)~=nil then
+		if next(properties)~=nil or #children~=0 or #Tags~=0 or next(Attributes)~=nil or IncludeInit==true or baseImport~=nil then
 			code..=`\n{string.rep("\t",Layer-1)}`
 			riched_code..=`\n{string.rep("\t",Layer-1)}`
 		end
