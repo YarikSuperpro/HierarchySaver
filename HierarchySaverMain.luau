@@ -2834,7 +2834,7 @@ local function GetTypeOfInstance(ins:Instance):string
 	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
 end
 
-local GoToIndexPath:(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?)->(string,string)
+local GoToIndexPath:(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?,Layer:number?)->(string,string)
 do
 	local function ___IsAProperty(ins:any,prop:string):any
 		return ins[prop]
@@ -2843,11 +2843,11 @@ do
 		local try,res = pcall(___IsAProperty,ins,prop)
 		return (try and ins:FindFirstChild(prop) ~= res) or ins:IsA("ObjectValue")
 	end
-	GoToIndexPath = function(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?):(string,string)
+	GoToIndexPath = function(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?,Layer:number?):(string,string)
 		RSK_rich = (RSK_rich~=nil and RSK_rich) or RecursionStartKeyword
 		local IsRecursive:boolean = (Recursive~=nil and (Recursive:IsDescendantOf(SelectedInstance::Instance) or ins==Recursive or SelectedInstance==Recursive)) or false
 		local txt,rich = "",""
-		if RecursionStartKeyword~=nil then
+		if IsRecursive==true and RecursionStartKeyword~=nil then
 			txt,rich = RecursionStartKeyword,RSK_rich
 		end
 		local Mode:"SafeIndex"|"Index"|"WaitForChild" = ss.OutsideHierarchyInstances
@@ -2889,21 +2889,53 @@ do
 		end
 		--Recursive
 		if IsRecursive and Recursive~=nil then--Recursive
-			print("recursion",Hierarchy)
 			for i,v in Hierarchy do
 				if v:IsAncestorOf(ins) then
 					--Down
-					txt..=`.Parent`
-					rich..=`.Parent`
+					if ss.FastNamecall==true then
+						txt = `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string","Parent")}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+						rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string","Parent"))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+						continue
+					elseif ss.Indexing_Instances_By=="Dots" then
+						txt =`{(ss.Typechecking==true and "(")or""}{txt}.Parent{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich =`{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText("Parent",ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						continue
+					end
+					txt =`{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string","Parent")}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+					rich =`{(ss.Typechecking==true and "(")or""}{rich}[{select(2,ConstructorTostring("string","Parent"))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 				else--Up
-					txt..=`.{v.Name}`
-					rich..=`.{v.Name}`
+					--If child has a name "Parent" there so having to use FindFirstChild
+					if i~=1 and IsAProperty(Hierarchy[i-1],v.Name) then
+						if ss.FastNamecall==true then
+							txt = `{(ss.Typechecking==true and "(")or""}FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+							rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						else
+							txt = `{(ss.Typechecking==true and "(")or""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+							rich = `{(ss.Typechecking==true and "(")or""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						end
+						continue
+					end
+					--Normal
+					if ss.FastNamecall==true then
+						txt = `{(ss.Typechecking==true and "(")or""}{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						continue
+					elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+						txt = `{(ss.Typechecking==true and "(")or""}{txt}.{v.Name}{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich = `{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText(v.Name,ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+						continue
+					end
+					txt = `{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string",v.Name)}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+					rich =`{(ss.Typechecking==true and "(")or""}{txt}[{select(2,ConstructorTostring("string",v.Name))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 				end
 			end
 			return txt,rich
 		elseif Recursive~=nil then--Safe index
+			Layer=Layer or 1
+			local InstanceIndex:number = 1
 			print("safeindex")
-
+			
+			
 			return txt,rich
 		end
 		print("------")
@@ -2958,14 +2990,12 @@ do
 					if ss.FastNamecall==true then
 						txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
 						rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-					else
-						if ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
-							txt = `{txt}.{v.Name}`
-							rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
-						else--Brackets
-							txt = `{txt}[{ConstructorTostring("string",v.Name)}]`
-							rich = `{rich}[{select(2,ConstructorTostring("string",v.Name))}]`
-						end
+					elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+						txt = `{txt}.{v.Name}`
+						rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
+					else--Brackets
+						txt = `{txt}[{ConstructorTostring("string",v.Name)}]`
+						rich = `{rich}[{select(2,ConstructorTostring("string",v.Name))}]`
 					end
 				end
 			end
@@ -3120,9 +3150,17 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		for key,value in properties do
 			if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
 				--Recursive hierarchy 
-				local c,r = GoToIndexPath(ins,value,"self",WriteRichText("self",ScriptSelf))
-				code..=`\n{string.rep("\t",Layer+1)}self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}{ss._Equal}{c}`
-				riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}{ss._Equal}{r}`
+				if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
+					--Recursive
+					local c,r = GoToIndexPath(ins,value,"self",WriteRichText("self",ScriptSelf))
+					code..=`\n{string.rep("\t",Layer+1)}self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}{ss._Equal}{c}`
+					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}{ss._Equal}{r}`
+				else
+					--SafeIndex
+					local c,r = GoToIndexPath(ins,value,`self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}`,`{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}`,Layer+1)
+					code..=c
+					riched_code..=r
+				end
 			end
 		end
 
@@ -3210,10 +3248,12 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 	--Children----
 	local children = ins:GetChildren()
 	if #children~=0 then
+		if ss.SeparateChildren==true then
+			code,riched_code = `{code}\n`,`{riched_code}\n`
+		end
 		for i,v in children do
 			if ss.RespectArchivable==true and v.Archivable==false then continue end
-			local c,r = HB_BuildProperties(v,code,riched_code,Layer+1)
-			code,riched_code= `{c}`,`{r}`
+			code,riched_code = HB_BuildProperties(v,code,riched_code,Layer+1)
 		end
 	end
 	-----
