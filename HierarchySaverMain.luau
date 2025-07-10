@@ -81,6 +81,26 @@ local function MathClampValue(value:number,min:number,max:number,clamp:number):n
 	return math.round(math.clamp((clamp==0 and value) or value-(value%clamp),min,max)*1_000)/1_000
 end
 
+--Sorted dictionary closure iterator
+local function spairs(t:{[string]:any})
+	local keys:{any} = {}
+	for k in t do
+		table.insert(keys, k)
+	end
+	table.sort(keys)
+	local i:number = 0
+	local n:number = #keys
+	-- iterator function (closure)
+	return function():(any,any)
+		i = i + 1
+		if i <= n then
+			local key:any = keys[i]
+			return key, t[key]
+		end
+		return nil,nil
+	end
+end
+
 --********************* Just types for raw class
 
 --*********************Voodoo C++ data types into Luau types
@@ -145,6 +165,7 @@ local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy S
 	))
 Widget.Name="Hierarchy Saver"
 Widget.Title="Hierarchy Saver"
+Widget:SetAttribute("Manage",false)
 --Elements
 local Elements = script:WaitForChild("Components")
 local TabButton = Elements:WaitForChild("TabButton")--Button to open tab
@@ -1046,9 +1067,18 @@ local Default_Properties_Cache:{[string]:cache_prop} = {}
 --[[
 Returns all non default properties of an Instance
 ]]
-local function GetProperties(instance:any):cache_prop
+local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	local ClassName:string = instance.ClassName
 	if Classes[ClassName]==nil then return {} end
+	--Bypass
+	if AllPropertiesBypass==true then
+		local prop:{[string]:any} = {}
+		for i,v in Classes[ClassName] do
+			prop[i]=instance[i]
+		end
+		return prop
+	end
+	--
 	if Default_Properties_Cache[ClassName]==nil then
 		local cache_prop:cache_prop = {}
 		local ins:any = Instance.new(ClassName)
@@ -1059,7 +1089,7 @@ local function GetProperties(instance:any):cache_prop
 		Default_Properties_Cache[ClassName]=cache_prop
 	end
 	local cache_prop:cache_prop = Default_Properties_Cache[ClassName] 
-	local prop = {}
+	local prop:{[string]:any} = {}
 	for i,v in Classes[ClassName] do
 		if instance[i]==cache_prop[i] or i=="ClassName" or i=="className" or i=="Parent" then continue end
 		prop[i]=instance[i]
@@ -1725,31 +1755,31 @@ end
 local function ToMatrixUnit(x:number):(string,string)
 	local deg:number = math.round(math.deg(x)*1000)/1000
 	x = math.rad(deg)
-
+	
 	if ss.MatrixCFrameMeasurements=="Degrees" then
-		return `math{(ss.IndexingBy=="Dots" and ".rad") or "[\"rad\"]"}({deg})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
+		return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
 	elseif ss.MatrixCFrameMeasurements=="Raw" or x==0 or x==math.pi then
-		if x==math.pi then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}` end
-		return tostring(x),select(2,ConstructorTostring("number",x))
+		if x==math.pi then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}` end
+		return ConstructorTostring("number",x)
 	elseif ss.MatrixCFrameMeasurements=="Balance" then
 		local mul = x/math.pi
-		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 		local sub = math.pi/x
 		if #tostring(sub%1)<7 then 
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 		else
-			return `math{(ss.IndexingBy=="Dots" and ".rad") or "[\"rad\"]"}({deg})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
+			return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
 		end
 	else--Radians
 		local mul = x/math.pi
-		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 		local sub = math.pi/x
 		if #tostring(sub%1)<7 then 
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Div}{sub}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 		else
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or "[\"pi\"]"}{ss.Mult}{mul}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
+			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
 		end
 	end
 end
@@ -1865,13 +1895,13 @@ ConstructorTostring_Switch = {
 				local rX,rX_rich = ToMatrixUnit(x)
 				local rY,rY_rich = ToMatrixUnit(y)
 				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `[{ConstructorTostring("string","fromEulerAnglesYXZ",Bypass)}]`}({ConstructorTostring("number",rX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rZ,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ",Bypass))}]`}({select(2,ConstructorTostring("number",rX_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rY_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rZ_rich,Bypass))})`
+				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `[{ConstructorTostring("string","fromEulerAnglesYXZ",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
 			elseif ss.CFrameFormatting=="CFrameNewPlusAngles" then
 				x,y,z = data:ToEulerAnglesXYZ()
 				local rX,rX_rich = ToMatrixUnit(x)
 				local rY,rY_rich = ToMatrixUnit(y)
 				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({ConstructorTostring("number",rX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",rZ,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({select(2,ConstructorTostring("number",rX_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rY_rich,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",rZ_rich,Bypass))})`
+				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
 			else--RawCFrameNew
 				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
 				X,Y,Z = Round(X),Round(Y),Round(Z)
@@ -2017,6 +2047,15 @@ ConstructorTostring_Switch = {
 		return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Offset,Bypass)})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset,Bypass))})`
 	end;
 	UDim2 = function(data:UDim2,Bypass:true?):(string,string)
+		if ss.UDIM2_MoreConstructors==true then
+			if data.X.Offset==0 and data.Y.Offset==0 and (data.X.Scale~=0 or data.Y.Scale~=0) then
+				--Scale constructor
+				return `UDim2{(ss.IndexingBy=="Dots" and `.fromScale`) or `[{ConstructorTostring("string","fromScale",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromScale",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromScale",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))})`
+			elseif (data.X.Offset~=0 or data.Y.Offset~=0) and data.X.Scale==0 and data.Y.Scale==0 then
+				--Offset constructor
+				return `UDim2{(ss.IndexingBy=="Dots" and `.fromOffset`) or `[{ConstructorTostring("string","fromOffset",Bypass)}]`}({ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromOffset",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromOffset",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
+			end
+		end
 		return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
 	end;
 	string = function(data:string):(string,string)
@@ -2834,6 +2873,45 @@ local function GetTypeOfInstance(ins:Instance):string
 	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
 end
 
+local function RecursionFindFirstChildSafeMethod(txt:string,rich:string,Index:number,Hierarchy:{Instance},Layer:number,PreviousVar:string,RecursionStartKeyword:string,RSK_rich:string):(string,string)
+	local v:Instance? = Hierarchy[Index]
+	local PreviousVar_Rich:string = PreviousVar
+	if PreviousVar=="workspace" then
+		PreviousVar_Rich = WriteRichText("workspace",ScriptBuiltInFunction)
+	elseif PreviousVar=="game" then
+		PreviousVar_Rich = WriteRichText("game",ScriptBuiltInFunction)
+	end
+	if v==nil then 
+		--Assign value
+		txt..=`\n{string.rep("\t",Layer)}{RecursionStartKeyword}{ss._Equal}{PreviousVar}`
+		rich..=`\n{string.rep("\t",Layer)}{RSK_rich}{ss._Equal}{PreviousVar_Rich}`
+		return txt,rich 
+	end
+	
+	local sanitizedName:string = string.gsub(v.Name,"[^%w_]","_")
+	if string.match(sanitizedName,"^%d") then
+		sanitizedName = `_{sanitizedName}`
+	end
+	--variable
+	local varName:string = `{(ss.SafeIndexSubtag=="" and v.Name=="" and "_") or ss.SafeIndexSubtag}{(ss.SafeIndexNaming=="SubtagPlusInstanceNamePlusNumber" and sanitizedName) or ""}{Index-1}`
+	if ss.FastNamecall == true then
+		txt..=`\n{string.rep("\t",Layer)}{ss._local}{varName}{ss._Equal}FindFirstChild({PreviousVar}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}?`) or ""}`
+		rich..=`\n{string.rep("\t",Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{WriteRichText("FindFirstChild",ScriptMethod)}({PreviousVar_Rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}?`) or ""}`
+	else
+		txt..=`\n{string.rep("\t",Layer)}{ss._local}{varName}{ss._Equal}{PreviousVar}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}?`) or ""}`
+		rich..=`\n{string.rep("\t",Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{PreviousVar_Rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}?`) or ""}`
+	end
+	--if statement
+	txt..=`\n{string.rep("\t",Layer)}if {varName} then`
+	rich..=`\n{string.rep("\t",Layer)}{WriteRichText("if",ScriptLuauKeyword)} {varName} {WriteRichText("then",ScriptLuauKeyword)}`
+	txt,rich = RecursionFindFirstChildSafeMethod(txt,rich,Index+1,Hierarchy,Layer+1,varName,RecursionStartKeyword,RSK_rich)
+	--End closing
+	txt..=`\n{string.rep("\t",Layer)}end`
+	rich..=`\n{string.rep("\t",Layer)}{WriteRichText("end",ScriptLuauKeyword)}`
+	return txt,rich
+end
+
+
 local GoToIndexPath:(ins:Instance,Recursive:Instance?,RecursionStartKeyword:string?,RSK_rich:string?,Layer:number?)->(string,string)
 do
 	local function ___IsAProperty(ins:any,prop:string):any
@@ -2861,6 +2939,7 @@ do
 		local Hierarchy:{Instance} = table.create(arraySize)::{Instance}
 		path = ins
 		if IsRecursive==false then--Regular from top to bottom
+			if Recursive~=nil then path = Recursive end
 			while path~=nil do
 				table.insert(Hierarchy,1,path)
 				if type(select(2,pcall(game.FindService,game,path.ClassName)))=="userdata" or pathMacro[path]~=nil then
@@ -2931,14 +3010,20 @@ do
 			end
 			return txt,rich
 		elseif Recursive~=nil then--Safe index
-			Layer=Layer or 1
-			local InstanceIndex:number = 1
-			print("safeindex")
-			
-			
+			local Layer:number = (Layer or 1)::number
+			--SAFEINDEX
+			local prevVar:string = "Unknown"
+			local grab = Hierarchy[1]::Instance
+			if grab==workspace then
+				prevVar = "workspace"
+			elseif grab==game then
+				prevVar = "game"
+			else
+				prevVar = grab.ClassName
+			end
+			txt,rich = RecursionFindFirstChildSafeMethod(txt,rich,2,Hierarchy,Layer,prevVar,RecursionStartKeyword::string,RSK_rich::string)	
 			return txt,rich
 		end
-		print("------")
 		--Top- to-Bottom
 		for i,v in Hierarchy do
 			if v==game then
@@ -3077,7 +3162,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		end
 	end
 	----------
-	for i,v in properties do
+	for i,v in spairs(properties) do
 		if i=="Name" then continue end
 		local foundBreak:boolean = false
 		for ii,vv in IgnoredPropertiesList do
@@ -3147,17 +3232,17 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 		--Recursive Hierarchy
-		for key,value in properties do
+		for key,value in spairs(properties) do
 			if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
 				--Recursive hierarchy 
 				if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
 					--Recursive
 					local c,r = GoToIndexPath(ins,value,"self",WriteRichText("self",ScriptSelf))
-					code..=`\n{string.rep("\t",Layer+1)}self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}{ss._Equal}{c}`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}{ss._Equal}{r}`
+					code..=`\n{string.rep("\t",Layer+1)}self{(ss.HB_PropBreckets==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}{ss._Equal}{c}`
+					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBreckets==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}{ss._Equal}{r}`
 				else
 					--SafeIndex
-					local c,r = GoToIndexPath(ins,value,`self{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}`,`{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}`,Layer+1)
+					local c,r = GoToIndexPath(ins,value,`self{(ss.HB_PropBreckets==true and `[{ConstructorTostring("string",key)}]`) or `.{key}`}`,`{WriteRichText("self",ScriptSelf)}{(ss.HB_PropBreckets==true and `[{select(2,ConstructorTostring("string",key))}]`) or `.{WriteRichText(key,ScriptProperty)}`}`,Layer+1)
 					code..=c
 					riched_code..=r
 				end
@@ -3192,13 +3277,13 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 			if next(Attributes)~=nil and IncludesAllAttributes==false then
 				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
 				if ss.FastNamecall==true then
-					for i,v in Attributes do
+					for i,v in spairs(Attributes) do
 						if IncludedAttributes[i]~=nil then continue end
 						code..=`\n{string.rep("\t",Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
 					end
 				else
-					for i,v in Attributes do
+					for i,v in spairs(Attributes) do
 						if IncludedAttributes[i]~=nil then continue end
 						code..=`\n{string.rep("\t",Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
@@ -3224,14 +3309,14 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 					if table.find(IncludedTags,v)~=nil then continue end
 					txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
 				end
-				code..=`\n{string.rep("\t",Layer+1)}AddTag{ss._Equal}\{{txt}\}{ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer+1)}AddTag{ss._Equal}\{{rich}\}{ss._Separator}`
+				code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
 			end
 			if next(Attributes)~=nil and IncludesAllAttributes==false then
-				code..=`\n{string.rep("\t",Layer+1)}SetAttribute{ss._Equal}\{`
-				riched_code..=`\n{string.rep("\t",Layer+1)}SetAttribute{ss._Equal}\{`
+				code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
+				riched_code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
 				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
-				for i,v in Attributes do
+				for i,v in spairs(Attributes) do
 					if IncludedAttributes[i]~=nil then continue end
 					code..=`\n{string.rep("\t",Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
 					riched_code..=`\n{string.rep("\t",Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
@@ -3290,6 +3375,23 @@ local function RawLuau_Convert(ins:Instance):()
 	Code.Text = "WIP"
 end
 
+
+local function GrabPropertiesOfSingularInstance(ins:Instance):()
+	local code,riched_code = `--{ins.ClassName}`,WriteRichText(`--{ins.ClassName}`,ScriptComment)
+	for i,v in spairs(GetProperties(ins,true)) do
+		if typeof(v)=="Instance" then
+			local c,r = GoToIndexPath(v)
+			code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
+			riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+			continue
+		end
+		local c,r = ConstructorTostring(typeof(v),v)
+		code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
+		riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+	end
+	Rich.Text = riched_code
+	Code.Text = code
+end
 local function BegginConvert():()
 	--Mutate variables
 	UpdateSS()
@@ -3301,7 +3403,9 @@ local function BegginConvert():()
 	--
 	SelectedInstance = Selection:Get()[1]
 	if SelectedInstance==nil then warn("Please select any instance to convert") return end
-	if CurrentConvertType=="Hierarchy Builder" then
+	if ss.Instance_PropGrab==true then
+		GrabPropertiesOfSingularInstance(SelectedInstance)
+	elseif CurrentConvertType=="Hierarchy Builder" then
 		HierarchyBuilder_Convert(SelectedInstance)
 	elseif CurrentConvertType=="Raw Luau" then
 		RawLuau_Convert(SelectedInstance)
