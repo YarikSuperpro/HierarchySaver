@@ -1725,7 +1725,7 @@ do
 	end
 end
 
-
+local hexDigits:string = "0123456789abcdef"
 local escape:{[string]:string} = {
 	['&'] = '&amp;',
 	['<'] = '&lt;',
@@ -1736,6 +1736,33 @@ local escape:{[string]:string} = {
 local function WriteRichText(str:string,color:Color3):string
 	return `<font color="#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
 end
+
+local function IsCleanNumber(num:number):boolean
+	local absnum:number = math.abs(num)
+	if absnum > 10^-math.floor(ss.SN_Float) and absnum < 10^math.floor(ss.SN_Integer) then return false end
+	
+	local str:string = tostring(absnum)
+	if num >= 1 or num <= -1 then
+		-- Matches things like "1000", "200000"
+		return string.match(str,"^%d0+$") ~= nil
+	elseif num > -1 and num < 1 then
+		-- Matches things like "0.0001"
+		return string.match(str,"^0%.0+[1-9]%d*$") ~= nil
+	end
+	return false
+end
+
+function ToScientificNotation(num:number):(string,boolean)
+	if num == 0 then
+		return "0",false
+	elseif IsCleanNumber(num)==false then
+		return tostring(num),false
+	end
+	local exponent:number = math.floor(math.log10(math.abs(num)))
+	local mantissa = num / (10^exponent)
+	return `{mantissa}e{exponent}`,true
+end
+
 
 local ConstructorTostring_Switch:{[string]:(data:any,true?)->(string,string)}
 local function ConstructorTostring(type:string,data:any,Bypass:true?):(string,string)
@@ -1749,13 +1776,13 @@ end
 --[[Number you want to round]]
 local function Round(x:number):number
 	if ss.Rounding==false then return x end
-	local Precision:number = 10^ss.Precision
+	local Precision:number = 10^math.floor(ss.Precision)
 	return math.round(x*Precision)/Precision
 end
 local function ToMatrixUnit(x:number):(string,string)
 	local deg:number = math.round(math.deg(x)*1000)/1000
 	x = math.rad(deg)
-	
+
 	if ss.MatrixCFrameMeasurements=="Degrees" then
 		return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
 	elseif ss.MatrixCFrameMeasurements=="Raw" or x==0 or x==math.pi then
@@ -1803,8 +1830,60 @@ ConstructorTostring_Switch = {
 			return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 		end
 		--Numbers
-		data = math.round(data*1_000_000)/1_000_000
-		return tostring(data),WriteRichText(tostring(data),ScriptNumber)
+		if ss.Rounding==true then
+			local Precision:number = 10^math.floor(ss.All_NumbersRound)
+			data = math.round(data*Precision)/Precision
+		end
+		local data_str:string = tostring(data)
+		if ss.HexNumbers==true and data%1==0 then
+			if data == 0 then
+				data_str = "0x0"
+			else
+				local negative:string = (data<0 and "-") or ""
+				local result:string = ""
+				data = math.abs(data)
+
+				while data > 0 do
+					local remainder:number = data % 16
+					result = string.sub(hexDigits,remainder + 1, remainder + 1) .. result
+					data //= 16
+				end
+				data_str = negative.."0x"..result
+			end
+		elseif ss.ScientificNotations==true then
+			local num,IsScientific = ToScientificNotation(data)
+			if IsScientific then
+				data_str = num
+				return num,WriteRichText(num,ScriptNumber)
+			end
+		end
+
+		if ss.UnderscoreNumbers==true then
+
+			local result:string = ""
+
+			local len:number = #data_str
+			local Index:number = 0
+			for i=len,1,-1 do
+				local char:string = string.sub(data_str,i,i)
+				if char=="-" then result = char..result 
+					break
+				elseif char=="." or string.sub(data_str,i+1,i+1)=="." then
+					Index=-1
+					result = char..result 
+					continue
+				end
+				if Index~=0 and Index%math.floor(ss.UnderscoreNumbers_Count)==0 then
+					result = "_"..result
+				end
+
+				result = char..result
+				Index+=1
+			end
+
+			return tostring(result),WriteRichText(tostring(result),ScriptNumber)
+		end
+		return tostring(data_str),WriteRichText(tostring(data_str),ScriptNumber)
 	end;
 	boolean = function(data:boolean):(string,string)
 		return tostring(data),WriteRichText(tostring(data),ScriptBool)
@@ -2887,7 +2966,7 @@ local function RecursionFindFirstChildSafeMethod(txt:string,rich:string,Index:nu
 		rich..=`\n{string.rep("\t",Layer)}{RSK_rich}{ss._Equal}{PreviousVar_Rich}`
 		return txt,rich 
 	end
-	
+
 	local sanitizedName:string = string.gsub(v.Name,"[^%w_]","_")
 	if string.match(sanitizedName,"^%d") then
 		sanitizedName = `_{sanitizedName}`
