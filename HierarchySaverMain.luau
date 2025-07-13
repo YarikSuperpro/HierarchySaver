@@ -1744,6 +1744,7 @@ local escape:{[string]:string} = {
 	['\''] = '&apos;',
 }
 local function WriteRichText(str:string,color:Color3):string
+	if ss.WriteRichText~=true then return str end
 	return `<font color="#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
 end
 
@@ -1870,16 +1871,20 @@ ConstructorTostring_Switch = {
 
 		if ss.UnderscoreNumbers==true then
 
-			local result:string = ""
+			
 
 			local len:number = #data_str
 			local Index:number = 0
-			for i=len,1,-1 do
+			local matchDot:number? = (ss.UnderscoreNumbers_IgnoreFloats==true and string.find(data_str,"%.")) or nil
+			local result:string = (matchDot~=nil and string.sub(data_str,matchDot,-1)) or ""
+			
+			for i=(matchDot and matchDot-1) or len,1,-1 do
+				
 				local char:string = string.sub(data_str,i,i)
 				if char=="-" then result = char..result 
 					break
-				elseif char=="." or string.sub(data_str,i+1,i+1)=="." then
-					Index=-1
+				elseif char=="." then
+					Index=0
 					result = char..result 
 					continue
 				end
@@ -2224,11 +2229,11 @@ end
 
 local IgnoredPropertiesList:{[any]:any}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};}]])
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
-		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";}}
+		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};}
 	end
 end
 
