@@ -82,7 +82,7 @@ local function MathClampValue(value:number,min:number,max:number,clamp:number):n
 end
 
 --Sorted dictionary closure iterator
-local function spairs(t:{[string]:any})
+local function spairs<K,V>(t:{[K]:V}): () -> (K?,V?)
 	local keys:{any} = {}
 	for k in t do
 		table.insert(keys, k)
@@ -91,7 +91,7 @@ local function spairs(t:{[string]:any})
 	local i:number = 0
 	local n:number = #keys
 	-- iterator function (closure)
-	return function():(any,any)
+	return function(): (K?,V?)
 		i = i + 1
 		if i <= n then
 			local key:any = keys[i]
@@ -142,7 +142,7 @@ local function SuccessResult(ret:string):()
 				if vv.MemberType~="Property" then continue end
 				if (type(vv.Security)=="string" and vv.Security~="None") or (type(vv.Security)=="table" and (vv.Security.Write~="None" or vv.Security.Read~="None")) then continue end
 				if vv.ValueType==nil then continue end
-				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil or table.find(vv.Tags,"Hidden")~=nil or table.find(vv.Tags,"Not Replicated")~=nil) then continue end
+				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil) then continue end
 				tab[vv.Name]=(vv.ValueType.Category=="Class" and "Instance") or (vv.ValueType.Category=="Enum" and `Enum.{vv.ValueType.Name}`) or (TranslateProperties[vv.ValueType.Name] or vv.ValueType.Name)
 			end
 			Superclass=raw_Classes[search].Superclass
@@ -1072,9 +1072,23 @@ local Default_Properties_Cache:{[string]:cache_prop} = {}
 --[[
 Returns all non default properties of an Instance
 ]]
+
+local InstanceClassProperties:{[string]:string} = {
+	Archivable = "boolean";
+	Capabilities = "SecurityCapabilities";
+	Name = "string";
+	Parent = "Instance";
+	Sandboxed = "boolean";	
+}
+
+local InstanceDefPropertiesFallback:cache_prop = {
+	Archivable = true;
+	Capabilities = SecurityCapabilities.new();
+	Sandboxed = false;
+}
+
 local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	local ClassName:string = instance.ClassName
-	if Classes[ClassName]==nil then return {} end
 	--Bypass
 	if AllPropertiesBypass==true then
 		local prop:{[string]:any} = {}
@@ -1086,16 +1100,18 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	--
 	if Default_Properties_Cache[ClassName]==nil then
 		local cache_prop:cache_prop = {}
-		local ins:any = Instance.new(ClassName)
-		for i,v in Classes[ClassName] do
-			cache_prop[i]=ins[i]
+		local try,ins = pcall(Instance.new,ClassName)
+		if try then
+			for i,v in Classes[ClassName] or InstanceClassProperties do
+				cache_prop[i]=ins[i]
+			end
+			ins:Destroy()
+			Default_Properties_Cache[ClassName]=cache_prop
 		end
-		ins:Destroy()
-		Default_Properties_Cache[ClassName]=cache_prop
 	end
-	local cache_prop:cache_prop = Default_Properties_Cache[ClassName] 
+	local cache_prop:cache_prop = Default_Properties_Cache[ClassName] or InstanceDefPropertiesFallback
 	local prop:{[string]:any} = {}
-	for i,v in Classes[ClassName] do
+	for i,v in Classes[ClassName] or InstanceClassProperties do
 		if instance[i]==cache_prop[i] or i=="ClassName" or i=="className" or i=="Parent" then continue end
 		prop[i]=instance[i]
 	end
@@ -1871,15 +1887,15 @@ ConstructorTostring_Switch = {
 
 		if ss.UnderscoreNumbers==true then
 
-			
+
 
 			local len:number = #data_str
 			local Index:number = 0
 			local matchDot:number? = (ss.UnderscoreNumbers_IgnoreFloats==true and string.find(data_str,"%.")) or nil
 			local result:string = (matchDot~=nil and string.sub(data_str,matchDot,-1)) or ""
-			
+
 			for i=(matchDot and matchDot-1) or len,1,-1 do
-				
+
 				local char:string = string.sub(data_str,i,i)
 				if char=="-" then result = char..result 
 					break
@@ -2188,7 +2204,7 @@ do
 	local function TableTostring(tbl:{[any]:any},Bypass:true?,Level:number?):(string,string)
 		local Level = (Level or 1)::number
 		local tbl_txt,tbl_rich = "{\n","{\n"
-		for i,v in tbl do
+		for i,v in spairs(tbl) do
 			if type(i)~="number" then
 				local regular,rich = ConstructorTostring(typeof(i),i,true)
 				tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
@@ -2229,11 +2245,11 @@ end
 
 local IgnoredPropertiesList:{[any]:any}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}]])
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
-		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};}
+		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}
 	end
 end
 
@@ -3200,16 +3216,16 @@ end
 local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
 	local dictionary,dictionary_rich = "{","{"
 	if ins.CollisionFidelity~=Enum.CollisionFidelity.Default then
-		dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("Enum",ins.CollisionFidelity)}{ss._Separator}`
-		dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",ins.CollisionFidelity))}{ss._Separator}`
+		dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss._Separator}`
+		dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss._Separator}`
 	end
 	if ins.RenderFidelity ~= Enum.RenderFidelity.Automatic then
-		dictionary..=`RenderFidelity{ss._Equal}{ConstructorTostring("Enum",ins.RenderFidelity)}{ss._Separator}`
-		dictionary_rich..=`RenderFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",ins.RenderFidelity))}{ss._Separator}`
+		dictionary..=`RenderFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.RenderFidelity)}{ss._Separator}`
+		dictionary_rich..=`RenderFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}{ss._Separator}`
 	end
 	if ins.FluidFidelity ~= Enum.FluidFidelity.Automatic then
-		dictionary..=`FluidFidelity{ss._Equal}{ConstructorTostring("Enum",ins.FluidFidelity)}{ss._Separator}`
-		dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",ins.FluidFidelity))}{ss._Separator}`
+		dictionary..=`FluidFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.FluidFidelity)}{ss._Separator}`
+		dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}{ss._Separator}`
 	end
 	dictionary..="}";dictionary_rich..="}"
 	dictionary = (dictionary=="{}" and "") or ss.FuncSeparator..dictionary
@@ -3238,7 +3254,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		--Declear instance for for mesh
 		if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
 			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-			
+
 			if ss.UseMeshFunction==true then
 				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
@@ -3261,23 +3277,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 		--Type
 		--Declear instance for for mesh
 		if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
-			local dictionary,dictionary_rich = "{","{"
-			if (ins::MeshPart).CollisionFidelity~=Enum.CollisionFidelity.Default then
-				dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("Enum",(ins::MeshPart).CollisionFidelity)}{ss._Separator}`
-				dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",(ins::MeshPart).CollisionFidelity))}{ss._Separator}`
-			end
-			if (ins::MeshPart).RenderFidelity ~= Enum.RenderFidelity.Automatic then
-				dictionary..=`RenderFidelity{ss._Equal}{ConstructorTostring("Enum",(ins::MeshPart).RenderFidelity)}{ss._Separator}`
-				dictionary_rich..=`RenderFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",(ins::MeshPart).RenderFidelity))}{ss._Separator}`
-			end
-			if (ins::MeshPart).FluidFidelity ~= Enum.FluidFidelity.Automatic then
-				dictionary..=`FluidFidelity{ss._Equal}{ConstructorTostring("Enum",(ins::MeshPart).FluidFidelity)}{ss._Separator}`
-				dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("Enum",(ins::MeshPart).FluidFidelity))}{ss._Separator}`
-			end
-			dictionary..="}";dictionary_rich..="}"
-			dictionary = (dictionary=="{}" and "") or ss.FuncSeparator..dictionary
-			dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
-
+			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 			if ss.UseMeshFunction==true then
 				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
@@ -3335,6 +3335,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
 		end
 	end
+	local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
 	----------
 	for i,v in spairs(properties) do
 		if i=="Name" then continue end
@@ -3346,10 +3347,10 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 			end
 		end
 		--Ignore List
-		if foundBreak then continue end
+		if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 		--Already in _base
 		if baseImport~=nil and _baseImports[baseImport][i]==v then continue end
-		if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i=="TextureID") then continue end
+		if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
 
 		local type:string = typeof(v)
 		if type=="Instance" then
@@ -3393,7 +3394,7 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 	end
 	--_init--
 	--IncludeInit?
-	local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+	local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
 	if IncludeInit==false then
 		for i,v in properties do
 			if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName)))~="Instance")))) then IncludeInit=true break end
@@ -3564,9 +3565,65 @@ local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,La
 	return code,riched_code
 end
 
+local function IncludeTopCode(IncludeFunctions:true?):(string,string)
+	local txt,rich = "",""
+	if ss.DisplaySource==true then
+		local t:string = (SelectedInstance or workspace):GetFullName()
+		txt..=`--@Source {t}\n`
+		rich..=WriteRichText(`--@Source {t}`,ScriptComment).."\n"
+	end
+	if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
+		if ss._SaveMeshes_Cache then
+			--local alloc
+			if ss.CacheTableType=="Array" then
+				txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?\}\}`) or ""}{ss._Equal}\{\}\n`
+				rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}\}`) or ""}{ss._Equal}\{\}\n`
+			else--Hash table
+				txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{` 				
+				rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{` 				
+				for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
+					for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
+						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
+						for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
+							txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
+							rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
+						end
+						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
+						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
+					end
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
+				end
+				txt..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+				rich..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+			end
+			--function open
+			txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}`
+			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}`
+			--function body
+			if ss.CacheTableType=="Array" then
+				
+				
+			else--Hash table
+				
+				
+			end
+			--function close
+			txt..=`\nend\n`
+			rich..=`\n{WriteRichText("end",ScriptLuauKeyword)}\n`
+		else
+
+
+		end
+	end
+	return txt,rich
+end
+
 local function HierarchyBuilder_Convert(ins:Instance):()
-	local code:string = ``
-	local riched_code:string = ``
+	local code,riched_code = IncludeTopCode(true)
 	code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
 	riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
 	code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)
