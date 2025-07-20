@@ -1743,11 +1743,11 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):(
 end
 local CachedConstants:{[any]:string}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_cachedConstants") or "{}")
+	local _try,ret = pcall(Parser,plugin:GetSetting("HB_cachedConstants") or [[{[2.718281828459045]="math.exp(1)"}]])
 	if _try and type(ret)=="table" then
 		CachedConstants=ret
 	else
-		CachedConstants = {}
+		CachedConstants = {[2.718281828459045]="math.exp(1)"}
 	end
 end
 
@@ -1764,33 +1764,6 @@ local function WriteRichText(str:string,color:Color3):string
 	return `<font color="#{color:ToHex()}">{string.gsub(str,`[&<>"\']`,escape)}</font>`
 end
 
-local function IsCleanNumber(num:number):boolean
-	local absnum:number = math.abs(num)
-	if absnum > 10^-math.floor(ss.SN_Float) and absnum < 10^math.floor(ss.SN_Integer) then return false end
-
-	local str:string = tostring(absnum)
-	if num >= 1 or num <= -1 then
-		-- Matches things like "1000", "200000"
-		return string.match(str,"^%d0+$") ~= nil
-	elseif num > -1 and num < 1 then
-		-- Matches things like "0.0001"
-		return string.match(str,"^0%.0+[1-9]%d*$") ~= nil
-	end
-	return false
-end
-
-function ToScientificNotation(num:number):(string,boolean)
-	if num == 0 then
-		return "0",false
-	elseif IsCleanNumber(num)==false then
-		return tostring(num),false
-	end
-	local exponent:number = math.floor(math.log10(math.abs(num)))
-	local mantissa = num / (10^exponent)
-	return `{mantissa}e{exponent}`,true
-end
-
-
 local ConstructorTostring_Switch:{[string]:(data:any,true?)->(string,string)}
 local function ConstructorTostring(type:string,data:any,Bypass:true?):(string,string)
 	if Bypass~=true then
@@ -1800,438 +1773,501 @@ local function ConstructorTostring(type:string,data:any,Bypass:true?):(string,st
 	end
 	return (ConstructorTostring_Switch[type] or ConstructorTostring_Switch["_Default"])(data,Bypass)
 end
---[[Number you want to round]]
-local function Round(x:number):number
-	if ss.Rounding==false then return x end
-	local Precision:number = 10^math.floor(ss.Precision)
-	return math.round(x*Precision)/Precision
-end
-local function ToMatrixUnit(x:number):(string,string)
-	local deg:number = math.round(math.deg(x)*1000)/1000
-	x = math.rad(deg)
+--Init ConstructorTostring
+(function():()
+	local function IsCleanNumber(num:number):boolean
+		local absnum:number = math.abs(num)
+		if absnum > 10^-math.floor(ss.SN_Float) and absnum < 10^math.floor(ss.SN_Integer) then return false end
 
-	if ss.MatrixCFrameMeasurements=="Degrees" then
-		return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
-	elseif ss.MatrixCFrameMeasurements=="Raw" or x==0 or x==math.pi then
-		if x==math.pi then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}` end
-		return ConstructorTostring("number",x)
-	elseif ss.MatrixCFrameMeasurements=="Balance" then
-		local mul = x/math.pi
-		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		local str:string = tostring(absnum)
+		if num >= 1 or num <= -1 then
+			-- Matches things like "1000", "200000"
+			return string.match(str,"^%d0+$") ~= nil
+		elseif num > -1 and num < 1 then
+			-- Matches things like "0.0001"
+			return string.match(str,"^0%.0+[1-9]%d*$") ~= nil
+		end
+		return false
+	end
 
-		local sub = math.pi/x
-		if #tostring(sub%1)<7 then 
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
-		else
+	local function ToScientificNotation(num:number):(string,boolean)
+		if num == 0 then
+			return "0",false
+		elseif IsCleanNumber(num)==false then
+			return tostring(num),false
+		end
+		local exponent:number = math.floor(math.log10(math.abs(num)))
+		local mantissa = num / (10^exponent)
+		return `{mantissa}e{exponent}`,true
+	end
+
+	local function decimalToFraction(x:number):(number,number)
+		local sign:number = 1
+		if x < 0 then
+			sign = -1
+			x = -x
+		end
+		local a, b = 0, 1
+		local c, d = 1, 0
+		while true do
+			local mediant_n:number = a + c
+			local mediant_d:number = b + d
+			if mediant_d > ss.Fraction::number then break end
+			if x * mediant_d > mediant_n then
+				a, b = mediant_n, mediant_d
+			else
+				c, d = mediant_n, mediant_d
+			end
+		end
+		local lower:number = a / b
+		local upper:number = c / d
+		if math.abs(lower - x) < math.abs(upper - x) then
+			return sign*a, b
+		end
+		return sign*c, d
+	end
+
+
+
+	--[[Number you want to round]]
+	local function Round(x:number):number
+		if ss.Rounding==false then return x end
+		local Precision:number = 10^math.floor(ss.Precision)
+		return math.round(x*Precision)/Precision
+	end
+	local function ToMatrixUnit(x:number):(string,string)
+		local deg:number = math.round(math.deg(x)*1000)/1000
+		x = math.rad(deg)
+
+		if ss.MatrixCFrameMeasurements=="Degrees" then
 			return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
-		end
-	else--Radians
-		local mul = x/math.pi
-		if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+		elseif ss.MatrixCFrameMeasurements=="Raw" or x==0 or x==math.pi then
+			if x==math.pi then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}` end
+			return ConstructorTostring("number",x)
+		elseif ss.MatrixCFrameMeasurements=="Balance" then
+			local mul = x/math.pi
+			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
-		local sub = math.pi/x
-		if #tostring(sub%1)<7 then 
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
-		else
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
+			local sub = math.pi/x
+			if #tostring(sub%1)<7 then 
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+			else
+				return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
+			end
+		else--Radians
+			local mul = x/math.pi
+			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+
+			local sub = math.pi/x
+			if #tostring(sub%1)<7 then 
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+			else
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
+			end
 		end
 	end
-end
-ConstructorTostring_Switch = {
-	EnumItem = function(data:EnumItem,Bypass:true?):(string,string)
-		if ss.IndexingBy=="Dots" then
-			return tostring(data),`{WriteRichText("Enum",ScriptBuiltInFunction)}.{WriteRichText(tostring(data.EnumType),ScriptBuiltInFunction)}.{WriteRichText(data.Name,ScriptProperty)}`
-		else
-			return `Enum[{ConstructorTostring("string",tostring(data.EnumType),Bypass)}][{ConstructorTostring("string",tostring(data.Name),Bypass)}]`,`{WriteRichText("Enum",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string",tostring(data.EnumType),Bypass))}][{select(2,ConstructorTostring("string",tostring(data.Name),Bypass))}]`
-		end
-	end;
-	number = function(data:number,Bypass:true?):(string,string)
-		--constants
-		if ss.NanConstant==true and data~=data then
-			return ss.NanConstant_Name,ss.NanConstant_Name
-		elseif data==math.pi then
-			return `math{(ss.IndexingBy=="Dots" and ".pi") or `["pi"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
-		elseif data==math.huge then
-			return `math{(ss.IndexingBy=="Dots" and ".huge") or `["huge"]`}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
-		elseif data~=data then
-			return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
-		end
-		--Numbers
-		if ss.Rounding==true then
-			local Precision:number = 10^math.floor(ss.All_NumbersRound)
-			data = math.round(data*Precision)/Precision
-		end
-		local data_str:string = tostring(data)
-		if ss.HexNumbers==true and data%1==0 then
-			if data == 0 then
-				data_str = "0x0"
+	ConstructorTostring_Switch = {
+		EnumItem = function(data:EnumItem,Bypass:true?):(string,string)
+			if ss.IndexingBy=="Dots" then
+				return tostring(data),`{WriteRichText("Enum",ScriptBuiltInFunction)}.{WriteRichText(tostring(data.EnumType),ScriptBuiltInFunction)}.{WriteRichText(data.Name,ScriptProperty)}`
 			else
-				local negative:string = (data<0 and "-") or ""
-				local result:string = ""
-				data = math.abs(data)
-
-				while data > 0 do
-					local remainder:number = data % 16
-					result = string.sub(hexDigits,remainder + 1, remainder + 1) .. result
-					data //= 16
-				end
-				data_str = negative.."0x"..result
+				return `Enum[{ConstructorTostring("string",tostring(data.EnumType),Bypass)}][{ConstructorTostring("string",tostring(data.Name),Bypass)}]`,`{WriteRichText("Enum",ScriptBuiltInFunction)}[{select(2,ConstructorTostring("string",tostring(data.EnumType),Bypass))}][{select(2,ConstructorTostring("string",tostring(data.Name),Bypass))}]`
 			end
-		elseif ss.ScientificNotations==true then
-			local num,IsScientific = ToScientificNotation(data)
-			if IsScientific then
-				data_str = num
-				return num,WriteRichText(num,ScriptNumber)
-			end
-		end
-
-		if ss.UnderscoreNumbers==true then
-
-
-
-			local len:number = #data_str
-			local Index:number = 0
-			local matchDot:number? = (ss.UnderscoreNumbers_IgnoreFloats==true and string.find(data_str,"%.")) or nil
-			local result:string = (matchDot~=nil and string.sub(data_str,matchDot,-1)) or ""
-
-			for i=(matchDot and matchDot-1) or len,1,-1 do
-
-				local char:string = string.sub(data_str,i,i)
-				if char=="-" then result = char..result 
-					break
-				elseif char=="." then
-					Index=0
-					result = char..result 
-					continue
-				end
-				if Index~=0 and Index%math.floor(ss.UnderscoreNumbers_Count)==0 then
-					result = "_"..result
-				end
-
-				result = char..result
-				Index+=1
-			end
-
-			return tostring(result),WriteRichText(tostring(result),ScriptNumber)
-		end
-		return tostring(data_str),WriteRichText(tostring(data_str),ScriptNumber)
-	end;
-	boolean = function(data:boolean):(string,string)
-		return tostring(data),WriteRichText(tostring(data),ScriptBool)
-	end;
-	["nil"] = function(data:nil):(string,string)
-		return "nil",WriteRichText("nil",ScriptNil)
-	end;
-	Vector2 = function(data:Vector2,Bypass:true?):(string,string)
-		--Constants
-		if data==Vector2.one then
-			return `Vector2{(ss.IndexingBy=="Dots" and ".one") or `["one"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one"))}]`}`
-		elseif data==Vector2.zero then
-			return `Vector2{(ss.IndexingBy=="Dots" and ".zero") or `["zero"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero"))}]`}`
-		elseif data==Vector2.xAxis then
-			return `Vector2{(ss.IndexingBy=="Dots" and ".xAxis") or `["xAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis"))}]`}`
-		elseif data==Vector2.yAxis then
-			return `Vector2{(ss.IndexingBy=="Dots" and ".yAxis") or `["yAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis"))}]`}`
-		end
-		--Vector2
-		local X,Y = Round(data.X),Round(data.Y)
-		return `Vector2{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))})`
-	end;
-	Vector2int16 = function(data:Vector2,Bypass:true?):(string,string)
-		return `Vector2int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)})`,`{WriteRichText("Vector2int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))})`
-	end;
-	Vector3 = function(data:Vector3,Bypass:true?):(string,string)
-		local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
-		if ss.VectorLibUse=="vector" then
+		end;
+		number = function(data:number,Bypass:true?):(string,string)
 			--constants
-			if data==Vector3.one then
-				return `vector{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
-			elseif data==Vector3.zero then
-				return `vector{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
+			if ss.NanConstant==true and data~=data then
+				return ss.NanConstant_Name,ss.NanConstant_Name
+			elseif data==math.pi or data==-math.pi then
+				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".pi") or `["pi"]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
+			elseif data==math.huge or data==-math.huge then
+				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".huge") or `["huge"]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
+			elseif data~=data then
+				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
-			--vectors
-			return `vector{(ss.IndexingBy=="Dots" and ".create") or `[{ConstructorTostring("string","create",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("create",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","create",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
-		else
-			--constants
-			if data==Vector3.one then
-				return `Vector3{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
-			elseif data==Vector3.zero then
-				return `Vector3{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
-			elseif data==Vector3.xAxis then
-				return `Vector3{(ss.IndexingBy=="Dots" and ".xAxis") or `[{ConstructorTostring("string","xAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis",Bypass))}]`}`
-			elseif data==Vector3.yAxis then
-				return `Vector3{(ss.IndexingBy=="Dots" and ".yAxis") or `[{ConstructorTostring("string","yAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis",Bypass))}]`}`
-			elseif data==Vector3.zAxis then
-				return `Vector3{(ss.IndexingBy=="Dots" and ".zAxis") or `[{ConstructorTostring("string","zAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zAxis",Bypass))}]`}`
+			--Numbers
+			if ss.Rounding==true then
+				local Precision:number = 10^math.floor(ss.All_NumbersRound)
+				data = math.round(data*Precision)/Precision
 			end
-			--Vector3
-			return `Vector3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
-		end
-	end;
-	Vector3int16 = function(data:Vector3int16,Bypass:true?):(string,string)
-		return `Vector3int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Z,Bypass)})`,`{WriteRichText("Vector3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Z,Bypass))})`
-	end;
-	BrickColor = function(data:BrickColor,Bypass:true?):(string,string)
-		return `BrickColor{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Name,Bypass)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Name,Bypass))})`
-	end;
-	Color3 = function(data:Color3,Bypass:true?):(string,string)
-		if ss.Color3Format=="Color3_new" then
-			local R,G,B = math.round(data.R*1_000_000)/1_000_000,math.round(data.G*1_000_000)/1_000_000,math.round(data.B*1_000_000)/1_000_000
-			return `Color3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
-		elseif ss.Color3Format=="Color3_fromRGB" then
-			local R,G,B = math.round(data.R*255),math.round(data.G*255),math.round(data.B*255)
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromRGB") or `[{ConstructorTostring("string","fromRGB",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromRGB",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromRGB",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
-		elseif ss.Color3Format=="Color3_fromHEX" then
-			local HEX:string = `#{data:ToHex()}`
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromHex") or `[{ConstructorTostring("string","fromHex",Bypass)}]`}({ConstructorTostring("string",HEX,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHex",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHex",Bypass))}]`}({select(2,ConstructorTostring("string",HEX,Bypass))})`
-		else--Color3_fromHSV
-			local H,S,V = data:ToHSV()
-			H,S,V = math.round(H*1_000_000)/1_000_000,math.round(S*1_000_000)/1_000_000,math.round(V*1_000_000)/1_000_000
-			return `Color3{(ss.IndexingBy=="Dots" and ".fromHSV") or `[{ConstructorTostring("string","fromHSV",Bypass)}]`}({ConstructorTostring("number",H,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",S,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",V,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHSV",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHSV",Bypass))}]`}({select(2,ConstructorTostring("number",H,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",S,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",V,Bypass))})`
-		end
-	end;
-	CFrame = function(data:CFrame,Bypass:true?):(string,string)
-		--Empty cframe
-		if data==CFrame.identity then
-			return `CFrame{(ss.IndexingBy=="Dots" and ".identity") or `[{ConstructorTostring("string","identity",Bypass)}]`}`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("identity",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","identity",Bypass))}]`}`
-		end
-		--CFrame
-		local x,y,z = data:ToOrientation()
-		if x==0 and y==0 and z==0 then--No rotation
+			local data_str:string = tostring(data)
+			if ss.HexNumbers==true and data%1==0 then
+				if data == 0 then
+					data_str = "0x0"
+				else
+					local negative:string = (data<0 and "-") or ""
+					local result:string = ""
+					data = math.abs(data)
+
+					while data > 0 do
+						local remainder:number = data % 16
+						result = string.sub(hexDigits,remainder + 1, remainder + 1) .. result
+						data //= 16
+					end
+					data_str = negative.."0x"..result
+				end
+			elseif ss.ScientificNotations==true then
+				local num,IsScientific = ToScientificNotation(data)
+				if IsScientific then
+					data_str = num
+					return num,WriteRichText(num,ScriptNumber)
+				end
+			end
+			if ss.FriendlyFraction==true and data%1~=0 and (#data_str-string.find(data_str,"%.")::number)>=ss.FractionThreshold::number then
+				if math.abs(data)<ss.FractionMaxInt::number then
+					local num, den = decimalToFraction(data)
+					local approx = num / den
+					local err:number = math.abs(data - approx) / math.abs(data)
+					if err < 0.5 * 10^(-(ss.FractionThreshold::number-1)) then
+						return `{ConstructorTostring("number",num)}{ss.Div}{ConstructorTostring("number",den)}`,`{select(2,ConstructorTostring("number",num))}{ss.Div}{select(2,ConstructorTostring("number",den))}`
+					end
+				end
+			end
+			if ss.UnderscoreNumbers==true then
+				local len:number = #data_str
+				local Index:number = 0
+				local matchDot:number? = (ss.UnderscoreNumbers_IgnoreFloats==true and string.find(data_str,"%.")) or nil
+				local result:string = (matchDot~=nil and string.sub(data_str,matchDot,-1)) or ""
+
+				for i=(matchDot and matchDot-1) or len,1,-1 do
+
+					local char:string = string.sub(data_str,i,i)
+					if char=="-" then result = char..result 
+						break
+					elseif char=="." then
+						Index=0
+						result = char..result 
+						continue
+					end
+					if Index~=0 and Index%math.floor(ss.UnderscoreNumbers_Count)==0 then
+						result = "_"..result
+					end
+
+					result = char..result
+					Index+=1
+				end
+
+				return tostring(result),WriteRichText(tostring(result),ScriptNumber)
+			end
+			return tostring(data_str),WriteRichText(tostring(data_str),ScriptNumber)
+		end;
+		boolean = function(data:boolean):(string,string)
+			return tostring(data),WriteRichText(tostring(data),ScriptBool)
+		end;
+		["nil"] = function(data:nil):(string,string)
+			return "nil",WriteRichText("nil",ScriptNil)
+		end;
+		Vector2 = function(data:Vector2,Bypass:true?):(string,string)
+			--Constants
+			if data==Vector2.one then
+				return `Vector2{(ss.IndexingBy=="Dots" and ".one") or `["one"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one"))}]`}`
+			elseif data==Vector2.zero then
+				return `Vector2{(ss.IndexingBy=="Dots" and ".zero") or `["zero"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero"))}]`}`
+			elseif data==Vector2.xAxis then
+				return `Vector2{(ss.IndexingBy=="Dots" and ".xAxis") or `["xAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis"))}]`}`
+			elseif data==Vector2.yAxis then
+				return `Vector2{(ss.IndexingBy=="Dots" and ".yAxis") or `["yAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis"))}]`}`
+			end
+			--Vector2
+			local X,Y = Round(data.X),Round(data.Y)
+			return `Vector2{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)})`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))})`
+		end;
+		Vector2int16 = function(data:Vector2,Bypass:true?):(string,string)
+			return `Vector2int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)})`,`{WriteRichText("Vector2int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))})`
+		end;
+		Vector3 = function(data:Vector3,Bypass:true?):(string,string)
 			local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
-			return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
-		elseif data.Position.Magnitude==0 then--No position
-			if ss.CFrameFormatting=="CFrameNewYXZRotation" then
-				local rX,rX_rich = ToMatrixUnit(x)
-				local rY,rY_rich = ToMatrixUnit(y)
-				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `[{ConstructorTostring("string","fromEulerAnglesYXZ",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
-			elseif ss.CFrameFormatting=="CFrameNewPlusAngles" then
-				x,y,z = data:ToEulerAnglesXYZ()
-				local rX,rX_rich = ToMatrixUnit(x)
-				local rY,rY_rich = ToMatrixUnit(y)
-				local rZ,rZ_rich = ToMatrixUnit(z)
-				return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
-			else--RawCFrameNew
-				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
-				X,Y,Z = Round(X),Round(Y),Round(Z)
-				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
+			if ss.VectorLibUse=="vector" then
+				--constants
+				if data==Vector3.one then
+					return `vector{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
+				elseif data==Vector3.zero then
+					return `vector{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
+				end
+				--vectors
+				return `vector{(ss.IndexingBy=="Dots" and ".create") or `[{ConstructorTostring("string","create",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("vector",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("create",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","create",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
+			else
+				--constants
+				if data==Vector3.one then
+					return `Vector3{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
+				elseif data==Vector3.zero then
+					return `Vector3{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
+				elseif data==Vector3.xAxis then
+					return `Vector3{(ss.IndexingBy=="Dots" and ".xAxis") or `[{ConstructorTostring("string","xAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis",Bypass))}]`}`
+				elseif data==Vector3.yAxis then
+					return `Vector3{(ss.IndexingBy=="Dots" and ".yAxis") or `[{ConstructorTostring("string","yAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis",Bypass))}]`}`
+				elseif data==Vector3.zAxis then
+					return `Vector3{(ss.IndexingBy=="Dots" and ".zAxis") or `[{ConstructorTostring("string","zAxis",Bypass)}]`}`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zAxis",Bypass))}]`}`
+				end
+				--Vector3
+				return `Vector3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("Vector3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
 			end
-		else--Has rotation and position
-			if ss.CFrameFormatting=="CFrameNewYXZRotation" or ss.CFrameFormatting=="CFrameNewPlusAngles" then
+		end;
+		Vector3int16 = function(data:Vector3int16,Bypass:true?):(string,string)
+			return `Vector3int16{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Z,Bypass)})`,`{WriteRichText("Vector3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Z,Bypass))})`
+		end;
+		BrickColor = function(data:BrickColor,Bypass:true?):(string,string)
+			return `BrickColor{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Name,Bypass)})`,`{WriteRichText("BrickColor",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Name,Bypass))})`
+		end;
+		Color3 = function(data:Color3,Bypass:true?):(string,string)
+			if ss.Color3Format=="Color3_new" then
+				local R,G,B = math.round(data.R*1_000_000)/1_000_000,math.round(data.G*1_000_000)/1_000_000,math.round(data.B*1_000_000)/1_000_000
+				return `Color3{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
+			elseif ss.Color3Format=="Color3_fromRGB" then
+				local R,G,B = math.round(data.R*255),math.round(data.G*255),math.round(data.B*255)
+				return `Color3{(ss.IndexingBy=="Dots" and ".fromRGB") or `[{ConstructorTostring("string","fromRGB",Bypass)}]`}({ConstructorTostring("number",R,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",G,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",B,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromRGB",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromRGB",Bypass))}]`}({select(2,ConstructorTostring("number",R,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",G,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",B,Bypass))})`
+			elseif ss.Color3Format=="Color3_fromHEX" then
+				local HEX:string = `#{data:ToHex()}`
+				return `Color3{(ss.IndexingBy=="Dots" and ".fromHex") or `[{ConstructorTostring("string","fromHex",Bypass)}]`}({ConstructorTostring("string",HEX,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHex",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHex",Bypass))}]`}({select(2,ConstructorTostring("string",HEX,Bypass))})`
+			else--Color3_fromHSV
+				local H,S,V = data:ToHSV()
+				H,S,V = math.round(H*1_000_000)/1_000_000,math.round(S*1_000_000)/1_000_000,math.round(V*1_000_000)/1_000_000
+				return `Color3{(ss.IndexingBy=="Dots" and ".fromHSV") or `[{ConstructorTostring("string","fromHSV",Bypass)}]`}({ConstructorTostring("number",H,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",S,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",V,Bypass)})`,`{WriteRichText("Color3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromHSV",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromHSV",Bypass))}]`}({select(2,ConstructorTostring("number",H,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",S,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",V,Bypass))})`
+			end
+		end;
+		CFrame = function(data:CFrame,Bypass:true?):(string,string)
+			--Empty cframe
+			if data==CFrame.identity then
+				return `CFrame{(ss.IndexingBy=="Dots" and ".identity") or `[{ConstructorTostring("string","identity",Bypass)}]`}`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("identity",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","identity",Bypass))}]`}`
+			end
+			--CFrame
+			local x,y,z = data:ToOrientation()
+			if x==0 and y==0 and z==0 then--No rotation
 				local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
-				local txt,rich = ConstructorTostring("CFrame",data.Rotation)
-				return `{(ss.FastNamecall==true and `{ss.NC_CfrMul}(`) or ""}CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{txt}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}CFrame`) or ""}`) or ""}`,`{(ss.FastNamecall==true and `{WriteRichText(ss.NC_CfrMul,ScriptMethod)}(`) or ""}{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{rich}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("CFrame",Color3.new(0,1,1))}`) or ""}`) or ""}`
-			else--RawCFrameNew
-				local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
-				X,Y,Z = Round(X),Round(Y),Round(Z)
-				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
-			end
-		end
-	end;
-	Axes = function(data:Axes,Bypass:true?):(string,string)
-		return `Axes{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}()`,`{WriteRichText("Axes",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}()`
-	end;
-	ColorSequenceKeypoint = function(data:ColorSequenceKeypoint,Bypass:true?):(string,string)
-		local color,rich = ConstructorTostring("Color3",data.Value)
-		return `ColorSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{color})`,`{WriteRichText("ColorSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{rich})`
-	end;
-	ColorSequence = function(data:ColorSequence,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		if #data.Keypoints>=3 then
-			txt,rich = "{","{"
-			for i,v in data.Keypoints do
-				local t,r = ConstructorTostring("ColorSequenceKeypoint",v,Bypass)
-				txt..=`{t}{ss._Separator}`
-				rich..=`{r}{ss._Separator}`
-			end
-			txt..="}";rich..="}"
-		elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
-			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass)}`
-			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass))}`
-		else--1
-			txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}`
-			rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}`
-		end
-		return `ColorSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("ColorSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	Faces = function(data:Faces,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		for i,v in Enum.NormalId:GetEnumItems() do
-			if (data :: any)[v.Name] then
-				if txt~="" then
-					txt..=ss.FuncSeparator
-					rich..=ss.FuncSeparator
+				return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))})`
+			elseif data.Position.Magnitude==0 then--No position
+				if ss.CFrameFormatting=="CFrameNewYXZRotation" then
+					local rX,rX_rich = ToMatrixUnit(x)
+					local rY,rY_rich = ToMatrixUnit(y)
+					local rZ,rZ_rich = ToMatrixUnit(z)
+					return `CFrame{(ss.IndexingBy=="Dots" and `.fromEulerAnglesYXZ`) or `[{ConstructorTostring("string","fromEulerAnglesYXZ",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromEulerAnglesYXZ",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromEulerAnglesYXZ",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+				elseif ss.CFrameFormatting=="CFrameNewPlusAngles" then
+					x,y,z = data:ToEulerAnglesXYZ()
+					local rX,rX_rich = ToMatrixUnit(x)
+					local rY,rY_rich = ToMatrixUnit(y)
+					local rZ,rZ_rich = ToMatrixUnit(z)
+					return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+				else--RawCFrameNew
+					local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
+					X,Y,Z = Round(X),Round(Y),Round(Z)
+					return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
 				end
-				txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
-			end
-		end
-		return `Faces{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Faces",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	FloatCurveKey = function(data:FloatCurveKey,Bypass:true?):(string,string)
-		return `FloatCurveKey{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Interpolation,Bypass)})`,`{WriteRichText("FloatCurveKey",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Interpolation,Bypass))})`	
-	end;
-	Font = function(data:Font,Bypass:true?):(string,string)
-		return `Font{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Family,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Weight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Style,Bypass)})`,`{WriteRichText("Font",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Family,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Weight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Style,Bypass))})`
-	end;
-	NumberRange = function(data:NumberRange,Bypass:true?):(string,string)
-		return `NumberRange{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({(data.Min==data.Max and `{ConstructorTostring("number",data.Max,Bypass)}`) or `{ConstructorTostring("number",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max,Bypass)}`})`,`{WriteRichText("NumberRange",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({(data.Min==data.Max and `{select(2,ConstructorTostring("number",data.Max,Bypass))}`) or `{select(2,ConstructorTostring("number",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max,Bypass))}`})`
-	end;
-	NumberSequenceKeypoint = function(data:NumberSequenceKeypoint,Bypass:true?):(string,string)
-		return `NumberSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{(data.Envelope~=0 and `{ss.FuncSeparator}{ConstructorTostring("number",data.Envelope,Bypass)}`) or ""})`,`{WriteRichText("NumberSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{(data.Envelope~=0 and `{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Envelope,Bypass))}`) or ""})`
-	end;
-	NumberSequence = function(data:NumberSequence,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		if #data.Keypoints>=3 then
-			txt,rich = "{","{"
-			for i,v in data.Keypoints do
-				local t,r = ConstructorTostring("NumberSequenceKeypoint",v,Bypass)
-				txt..=`{t}{ss._Separator}`
-				rich..=`{r}{ss._Separator}`
-			end
-			txt..="}";rich..="}"
-		elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
-			txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Keypoints[2].Value,Bypass)}`
-			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Keypoints[2].Value,Bypass))}`
-		else--1
-			txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}`
-			rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}`
-		end
-		return `NumberSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("NumberSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	Path2DControlPoint = function(data:Path2DControlPoint,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		if data.LeftTangent~=UDim2_zero and data.RightTangent~=UDim2_zero then
-			--Full constructor
-			txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.LeftTangent,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.RightTangent,Bypass)}`
-			rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.LeftTangent,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.RightTangent,Bypass))}`
-		elseif data.Position~=UDim2_zero then
-			--Position only
-			txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}`
-			rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}`
-		end
-		return `Path2DControlPoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Path2DControlPoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	PathWaypoint = function(data:PathWaypoint,Bypass:true?):(string,string)
-		return `PathWaypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Action,Bypass)}{(data.Label~="" and `{ss.FuncSeparator}{ConstructorTostring("string",data.Label,Bypass)}`) or ""})`,`{WriteRichText("PathWaypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Action,Bypass))}{(data.Label~="" and `{ss.FuncSeparator}{select(2,ConstructorTostring("string",data.Label,Bypass))}`) or ""})`
-	end;
-	PhysicalProperties = function(data:PhysicalProperties,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		for i,v in Enum.Material:GetEnumItems() do
-			if data==PhysicalProperties.new(v) then
-				txt = `{ConstructorTostring("EnumItem",v,Bypass)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",v,Bypass))}`
-				break
-			end
-		end
-		if txt=="" then
-			if data.FrictionWeight==1 and data.ElasticityWeight==1 then--3 args
-				txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}`
-			else--All args
-				txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.FrictionWeight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass)}`
-				rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.FrictionWeight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass))}`
-			end
-		end
-		return `PhysicalProperties{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("PhysicalProperties",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	Ray = function(data:Ray,Bypass:true?):(string,string)
-		return `Ray{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Origin,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",data.Direction,Bypass)})`,`{WriteRichText("Ray",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Origin,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",data.Direction,Bypass))})`
-	end;
-	Rect = function(data:Rect,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		if data~=Rect_zero then
-			txt = `{ConstructorTostring("number",data.Min.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Min.Y)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.Y,Bypass)}`
-			rich = `{select(2,ConstructorTostring("number",data.Min.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Min.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.Y,Bypass))}`
-		end
-		return `Rect{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Rect",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	Region3 = function(data:Region3,Bypass:true?):(string,string)
-		local min,max = data.CFrame.Position-data.Size*0.5,data.CFrame.Position+data.Size*0.5
-		return `Region3{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",max,Bypass)})`,`{WriteRichText("Region3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",max,Bypass))})`
-	end;
-	Region3int16 = function(data:Region3int16,Bypass:true?):(string,string)
-		return `Region3int16{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3int16",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3int16",data.Max,Bypass)})`,`{WriteRichText("Region3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3int16",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3int16",data.Max,Bypass))})`
-	end;
-	UDim = function(data:UDim,Bypass:true?):(string,string)
-		return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Offset,Bypass)})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset,Bypass))})`
-	end;
-	UDim2 = function(data:UDim2,Bypass:true?):(string,string)
-		if ss.UDIM2_MoreConstructors==true then
-			if data.X.Offset==0 and data.Y.Offset==0 and (data.X.Scale~=0 or data.Y.Scale~=0) then
-				--Scale constructor
-				return `UDim2{(ss.IndexingBy=="Dots" and `.fromScale`) or `[{ConstructorTostring("string","fromScale",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromScale",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromScale",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))})`
-			elseif (data.X.Offset~=0 or data.Y.Offset~=0) and data.X.Scale==0 and data.Y.Scale==0 then
-				--Offset constructor
-				return `UDim2{(ss.IndexingBy=="Dots" and `.fromOffset`) or `[{ConstructorTostring("string","fromOffset",Bypass)}]`}({ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromOffset",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromOffset",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
-			end
-		end
-		return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
-	end;
-	string = function(data:string):(string,string)
-		--Its for a joke mainly idk why i added that
-		if ss.HexademicalString==true then
-			local ret:string = ""
-			for char in string.gmatch(data, ".") do
-				ret ..= `\\x{string.format("%x", utf8.codepoint(char))}`
-			end
-			return `"{ret}"`,WriteRichText(`"{ret}"`,ScriptString)
-		end
-		-------------------------------------
-		data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"",`\"`)
-		return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
-	end;
-	SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
-		local txt,rich = "",""
-		for i,v in Enum.SecurityCapability:GetEnumItems() do
-			if data:Contains(v) then
-				if txt~="" then
-					txt..=ss.FuncSeparator
-					rich..=ss.FuncSeparator
+			else--Has rotation and position
+				if ss.CFrameFormatting=="CFrameNewYXZRotation" or ss.CFrameFormatting=="CFrameNewPlusAngles" then
+					local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
+					local txt,rich = ConstructorTostring("CFrame",data.Rotation)
+					return `{(ss.FastNamecall==true and `{ss.NC_CfrMul}(`) or ""}CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{txt}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}CFrame`) or ""}`) or ""}`,`{(ss.FastNamecall==true and `{WriteRichText(ss.NC_CfrMul,ScriptMethod)}(`) or ""}{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{rich}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("CFrame",Color3.new(0,1,1))}`) or ""}`) or ""}`
+				else--RawCFrameNew
+					local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
+					X,Y,Z = Round(X),Round(Y),Round(Z)
+					return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R00,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R01,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R02,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R10,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R11,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R12,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R20,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R21,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",R22,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R00,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R01,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R02,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R10,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R11,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R12,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R20,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R21,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",R22,Bypass))})`
 				end
-				txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
 			end
+		end;
+		Axes = function(data:Axes,Bypass:true?):(string,string)
+			return `Axes{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}()`,`{WriteRichText("Axes",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}()`
+		end;
+		ColorSequenceKeypoint = function(data:ColorSequenceKeypoint,Bypass:true?):(string,string)
+			local color,rich = ConstructorTostring("Color3",data.Value)
+			return `ColorSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{color})`,`{WriteRichText("ColorSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{rich})`
+		end;
+		ColorSequence = function(data:ColorSequence,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			if #data.Keypoints>=3 then
+				txt,rich = "{","{"
+				for i,v in data.Keypoints do
+					local t,r = ConstructorTostring("ColorSequenceKeypoint",v,Bypass)
+					txt..=`{t}{ss._Separator}`
+					rich..=`{r}{ss._Separator}`
+				end
+				txt..="}";rich..="}"
+			elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
+				txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass)}`
+				rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Color3",data.Keypoints[2].Value,Bypass))}`
+			else--1
+				txt = `{ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass)}`
+				rich = `{select(2,ConstructorTostring("Color3",data.Keypoints[1].Value,Bypass))}`
+			end
+			return `ColorSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("ColorSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		Faces = function(data:Faces,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			for i,v in Enum.NormalId:GetEnumItems() do
+				if (data :: any)[v.Name] then
+					if txt~="" then
+						txt..=ss.FuncSeparator
+						rich..=ss.FuncSeparator
+					end
+					txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
+				end
+			end
+			return `Faces{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Faces",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		FloatCurveKey = function(data:FloatCurveKey,Bypass:true?):(string,string)
+			return `FloatCurveKey{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Interpolation,Bypass)})`,`{WriteRichText("FloatCurveKey",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Interpolation,Bypass))})`	
+		end;
+		Font = function(data:Font,Bypass:true?):(string,string)
+			return `Font{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("string",data.Family,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Weight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Style,Bypass)})`,`{WriteRichText("Font",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("string",data.Family,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Weight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Style,Bypass))})`
+		end;
+		NumberRange = function(data:NumberRange,Bypass:true?):(string,string)
+			return `NumberRange{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({(data.Min==data.Max and `{ConstructorTostring("number",data.Max,Bypass)}`) or `{ConstructorTostring("number",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max,Bypass)}`})`,`{WriteRichText("NumberRange",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({(data.Min==data.Max and `{select(2,ConstructorTostring("number",data.Max,Bypass))}`) or `{select(2,ConstructorTostring("number",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max,Bypass))}`})`
+		end;
+		NumberSequenceKeypoint = function(data:NumberSequenceKeypoint,Bypass:true?):(string,string)
+			return `NumberSequenceKeypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Time,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Value,Bypass)}{(data.Envelope~=0 and `{ss.FuncSeparator}{ConstructorTostring("number",data.Envelope,Bypass)}`) or ""})`,`{WriteRichText("NumberSequenceKeypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Time,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Value,Bypass))}{(data.Envelope~=0 and `{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Envelope,Bypass))}`) or ""})`
+		end;
+		NumberSequence = function(data:NumberSequence,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			if #data.Keypoints>=3 then
+				txt,rich = "{","{"
+				for i,v in data.Keypoints do
+					local t,r = ConstructorTostring("NumberSequenceKeypoint",v,Bypass)
+					txt..=`{t}{ss._Separator}`
+					rich..=`{r}{ss._Separator}`
+				end
+				txt..="}";rich..="}"
+			elseif data.Keypoints[1].Value~=data.Keypoints[2].Value then
+				txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Keypoints[2].Value,Bypass)}`
+				rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Keypoints[2].Value,Bypass))}`
+			else--1
+				txt = `{ConstructorTostring("number",data.Keypoints[1].Value,Bypass)}`
+				rich = `{select(2,ConstructorTostring("number",data.Keypoints[1].Value,Bypass))}`
+			end
+			return `NumberSequence{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("NumberSequence",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		Path2DControlPoint = function(data:Path2DControlPoint,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			if data.LeftTangent~=UDim2_zero and data.RightTangent~=UDim2_zero then
+				--Full constructor
+				txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.LeftTangent,Bypass)}{ss.FuncSeparator}{ConstructorTostring("UDim2",data.RightTangent,Bypass)}`
+				rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.LeftTangent,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("UDim2",data.RightTangent,Bypass))}`
+			elseif data.Position~=UDim2_zero then
+				--Position only
+				txt = `{ConstructorTostring("UDim2",data.Position,Bypass)}`
+				rich = `{select(2,ConstructorTostring("UDim2",data.Position,Bypass))}`
+			end
+			return `Path2DControlPoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Path2DControlPoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		PathWaypoint = function(data:PathWaypoint,Bypass:true?):(string,string)
+			return `PathWaypoint{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Position,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Action,Bypass)}{(data.Label~="" and `{ss.FuncSeparator}{ConstructorTostring("string",data.Label,Bypass)}`) or ""})`,`{WriteRichText("PathWaypoint",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Position,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Action,Bypass))}{(data.Label~="" and `{ss.FuncSeparator}{select(2,ConstructorTostring("string",data.Label,Bypass))}`) or ""})`
+		end;
+		PhysicalProperties = function(data:PhysicalProperties,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			for i,v in Enum.Material:GetEnumItems() do
+				if data==PhysicalProperties.new(v) then
+					txt = `{ConstructorTostring("EnumItem",v,Bypass)}`
+					rich = `{select(2,ConstructorTostring("EnumItem",v,Bypass))}`
+					break
+				end
+			end
+			if txt=="" then
+				if data.FrictionWeight==1 and data.ElasticityWeight==1 then--3 args
+					txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}`
+					rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}`
+				else--All args
+					txt = `{ConstructorTostring("EnumItem",data.Density,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Friction,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.Elasticity,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.FrictionWeight,Bypass)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass)}`
+					rich = `{select(2,ConstructorTostring("EnumItem",data.Density,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Friction,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.Elasticity,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.FrictionWeight,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",data.ElasticityWeight,Bypass))}`
+				end
+			end
+			return `PhysicalProperties{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("PhysicalProperties",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		Ray = function(data:Ray,Bypass:true?):(string,string)
+			return `Ray{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",data.Origin,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",data.Direction,Bypass)})`,`{WriteRichText("Ray",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",data.Origin,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",data.Direction,Bypass))})`
+		end;
+		Rect = function(data:Rect,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			if data~=Rect_zero then
+				txt = `{ConstructorTostring("number",data.Min.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Min.Y)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Max.Y,Bypass)}`
+				rich = `{select(2,ConstructorTostring("number",data.Min.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Min.Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Max.Y,Bypass))}`
+			end
+			return `Rect{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("Rect",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		Region3 = function(data:Region3,Bypass:true?):(string,string)
+			local min,max = data.CFrame.Position-data.Size*0.5,data.CFrame.Position+data.Size*0.5
+			return `Region3{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3",min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3",max,Bypass)})`,`{WriteRichText("Region3",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3",min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3",max,Bypass))})`
+		end;
+		Region3int16 = function(data:Region3int16,Bypass:true?):(string,string)
+			return `Region3int16{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("Vector3int16",data.Min,Bypass)}{ss.FuncSeparator}{ConstructorTostring("Vector3int16",data.Max,Bypass)})`,`{WriteRichText("Region3int16",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("Vector3int16",data.Min,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("Vector3int16",data.Max,Bypass))})`
+		end;
+		UDim = function(data:UDim,Bypass:true?):(string,string)
+			return `UDim{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Offset,Bypass)})`,`{WriteRichText("UDim",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Offset,Bypass))})`
+		end;
+		UDim2 = function(data:UDim2,Bypass:true?):(string,string)
+			if ss.UDIM2_MoreConstructors==true then
+				if data.X.Offset==0 and data.Y.Offset==0 and (data.X.Scale~=0 or data.Y.Scale~=0) then
+					--Scale constructor
+					return `UDim2{(ss.IndexingBy=="Dots" and `.fromScale`) or `[{ConstructorTostring("string","fromScale",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromScale",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromScale",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))})`
+				elseif (data.X.Offset~=0 or data.Y.Offset~=0) and data.X.Scale==0 and data.Y.Scale==0 then
+					--Offset constructor
+					return `UDim2{(ss.IndexingBy=="Dots" and `.fromOffset`) or `[{ConstructorTostring("string","fromOffset",Bypass)}]`}({ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromOffset",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromOffset",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
+				end
+			end
+			return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
+		end;
+		string = function(data:string):(string,string)
+			--Its for a joke mainly idk why i added that
+			if ss.HexademicalString==true then
+				local ret:string = ""
+				for char in string.gmatch(data, ".") do
+					ret ..= `\\x{string.format("%x", utf8.codepoint(char))}`
+				end
+				return `"{ret}"`,WriteRichText(`"{ret}"`,ScriptString)
+			end
+			-------------------------------------
+			data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"",`\"`)
+			return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
+		end;
+		SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
+			local txt,rich = "",""
+			for i,v in Enum.SecurityCapability:GetEnumItems() do
+				if data:Contains(v) then
+					if txt~="" then
+						txt..=ss.FuncSeparator
+						rich..=ss.FuncSeparator
+					end
+					txt..=ConstructorTostring("EnumItem",v,Bypass);rich..=select(2,ConstructorTostring("EnumItem",v,Bypass))
+				end
+			end
+			txt=string.sub(txt,#ss.FuncSeparator,-1);rich=string.sub(rich,#ss.FuncSeparator,-1)
+			return `SecurityCapabilities{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("SecurityCapabilities",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
+		end;
+		_Default = function(data:any):(string,string)
+			return tostring(data),WriteRichText(tostring(data),ScriptLuauKeyword)
 		end
-		txt=string.sub(txt,#ss.FuncSeparator,-1);rich=string.sub(rich,#ss.FuncSeparator,-1)
-		return `SecurityCapabilities{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({txt})`,`{WriteRichText("SecurityCapabilities",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({rich})`
-	end;
-	_Default = function(data:any):(string,string)
-		return tostring(data),WriteRichText(tostring(data),ScriptLuauKeyword)
-	end
-}::typeof(ConstructorTostring_Switch)
+	}::typeof(ConstructorTostring_Switch)
 
-do
-	local function TableTostring(tbl:{[any]:any},Bypass:true?,Level:number?):(string,string)
-		local Level = (Level or 1)::number
-		local tbl_txt,tbl_rich = "{\n","{\n"
-		for i,v in spairs(tbl) do
-			if type(i)~="number" then
-				local regular,rich = ConstructorTostring(typeof(i),i,true)
-				tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
-				tbl_rich..=`{string.rep("\t",Level)}[{rich}]{ss._Equal}`
-			else
-				tbl_txt..=string.rep("\t",Level)
-				tbl_rich..=string.rep("\t",Level)
+	do
+		local function TableTostring(tbl:{[any]:any},Bypass:true?,Level:number?):(string,string)
+			local Level = (Level or 1)::number
+			local tbl_txt,tbl_rich = "{\n","{\n"
+			for i,v in spairs(tbl) do
+				if type(i)~="number" or i%1~=0 then
+					local regular,rich = ConstructorTostring(typeof(i),i,true)
+					tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
+					tbl_rich..=`{string.rep("\t",Level)}[{rich}]{ss._Equal}`
+				else
+					tbl_txt..=string.rep("\t",Level)
+					tbl_rich..=string.rep("\t",Level)
+				end
+				if type(v)=="table" then
+					local regular,rich = TableTostring(v::{[any]:any},Bypass,Level+1)
+					tbl_txt..=regular..`{ss._Separator}\n`
+					tbl_rich..=rich..`{ss._Separator}\n`
+				else
+					local regular,rich = ConstructorTostring(typeof(v),v,true)
+					tbl_txt..=regular..`{ss._Separator}\n`
+					tbl_rich..=rich..`{ss._Separator}\n`
+				end
 			end
-			if type(v)=="table" then
-				local regular,rich = TableTostring(v::{[any]:any},Bypass,Level+1)
-				tbl_txt..=regular..`{ss._Separator}\n`
-				tbl_rich..=rich..`{ss._Separator}\n`
-			else
-				local regular,rich = ConstructorTostring(typeof(v),v,true)
-				tbl_txt..=regular..`{ss._Separator}\n`
-				tbl_rich..=rich..`{ss._Separator}\n`
-			end
+			tbl_txt..=string.rep("\t",Level-1).."}"
+			tbl_rich..=string.rep("\t",Level-1).."}"
+			return tbl_txt,tbl_rich
 		end
-		tbl_txt..=string.rep("\t",Level-1).."}"
-		tbl_rich..=string.rep("\t",Level-1).."}"
-		return tbl_txt,tbl_rich
-	end
 
-	ConstructorTostring_Switch.table=function(tbl:{[any]:any},Bypass:true?):(string,string)
-		return TableTostring(tbl,Bypass)
+		ConstructorTostring_Switch.table=function(tbl:{[any]:any},Bypass:true?):(string,string)
+			return TableTostring(tbl,Bypass)
+		end
 	end
-end
+end)()
 local pathMacro:{[Instance]:string}
 do
 	local _try,ret = pcall(Parser,plugin:GetSetting("HB_pathMacro") or "{}")
@@ -3017,12 +3053,12 @@ local function RecursionFindFirstChildSafeMethod(txt:string,rich:string,Index:nu
 		rich..=`\n{string.rep("\t",Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{PreviousVar_Rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}?`) or ""}`
 	end
 	--if statement
-	txt..=`\n{string.rep("\t",Layer)}if {varName} then`
-	rich..=`\n{string.rep("\t",Layer)}{WriteRichText("if",ScriptLuauKeyword)} {varName} {WriteRichText("then",ScriptLuauKeyword)}`
+	txt..=`\n{string.rep("\t",Layer)}{ss["if"]}{varName}{ss["then"]}`
+	rich..=`\n{string.rep("\t",Layer)}{WriteRichText(ss["if"],ScriptLuauKeyword)}{varName}{WriteRichText(ss["then"],ScriptLuauKeyword)}`
 	txt,rich = RecursionFindFirstChildSafeMethod(txt,rich,Index+1,Hierarchy,Layer+1,varName,Value,ValueProperty)
 	--End closing
-	txt..=`\n{string.rep("\t",Layer)}end`
-	rich..=`\n{string.rep("\t",Layer)}{WriteRichText("end",ScriptLuauKeyword)}`
+	txt..=`\n{string.rep("\t",Layer)}{ss["end"]}`
+	rich..=`\n{string.rep("\t",Layer)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 	return txt,rich
 end
 
@@ -3213,484 +3249,497 @@ do
 
 end
 
-local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
-	local dictionary,dictionary_rich = "{","{"
-	if ins.CollisionFidelity~=Enum.CollisionFidelity.Default then
-		dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss._Separator}`
-		dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss._Separator}`
-	end
-	if ins.RenderFidelity ~= Enum.RenderFidelity.Automatic then
-		dictionary..=`RenderFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.RenderFidelity)}{ss._Separator}`
-		dictionary_rich..=`RenderFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}{ss._Separator}`
-	end
-	if ins.FluidFidelity ~= Enum.FluidFidelity.Automatic then
-		dictionary..=`FluidFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.FluidFidelity)}{ss._Separator}`
-		dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}{ss._Separator}`
-	end
-	dictionary..="}";dictionary_rich..="}"
-	dictionary = (dictionary=="{}" and "") or ss.FuncSeparator..dictionary
-	dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
-	return dictionary,dictionary_rich
-end
+--Converter stuff
+(function():()
 
 
-local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,Layer:number,Initiator:true?):(string,string)
-	local properties = GetProperties(ins)
-	local Tags = ins:GetTags()
-	local Attributes = ins:GetAttributes()
-
-	--Brackets
-	if Initiator~=true then
-		code..=`\n{string.rep("\t",Layer-1)}\{`
-		riched_code..=`\n{string.rep("\t",Layer-1)}\{`
+	local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
+		local dictionary,dictionary_rich = "{","{"
+		if ins.CollisionFidelity~=Enum.CollisionFidelity.Default then
+			dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss._Separator}`
+			dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss._Separator}`
+		end
+		if ins.RenderFidelity ~= Enum.RenderFidelity.Automatic then
+			dictionary..=`RenderFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.RenderFidelity)}{ss._Separator}`
+			dictionary_rich..=`RenderFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}{ss._Separator}`
+		end
+		if ins.FluidFidelity ~= Enum.FluidFidelity.Automatic then
+			dictionary..=`FluidFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.FluidFidelity)}{ss._Separator}`
+			dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}{ss._Separator}`
+		end
+		dictionary..="}";dictionary_rich..="}"
+		dictionary = (dictionary=="{}" and "") or ss.FuncSeparator..dictionary
+		dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
+		return dictionary,dictionary_rich
 	end
-	--Declearing ClassName
-	if ss._HB_Prop_Type_Newline==true then
-		code..=`\n{string.rep("\t",Layer)}`
-		riched_code..=`\n{string.rep("\t",Layer)}`
-	end
-	local Type:string = GetTypeOfInstance(ins)
-	if properties.Name==nil then
-		--Declear instance for for mesh
-		if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
-			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 
-			if ss.UseMeshFunction==true then
-				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-			elseif ss.FastNamecall==true then
-				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+
+	local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,Layer:number,Initiator:true?):(string,string)
+		local properties = GetProperties(ins)
+		local Tags = ins:GetTags()
+		local Attributes = ins:GetAttributes()
+
+		--Brackets
+		if Initiator~=true then
+			code..=`\n{string.rep("\t",Layer-1)}\{`
+			riched_code..=`\n{string.rep("\t",Layer-1)}\{`
+		end
+		--Declearing ClassName
+		if ss._HB_Prop_Type_Newline==true then
+			code..=`\n{string.rep("\t",Layer)}`
+			riched_code..=`\n{string.rep("\t",Layer)}`
+		end
+		local Type:string = GetTypeOfInstance(ins)
+		if properties.Name==nil then
+			--Declear instance for for mesh
+			if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+
+				if ss.UseMeshFunction==true then
+					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				elseif ss.FastNamecall==true then
+					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				else
+					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				end
 			else
-				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				--Type
+				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 			end
 		else
+			--Name
+			code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
+			riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
 			--Type
-			code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-			riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-		end
-	else
-		--Name
-		code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
-		riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
-		--Type
-		--Declear instance for for mesh
-		if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
-			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-			if ss.UseMeshFunction==true then
-				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-			elseif ss.FastNamecall==true then
-				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-			else
-				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-			end
-		else
-			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-		end
-	end
-	----------------------
-	---_base---
-	local baseImport:string? = nil
-	if ss.Use_Base_Imports and Classes[Type]~=nil then
-		--Grabbing best match for _base
-		local persentage:number = 0
-		for _base,tab in _baseImports do
-			local Matches:number = 0
-			local PropertyCount:number = 0
-			if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
-				for i,v in tab._exec.SetAttribute do
-					if Attributes[i]==v then Matches+=1 end
-					PropertyCount+=1
-				end
-			end
-			if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
-				for i,v in tab._exec.AddTag do
-					if table.find(Tags,v)~=nil then Matches+=1 end
-					PropertyCount+=1
-				end
-			end
-			for i,v in tab do
-				if Classes[Type][i]==nil then break end
-				if properties[i]==v and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
-				if i=="_exec" then continue end
-				PropertyCount+=1
-			end
-
-			if Matches~=0 and PropertyCount~=0 then
-				local _procentage:number = PropertyCount/Matches*100
-				if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
-					baseImport = _base
-					persentage = _procentage
-				end
-			end
-		end
-		--Setting _base
-		if baseImport~=nil then
-			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
-			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
-		end
-	end
-	local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
-	----------
-	for i,v in spairs(properties) do
-		if i=="Name" then continue end
-		local foundBreak:boolean = false
-		for ii,vv in IgnoredPropertiesList do
-			if ins:IsA(ii) and table.find(vv,i)~=nil then
-				foundBreak=true
-				break
-			end
-		end
-		--Ignore List
-		if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
-		--Already in _base
-		if baseImport~=nil and _baseImports[baseImport][i]==v then continue end
-		if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
-
-		local type:string = typeof(v)
-		if type=="Instance" then
-			if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName)))=="Instance"))) then
-				--Outside of hierarchy
-				local c_code,c_rich = GoToIndexPath(v)
-				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
-			end
-			continue
-		end
-		if ConstructorTostring_Switch[type]==nil then continue end
-
-		local c_code,c_rich = ConstructorTostring(type,v)
-		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
-		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
-	end
-	local _baseIncludesAllTagsAndAttributes:boolean = baseImport~=nil
-	local IncludesAllTags:boolean = _baseIncludesAllTagsAndAttributes
-	local IncludesAllAttributes:boolean = _baseIncludesAllTagsAndAttributes
-	if _baseIncludesAllTagsAndAttributes then
-		local import = _baseImports[baseImport::string]
-		if type(import._exec)=="table" then
-			local _exec:{[any]:any} = import._exec
-			_baseIncludesAllTagsAndAttributes=((type(_exec.SetAttribute)=="table" or type(_exec.AddTag)=="table") and true )or false
-			if _baseIncludesAllTagsAndAttributes then
-				if type(_exec.SetAttribute)=="table" then
-					for i,v in Attributes do
-						if _exec.SetAttribute[i]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
-					end
-				end
-				if type(_exec.AddTag)=="table" then
-					for i,v in Tags do
-						if table.find(_exec.AddTag,v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
-					end
-				end
-			end
-		else
-			_baseIncludesAllTagsAndAttributes=false
-		end
-	end
-	--_init--
-	--IncludeInit?
-	local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
-	if IncludeInit==false then
-		for i,v in properties do
-			if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName)))~="Instance")))) then IncludeInit=true break end
-		end
-	end
-	--Actual _init here
-	--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
-	--Note that Instance property could be self
-	if IncludeInit then
-		code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-		riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-		--Recursive Hierarchy
-		for key,value in spairs(properties) do
-			if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
-				--Recursive hierarchy 
-				if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
-					--Recursive
-					local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
-					code..=c
-					riched_code..=r
-				else
-					--SafeIndex
-					local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
-					code..=c
-					riched_code..=r
-				end
-			end
-		end
-
-
-
-
-
-
-		--Tags and attributes
-		if ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
-			--tags
-			if #Tags~=0 and IncludesAllTags==false then
-				local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
-				if ss.FastNamecall==true then
-					for i,v in Tags do
-						if table.find(IncludedTags,v)~=nil then continue end
-						code..=`\n{string.rep("\t",Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
-						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
-					end
-				else
-					for i,v in Tags do
-						if table.find(IncludedTags,v)~=nil then continue end
-						code..=`\n{string.rep("\t",Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
-						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
-					end
-				end
-			end
-			--Attributes
-			if next(Attributes)~=nil and IncludesAllAttributes==false then
-				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
-				if ss.FastNamecall==true then
-					for i,v in spairs(Attributes) do
-						if IncludedAttributes[i]~=nil then continue end
-						code..=`\n{string.rep("\t",Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
-						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
-					end
-				else
-					for i,v in spairs(Attributes) do
-						if IncludedAttributes[i]~=nil then continue end
-						code..=`\n{string.rep("\t",Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
-						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
-					end
-				end
-			end
-		end
-		--Meshes
-		if (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered") then
-			--MeshID
-			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-			if ss.FastNamecall==true then
+			--Declear instance for for mesh
+			if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 				if ss.UseMeshFunction==true then
-					code..=`\n{string.rep("\t",Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
+					code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				elseif ss.FastNamecall==true then
+					code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				else
-					code..=`\n{string.rep("\t",Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep("\t",Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}Destroy({ss.localMeshVariableName})`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep("\t",Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+					code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				end
 			else
-				if ss.UseMeshFunction==true then
-					code..=`\n{string.rep("\t",Layer+1)}self:ApplyMesh({ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
-				else
-					code..=`\n{string.rep("\t",Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep("\t",Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{ss.localMeshVariableName}:Destroy()`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
-				end	
-			end
-			--TextureID
-			if properties.TextureID~=nil then
-				if ss.FastNamecall==true then
-					code..=`\n{string.rep("\t",Layer+1)}{ss.NC_InsSetProperty}(self{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID)})`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID))})`
-				else
-					code..=`\n{string.rep("\t",Layer+1)}self{(ss.Indexing_Instances_By=="Dots" and `.TextureID`) or `[{ConstructorTostring("string","TextureID")}]`}{ss._Equal}{ConstructorTostring("string",properties.TextureID)}`
-					riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText("TextureID",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","TextureID"))}]`}{ss._Equal}{select(2,ConstructorTostring("string",properties.TextureID))}`
-				end
+				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 			end
 		end
-		--
-		code..=`\n{string.rep("\t",Layer)}end{ss._Separator}`
-		riched_code..=`\n{string.rep("\t",Layer)}{WriteRichText("end",ScriptLuauKeyword)}{ss._Separator}`
-	end
+		----------------------
+		---_base---
+		local baseImport:string? = nil
+		if ss.Use_Base_Imports and Classes[Type]~=nil then
+			--Grabbing best match for _base
+			local persentage:number = 0
+			for _base,tab in _baseImports do
+				local Matches:number = 0
+				local PropertyCount:number = 0
+				if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
+					for i,v in tab._exec.SetAttribute do
+						if Attributes[i]==v then Matches+=1 end
+						PropertyCount+=1
+					end
+				end
+				if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
+					for i,v in tab._exec.AddTag do
+						if table.find(Tags,v)~=nil then Matches+=1 end
+						PropertyCount+=1
+					end
+				end
+				for i,v in tab do
+					if Classes[Type][i]==nil then break end
+					if properties[i]==v and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
+					if i=="_exec" then continue end
+					PropertyCount+=1
+				end
 
-	---_exec---
-	if ss._HB_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
-		if _baseIncludesAllTagsAndAttributes==false then
-			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
-			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
-			if #Tags~=0 and IncludesAllTags==false then
-				local txt,rich = "",""
-				local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
-				for i,v in Tags do
-					if table.find(IncludedTags,v)~=nil then continue end
-					txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
+				if Matches~=0 and PropertyCount~=0 then
+					local _procentage:number = PropertyCount/Matches*100
+					if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
+						baseImport = _base
+						persentage = _procentage
+					end
 				end
-				code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
 			end
-			if next(Attributes)~=nil and IncludesAllAttributes==false then
-				code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
-				riched_code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
-				local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
-				for i,v in spairs(Attributes) do
-					if IncludedAttributes[i]~=nil then continue end
-					code..=`\n{string.rep("\t",Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
-					riched_code..=`\n{string.rep("\t",Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
+			--Setting _base
+			if baseImport~=nil then
+				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+			end
+		end
+		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
+		----------
+		for i,v in spairs(properties) do
+			if i=="Name" then continue end
+			local foundBreak:boolean = false
+			for ii,vv in IgnoredPropertiesList do
+				if ins:IsA(ii) and table.find(vv,i)~=nil then
+					foundBreak=true
+					break
 				end
-				code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
-				riched_code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
 			end
-			--Closing _exec
-			code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
-			riched_code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
-		end	
-	end
-	-------
-	--Children----
-	local children = ins:GetChildren()
-	if #children~=0 then
-		if ss.SeparateChildren==true then
-			code,riched_code = `{code}\n`,`{riched_code}\n`
-		end
-		for i,v in children do
-			if ss.RespectArchivable==true and v.Archivable==false then continue end
-			code,riched_code = HB_BuildProperties(v,code,riched_code,Layer+1)
-		end
-	end
-	-----
-	if Initiator~=true then
-		--Step out from Type/Name
-		if next(properties)~=nil or #children~=0 or #Tags~=0 or next(Attributes)~=nil or IncludeInit==true or baseImport~=nil then
-			code..=`\n{string.rep("\t",Layer-1)}`
-			riched_code..=`\n{string.rep("\t",Layer-1)}`
-		end
-		--Step out from instance constructor and close it
-		code..=`\}{ss._Separator}`
-		riched_code..=`\}{ss._Separator}`
-	elseif Initiator==true and ((#children==0 and next(properties)~=nil) or #children>0) then
-		code..=`\n`
-		riched_code..=`\n`
-	end
-	-----
-	return code,riched_code
-end
+			--Ignore List
+			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
+			--Already in _base
+			if baseImport~=nil and _baseImports[baseImport][i]==v then continue end
+			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
 
-local function IncludeTopCode(IncludeFunctions:true?):(string,string)
-	local txt,rich = "",""
-	if ss.DisplaySource==true then
-		local t:string = (SelectedInstance or workspace):GetFullName()
-		txt..=`--@Source {t}\n`
-		rich..=WriteRichText(`--@Source {t}`,ScriptComment).."\n"
-	end
-	if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
-		if ss._SaveMeshes_Cache then
-			--local alloc
-			if ss.CacheTableType=="Array" then
-				txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?\}\}`) or ""}{ss._Equal}\{\}\n`
-				rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}\}`) or ""}{ss._Equal}\{\}\n`
-			else--Hash table
-				txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{` 				
-				rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{` 				
-				for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
-					txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
-					rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
-					for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
-						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
-						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
-						for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
-							txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
-							rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
+			local type:string = typeof(v)
+			if type=="Instance" then
+				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName)))=="Instance"))) then
+					--Outside of hierarchy
+					local c_code,c_rich = GoToIndexPath(v)
+					code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
+				end
+				continue
+			end
+			if ConstructorTostring_Switch[type]==nil then continue end
+
+			local c_code,c_rich = ConstructorTostring(type,v)
+			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
+		end
+		local _baseIncludesAllTagsAndAttributes:boolean = baseImport~=nil
+		local IncludesAllTags:boolean = _baseIncludesAllTagsAndAttributes
+		local IncludesAllAttributes:boolean = _baseIncludesAllTagsAndAttributes
+		if _baseIncludesAllTagsAndAttributes then
+			local import = _baseImports[baseImport::string]
+			if type(import._exec)=="table" then
+				local _exec:{[any]:any} = import._exec
+				_baseIncludesAllTagsAndAttributes=((type(_exec.SetAttribute)=="table" or type(_exec.AddTag)=="table") and true )or false
+				if _baseIncludesAllTagsAndAttributes then
+					if type(_exec.SetAttribute)=="table" then
+						for i,v in Attributes do
+							if _exec.SetAttribute[i]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
 						end
-						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
-						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
 					end
-					txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
-					rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
+					if type(_exec.AddTag)=="table" then
+						for i,v in Tags do
+							if table.find(_exec.AddTag,v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
+						end
+					end
 				end
-				txt..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
-				rich..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+			else
+				_baseIncludesAllTagsAndAttributes=false
 			end
-			--function open
-			txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}`
-			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}`
-			--function body
-			if ss.CacheTableType=="Array" then
-				
-				
-			else--Hash table
-				
-				
-			end
-			--function close
-			txt..=`\nend\n`
-			rich..=`\n{WriteRichText("end",ScriptLuauKeyword)}\n`
-		else
-
-
 		end
+		--_init--
+		--IncludeInit?
+		local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+		if IncludeInit==false then
+			for i,v in properties do
+				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName)))~="Instance")))) then IncludeInit=true break end
+			end
+		end
+		--Actual _init here
+		--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
+		--Note that Instance property could be self
+		if IncludeInit then
+			code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			--Recursive Hierarchy
+			for key,value in spairs(properties) do
+				if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
+					--Recursive hierarchy 
+					if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
+						--Recursive
+						local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
+						code..=c
+						riched_code..=r
+					else
+						--SafeIndex
+						local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
+						code..=c
+						riched_code..=r
+					end
+				end
+			end
+
+
+
+
+
+
+			--Tags and attributes
+			if ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
+				--tags
+				if #Tags~=0 and IncludesAllTags==false then
+					local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+					if ss.FastNamecall==true then
+						for i,v in Tags do
+							if table.find(IncludedTags,v)~=nil then continue end
+							code..=`\n{string.rep("\t",Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
+							riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
+						end
+					else
+						for i,v in Tags do
+							if table.find(IncludedTags,v)~=nil then continue end
+							code..=`\n{string.rep("\t",Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
+							riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
+						end
+					end
+				end
+				--Attributes
+				if next(Attributes)~=nil and IncludesAllAttributes==false then
+					local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+					if ss.FastNamecall==true then
+						for i,v in spairs(Attributes) do
+							if IncludedAttributes[i]~=nil then continue end
+							code..=`\n{string.rep("\t",Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+							riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+						end
+					else
+						for i,v in spairs(Attributes) do
+							if IncludedAttributes[i]~=nil then continue end
+							code..=`\n{string.rep("\t",Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+							riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+						end
+					end
+				end
+			end
+			--Meshes
+			if (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered") then
+				--MeshID
+				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+				if ss.FastNamecall==true then
+					if ss.UseMeshFunction==true then
+						code..=`\n{string.rep("\t",Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
+					else
+						code..=`\n{string.rep("\t",Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep("\t",Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}Destroy({ss.localMeshVariableName})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep("\t",Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+					end
+				else
+					if ss.UseMeshFunction==true then
+						code..=`\n{string.rep("\t",Layer+1)}self:ApplyMesh({ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
+					else
+						code..=`\n{string.rep("\t",Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep("\t",Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{ss.localMeshVariableName}:Destroy()`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep("\t",Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+					end	
+				end
+				--TextureID
+				if properties.TextureID~=nil then
+					if ss.FastNamecall==true then
+						code..=`\n{string.rep("\t",Layer+1)}{ss.NC_InsSetProperty}(self{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID)})`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID))})`
+					else
+						code..=`\n{string.rep("\t",Layer+1)}self{(ss.Indexing_Instances_By=="Dots" and `.TextureID`) or `[{ConstructorTostring("string","TextureID")}]`}{ss._Equal}{ConstructorTostring("string",properties.TextureID)}`
+						riched_code..=`\n{string.rep("\t",Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText("TextureID",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","TextureID"))}]`}{ss._Equal}{select(2,ConstructorTostring("string",properties.TextureID))}`
+					end
+				end
+			end
+			--
+			code..=`\n{string.rep("\t",Layer)}end{ss._Separator}`
+			riched_code..=`\n{string.rep("\t",Layer)}{WriteRichText("end",ScriptLuauKeyword)}{ss._Separator}`
+		end
+
+		---_exec---
+		if ss._HB_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
+			if _baseIncludesAllTagsAndAttributes==false then
+				code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
+				riched_code..=`\n{string.rep("\t",Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
+				if #Tags~=0 and IncludesAllTags==false then
+					local txt,rich = "",""
+					local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+					for i,v in Tags do
+						if table.find(IncludedTags,v)~=nil then continue end
+						txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
+					end
+					code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
+				end
+				if next(Attributes)~=nil and IncludesAllAttributes==false then
+					code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
+					riched_code..=`\n{string.rep("\t",Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
+					local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+					for i,v in spairs(Attributes) do
+						if IncludedAttributes[i]~=nil then continue end
+						code..=`\n{string.rep("\t",Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
+						riched_code..=`\n{string.rep("\t",Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
+					end
+					code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
+					riched_code..=`\n{string.rep("\t",Layer+1)}\}{ss._Separator}`
+				end
+				--Closing _exec
+				code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
+				riched_code..=`\n{string.rep("\t",Layer)}\}{ss._Separator}`
+			end	
+		end
+		-------
+		--Children----
+		local children = ins:GetChildren()
+		if #children~=0 then
+			if ss.SeparateChildren==true then
+				code,riched_code = `{code}\n`,`{riched_code}\n`
+			end
+			for i,v in children do
+				if ss.RespectArchivable==true and v.Archivable==false then continue end
+				code,riched_code = HB_BuildProperties(v,code,riched_code,Layer+1)
+			end
+		end
+		-----
+		if Initiator~=true then
+			--Step out from Type/Name
+			if next(properties)~=nil or #children~=0 or #Tags~=0 or next(Attributes)~=nil or IncludeInit==true or baseImport~=nil then
+				code..=`\n{string.rep("\t",Layer-1)}`
+				riched_code..=`\n{string.rep("\t",Layer-1)}`
+			end
+			--Step out from instance constructor and close it
+			code..=`\}{ss._Separator}`
+			riched_code..=`\}{ss._Separator}`
+		elseif Initiator==true and ((#children==0 and next(properties)~=nil) or #children>0) then
+			code..=`\n`
+			riched_code..=`\n`
+		end
+		-----
+		return code,riched_code
 	end
-	return txt,rich
-end
 
-local function HierarchyBuilder_Convert(ins:Instance):()
-	local code,riched_code = IncludeTopCode(true)
-	code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-	riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-	code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)
-	code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
-	riched_code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
-	Rich.Text = riched_code
-	Code.Text = code
-end
-local function RawLuau_Convert(ins:Instance):()
-	Rich.Text = "WIP"
-	Code.Text = "WIP"
-end
+	local function IncludeTopCode(IncludeFunctions:true?):(string,string)
+		local txt,rich = "",""
+		if ss.DisplaySource==true then
+			local t:string = (SelectedInstance or workspace):GetFullName()
+			txt..=`--@Source {t}\n`
+			rich..=WriteRichText(`--@Source {t}`,ScriptComment).."\n"
+		end
+		if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
+			if ss._SaveMeshes_Cache then
+				--local alloc
+				if ss.CacheTableType=="Array" then
+					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?\}\}`) or ""}{ss._Equal}\{\}\n`
+					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}\}`) or ""}{ss._Equal}\{\}\n`
+				else--Hash table
+					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{` 				
+					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{` 				
+					for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
+						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
+						for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+							txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
+							rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
+							for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
+								txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
+								rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t\t`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
+							end
+							txt..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
+							rich..=`{(ss.CacheHashTableSpacing==true and `\n\t\t`) or ""}\}{ss._Separator}`
+						end
+						txt..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
+						rich..=`{(ss.CacheHashTableSpacing==true and `\n\t`) or ""}\}{ss._Separator}`
+					end
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+				end
+				--function open
+				txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
+				rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
+				--function body
+				if ss.CacheTableType=="Array" then
+					--for loop
+					txt..=`\n\tt{ss._Equal}t{ss["or"]}\{\}\n\t{ss._local}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}\n\t{ss["for"]}i{ss.TupleSeparator}v{ss["in"]}{ss._SaveMeshes_CacheTableName}{ss["do"]}\n\t\t{ss["if"]}v{(ss.IndexingBy=="Dots" and `.Id`) or `[{ConstructorTostring("string","Id")}]`}{ss["=="]}Id{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Cf`) or `[{ConstructorTostring("string","Cf")}]`}{ss["=="]}cf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Rf`) or `[{ConstructorTostring("string","Rf")}]`}{ss["=="]}rf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Ff`) or `[{ConstructorTostring("string","Ff")}]`}{ss["=="]}ff{ss["then"]} {ss["return"]} v{(ss.IndexingBy=="Dots" and `.M`) or `[{ConstructorTostring("string","M")}]`} {ss["end"]}\n\t{ss["end"]}`
+					rich..=`\n\tt{ss._Equal}t{WriteRichText(ss["or"],ScriptLuauKeyword)}\{\}\n\t{WriteRichText(ss._local,ScriptLocal)}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}\n\t{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss.TupleSeparator}v{WriteRichText(ss["in"],ScriptLuauKeyword)}{ss._SaveMeshes_CacheTableName}{WriteRichText(ss["do"],ScriptLuauKeyword)}\n\t\t{WriteRichText(ss["if"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Id",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Id"))}]`}{ss["=="]}Id{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Cf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Cf"))}]`}{ss["=="]}cf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Rf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Rf"))}]`}{ss["=="]}rf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Ff",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Ff"))}]`}{ss["=="]}ff{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} v{(ss.IndexingBy=="Dots" and `.{WriteRichText("M",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","M"))}]`} {WriteRichText(ss["end"],ScriptLuauKeyword)}\n\t{WriteRichText(ss["end"],ScriptLuauKeyword)}`
+					--Create cache
+					if ss.FastNamecall then
+						txt..=`\n\t{ss._local}`
+
+					else
 
 
-local function GrabPropertiesOfSingularInstance(ins:Instance):()
-	local code,riched_code = `--{ins.ClassName}`,WriteRichText(`--{ins.ClassName}`,ScriptComment)
-	for i,v in spairs(GetProperties(ins,true)) do
-		if typeof(v)=="Instance" then
-			local c,r = GoToIndexPath(v)
+					end
+				else--Hash table
+
+
+				end
+				--function close
+				txt..=`\n{ss["end"]}\n\n`
+				rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n\n`
+			else
+
+
+			end
+		end
+		return txt,rich
+	end
+
+	local function HierarchyBuilder_Convert(ins:Instance):()
+		local code,riched_code = IncludeTopCode(true)
+		code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
+		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
+		code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)
+		code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
+		riched_code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
+		Rich.Text = riched_code
+		Code.Text = code
+	end
+	local function RawLuau_Convert(ins:Instance):()
+		Rich.Text = "WIP"
+		Code.Text = "WIP"
+	end
+
+
+	local function GrabPropertiesOfSingularInstance(ins:Instance):()
+		local code,riched_code = `--{ins.ClassName}`,WriteRichText(`--{ins.ClassName}`,ScriptComment)
+		for i,v in spairs(GetProperties(ins,true)) do
+			if typeof(v)=="Instance" then
+				local c,r = GoToIndexPath(v)
+				code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
+				riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+				continue
+			end
+			local c,r = ConstructorTostring(typeof(v),v)
 			code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
 			riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
-			continue
 		end
-		local c,r = ConstructorTostring(typeof(v),v)
-		code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
-		riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+		Rich.Text = riched_code
+		Code.Text = code
 	end
-	Rich.Text = riched_code
-	Code.Text = code
-end
-local function BegginConvert():()
-	--Mutate variables
-	UpdateSS()
-	OnConvert:Fire()
-	--Configs init
-	Rich.TextSize = ss.CodeOutputTextSize
-	Code.TextSize = ss.CodeOutputTextSize
-	CodeOutput_Title.TextSize=ss.CodeOutputTextSize
-	--
-	SelectedInstance = Selection:Get()[1]
-	if SelectedInstance==nil then warn("Please select any instance to convert") return end
-	if ss.Instance_PropGrab==true then
-		GrabPropertiesOfSingularInstance(SelectedInstance)
-	elseif CurrentConvertType=="Hierarchy Builder" then
-		HierarchyBuilder_Convert(SelectedInstance)
-	elseif CurrentConvertType=="Raw Luau" then
-		RawLuau_Convert(SelectedInstance)
-	else
-		error("Something unexpected heppened somehow, This tab converter does not exist")
+	local function BegginConvert():()
+		--Mutate variables
+		UpdateSS()
+		OnConvert:Fire()
+		--Configs init
+		Rich.TextSize = ss.CodeOutputTextSize
+		Code.TextSize = ss.CodeOutputTextSize
+		CodeOutput_Title.TextSize=ss.CodeOutputTextSize
+		--
+		SelectedInstance = Selection:Get()[1]
+		if SelectedInstance==nil then warn("Please select any instance to convert") return end
+		if ss.Instance_PropGrab==true then
+			GrabPropertiesOfSingularInstance(SelectedInstance)
+		elseif CurrentConvertType=="Hierarchy Builder" then
+			HierarchyBuilder_Convert(SelectedInstance)
+		elseif CurrentConvertType=="Raw Luau" then
+			RawLuau_Convert(SelectedInstance)
+		else
+			error("Something unexpected heppened somehow, This tab converter does not exist")
+		end
+		local bounds = TextService:GetTextSize(Code.Text,Code.TextSize,Code.Font,Vector2.new(math.huge,math.huge))
+		CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
+		SelectButtonByName("Converted Code")
 	end
-	local bounds = TextService:GetTextSize(Code.Text,Code.TextSize,Code.Font,Vector2.new(math.huge,math.huge))
-	CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
-	SelectButtonByName("Converted Code")
-end
 
 
-do
-	--Connecting convert stuff
-	local ConvertKeybind = plugin:CreatePluginAction("HB_Convert","Convert","Convert","rbxassetid://75358548882112",true)
-	ConvertKeybind.Name = "Convert"
-	LowerBar_Convert.MouseButton1Click:Connect(BegginConvert)
-	ConvertKeybind.Triggered:Connect(BegginConvert)
-end
+	do
+		--Connecting convert stuff
+		local ConvertKeybind = plugin:CreatePluginAction("HB_Convert","Convert","Convert","rbxassetid://75358548882112",true)
+		ConvertKeybind.Name = "Convert"
+		LowerBar_Convert.MouseButton1Click:Connect(BegginConvert)
+		ConvertKeybind.Triggered:Connect(BegginConvert)
+	end
 
 
 
-
+end)()
 
 
 
