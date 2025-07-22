@@ -2988,22 +2988,7 @@ do
 	local EvilScroll = Converted_Code_Content.Parent::ScrollingFrame
 	EvilScroll:Destroy()
 end
---game.Selection:Set{Hierarchy_Builder_Content}
-local CodeOutput_Title = CodeOutput:WaitForChild("TextLabel")::TextLabel	
-local CodeOutput_Scrolling = CodeOutput:WaitForChild("ScrollingFrame")
-local Code = CodeOutput_Scrolling:WaitForChild("Code")::TextBox
-local Rich = CodeOutput_Scrolling:WaitForChild("Rich")::TextLabel
-CodeOutput_Title.TextSize=ss.CodeOutputTextSize
-Rich.TextSize = ss.CodeOutputTextSize
-Code.TextSize = ss.CodeOutputTextSize
-CodeOutput_Title.Text="--CTRL+A and then CTRL+C code below:"
-table.insert(ScriptBackground_List,CodeOutput)
-table.insert(ScriptTextColor_List,Rich)
-table.insert(ScriptTextColor_List,Code)
-table.insert(ScriptComment_List,CodeOutput_Title)
-table.insert(ScrollingFramesScrollBar,CodeOutput_Scrolling)
-CodeOutput.Visible=true
-CodeOutput.Parent=Converted_Code
+
 
 warn("YAY",Classes,Data)
 for i,v in ViewTabs:GetChildren()::{Frame} do
@@ -3013,7 +2998,7 @@ for i,v in ViewTabs:GetChildren()::{Frame} do
 		Button:SetAttribute("Enabled",true)
 	end
 end
-ThemeChanged()
+
 
 local function GetTypeOfInstance(ins:Instance):string
 	return (Classes[ins.ClassName]~=nil and ins.ClassName) or ss._ReplacementInstance
@@ -3251,7 +3236,89 @@ end
 
 --Converter stuff
 (function():()
+	local CreateStr = require(script:WaitForChild("strWrap"))
+	local strMaxSize:number = 199_999;
 
+	local ComputedCode:{string} = {""}
+	local ComputedRichCode:{string} = ComputedCode
+	local Num_Needle:number = 1
+
+	local udim2_Over200K:UDim2 = UDim2.new(0.65, 0,0.063, 0)
+	local udim2_Less200K:UDim2 = UDim2.new(1, 0,0.063, 0)
+
+	local CodeOutput_Title = CodeOutput:WaitForChild("TextLabel")::TextLabel	
+	local CodeOutput_Title_Frame = CodeOutput_Title:WaitForChild("Frame")::Frame
+
+	--[[Num]] local Num = CodeOutput_Title_Frame:WaitForChild("Num")::TextLabel
+	local Num_Left = CodeOutput_Title_Frame:WaitForChild("Left")::ImageButton
+	local Num_Right = CodeOutput_Title_Frame:WaitForChild("Right")::ImageButton
+	table.insert(ScrollbarButtons,Num_Left)
+	table.insert(ScrollbarButtons,Num_Right)
+	table.insert(BrightestText_Theme,Num)
+	CodeOutput_Title_Frame.Visible = false
+	CodeOutput_Title.Size = udim2_Less200K
+
+	local CodeOutput_Scrolling = CodeOutput:WaitForChild("ScrollingFrame")
+	local Code = CodeOutput_Scrolling:WaitForChild("Code")::TextBox
+	local Rich = CodeOutput_Scrolling:WaitForChild("Rich")::TextLabel
+	CodeOutput_Title.TextSize=ss.CodeOutputTextSize
+	Rich.TextSize = ss.CodeOutputTextSize
+	Code.TextSize = ss.CodeOutputTextSize
+	CodeOutput_Title.Text="--CTRL+A and then CTRL+C code below:"
+	table.insert(ScriptBackground_List,CodeOutput)
+	table.insert(ScriptTextColor_List,Rich)
+	table.insert(ScriptTextColor_List,Code)
+	table.insert(ScriptComment_List,CodeOutput_Title)
+	table.insert(ScrollingFramesScrollBar,CodeOutput_Scrolling)
+
+	local function ApplyText():()
+		Num.Text = tostring(Num_Needle)
+		Code.Text = ComputedCode[Num_Needle] or ""
+		Rich.Text = ComputedRichCode[Num_Needle] or ""
+	end
+	Num_Left.MouseButton1Click:Connect(function():()
+		local needle:number = Num_Needle-1
+		if ComputedCode[needle]~=nil then
+			Num_Needle = needle
+			ApplyText()
+		end
+	end)
+	Num_Right.MouseButton1Click:Connect(function():()
+		local needle:number = Num_Needle+1
+		if ComputedCode[needle]~=nil then
+			Num_Needle = needle
+			ApplyText()
+		end
+	end)
+
+	CodeOutput.Visible=true
+	CodeOutput.Parent=Converted_Code
+
+
+
+	local function ShowText(txt:CreateStr.class,rich:CreateStr.class):()
+		Num_Needle = 1
+		Num.Text = "1"
+		if ss.WriteRichText~=true or rich.len>strMaxSize then rich = txt end
+		if txt.len>strMaxSize then
+			rich = txt
+			CodeOutput_Title_Frame.Visible = true
+			CodeOutput_Title.Size = udim2_Over200K
+		else
+			CodeOutput_Title_Frame.Visible = false
+			CodeOutput_Title.Size = udim2_Less200K
+		end
+		if txt==rich then
+			local compute:{string} = txt:Extract()
+			ComputedCode = compute
+			ComputedRichCode = compute
+			ApplyText()
+			return
+		end
+		ComputedCode = txt:Extract()
+		ComputedRichCode = rich:Extract()
+		ApplyText()
+	end
 
 	local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
 		local dictionary,dictionary_rich = "{","{"
@@ -3274,7 +3341,7 @@ end
 	end
 
 
-	local function HB_BuildProperties(ins:Instance,code:string,riched_code:string,Layer:number,Initiator:true?):(string,string)
+	local function HB_BuildProperties(ins:Instance,code:CreateStr.class,riched_code:CreateStr.class,Layer:number,Initiator:true?):()
 		local properties = GetProperties(ins)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
@@ -3580,11 +3647,12 @@ end
 		local children = ins:GetChildren()
 		if #children~=0 then
 			if ss.SeparateChildren==true then
-				code,riched_code = `{code}\n`,`{riched_code}\n`
+				code..="\n"
+				riched_code..="\n"
 			end
 			for i,v in children do
 				if ss.RespectArchivable==true and v.Archivable==false then continue end
-				code,riched_code = HB_BuildProperties(v,code,riched_code,Layer+1)
+				HB_BuildProperties(v,code,riched_code,Layer+1)
 			end
 		end
 		-----
@@ -3602,7 +3670,7 @@ end
 			riched_code..=`\n`
 		end
 		-----
-		return code,riched_code
+		--return code,riched_code
 	end
 
 	local function IncludeTopCode(IncludeFunctions:true?):(string,string)
@@ -3673,7 +3741,7 @@ end
 				--function open
 				txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
 				rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
-				
+
 				--Create object
 				if ss.FastNamecall then
 					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
@@ -3692,14 +3760,16 @@ end
 	end
 
 	local function HierarchyBuilder_Convert(ins:Instance):()
-		local code,riched_code = IncludeTopCode(true)
+		local code,riched_code = CreateStr(),CreateStr()
+		local __c,__r = IncludeTopCode(true)
+		code..=__c
+		riched_code..=__r
 		code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
 		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-		code,riched_code=HB_BuildProperties(ins,code,riched_code,1,true)
+		HB_BuildProperties(ins,code,riched_code,1,true)
 		code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
 		riched_code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
-		Rich.Text = riched_code
-		Code.Text = code
+		ShowText(code,riched_code)
 	end
 	local function RawLuau_Convert(ins:Instance):()
 		Rich.Text = "WIP"
@@ -3708,7 +3778,9 @@ end
 
 
 	local function GrabPropertiesOfSingularInstance(ins:Instance):()
-		local code,riched_code = `--{ins.ClassName}`,WriteRichText(`--{ins.ClassName}`,ScriptComment)
+		local code,riched_code = CreateStr(),CreateStr()
+		code..= `--{ins.ClassName}`
+		riched_code..= WriteRichText(`--{ins.ClassName}`,ScriptComment)
 		for i,v in spairs(GetProperties(ins,true)) do
 			if typeof(v)=="Instance" then
 				local c,r = GoToIndexPath(v)
@@ -3720,8 +3792,7 @@ end
 			code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
 			riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
 		end
-		Rich.Text = riched_code
-		Code.Text = code
+		ShowText(code,riched_code)
 	end
 	local function BegginConvert():()
 		--Mutate variables
@@ -3760,8 +3831,7 @@ end
 
 
 end)()
-
-
+ThemeChanged()
 
 
 
