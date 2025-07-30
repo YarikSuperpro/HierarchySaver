@@ -1,3 +1,5 @@
+--!strict
+--!optimize 2
 --[[
 Copyright 2025 Yarik_superpro
 
@@ -14,7 +16,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		limitations under the License.
 ]]
 
---!optimize 2
 plugin.Name="Hierarchy Saver (plugin)"
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -175,7 +176,7 @@ local LightThemeColor_List:{Frame} = table.create(3)::{Frame}
 local Tab_EnumColor_List:{Frame} = table.create(1)::{Frame}
 local ScriptWhitespaceColorList_FOR_UI_STROKE:{UIStroke} = table.create(3)::{UIStroke}
 local TextButtons_Theme:{TextLabel|TextBox|TextButton} = table.create(20)::{TextLabel|TextBox|TextButton}
-local BrightestText_Theme:{TextLabel|TextBox|TextButton|ImageLabel|ImageButton} = table.create(10)::{TextLabel|TextBox|TextButton}
+local BrightestText_Theme:{TextLabel|TextBox|TextButton|ImageLabel|ImageButton} = table.create(10)::{TextLabel|TextBox|TextButton|ImageLabel|ImageButton}
 --Display
 local Main = script:WaitForChild("Main")
 local LowerBar = Main:WaitForChild("LowerBar")
@@ -538,7 +539,7 @@ local function DeleteTab(Name:string):()
 		Tab:Destroy()
 	end
 end
-local CurrentConvertType:string = "Hierarchy Builder"
+local CurrentConvertType:string = "Nestify"
 local function SelectButtonByName(name:string):()
 	local button = UpperBar:FindFirstChild(name)::Frame?
 	local viewport = ViewTabs:FindFirstChild(name)::Frame?
@@ -564,9 +565,9 @@ local OnConvert:BindableEvent = Instance.new("BindableEvent")
 local UncollapseCategoryies:BindableEvent = Instance.new("BindableEvent")
 local AllPropertyRelatives:{[TextLabel]:GuiObject} = {}--TextLabel.Text -> Target
 do
-	local SearchKeybind = plugin:CreatePluginAction("HB_StartSearch","Search","Search for property","rbxassetid://75358548882112",true)
+	local SearchKeybind = plugin:CreatePluginAction("NE_StartSearch","Search","Search for property","rbxassetid://75358548882112",true)
 	SearchKeybind.Name = "Search for property"
-	local CancelKeybind = plugin:CreatePluginAction("HB_CancelSearch","Cancel Search","Cancel Search for property","rbxassetid://75358548882112",true)
+	local CancelKeybind = plugin:CreatePluginAction("NE_CancelSearch","Cancel Search","Cancel Search for property","rbxassetid://75358548882112",true)
 	CancelKeybind.Name = "Cancel Search for property"
 	local SearchBox = Main:WaitForChild("Search")::TextBox
 	local SearchButton = LowerBar:WaitForChild("Search")
@@ -808,7 +809,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 		elseif CanvasSize.Y.Offset>AbsoluteWindowSize.Y then
 			Tab_Right.Visible=false;Tab_Left.Visible=false
 			if Tab_Scroll.CanvasPosition.X~=0 then
-				Tab_Scroll.CanvasPosition-=Vector2.new(Tab_Scroll.CanvasPosition.X,0)
+				Tab_Scroll.CanvasPosition-=Vector2.new(Tab_Scroll.CanvasPosition.X::number,0)
 			end
 			Tab_Lower.Position=UDim2_one
 			Tab_Upper.Visible=true;Tab_Lower.Visible=true;
@@ -820,7 +821,7 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 			List.Size=UDim2_one_List
 		else
 			if Tab_Scroll.CanvasPosition.X~=0 then
-				Tab_Scroll.CanvasPosition-=Vector2.new(Tab_Scroll.CanvasPosition.X,0)
+				Tab_Scroll.CanvasPosition-=Vector2.new(Tab_Scroll.CanvasPosition.X::number,0)
 			end
 			Tab_Upper.Visible=false;Tab_Lower.Visible=false;Tab_Right.Visible=false;Tab_Left.Visible=false
 			List.Size=UDim2_one_List	
@@ -1105,7 +1106,7 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 			for i,v in Classes[ClassName] or InstanceClassProperties do
 				cache_prop[i]=ins[i]
 			end
-			ins:Destroy()
+			(ins::Instance|any):Destroy()
 			Default_Properties_Cache[ClassName]=cache_prop
 		end
 	end
@@ -1293,7 +1294,7 @@ local function PropertyTypeInitiator(Property:TextButton,Property_Content:Frame,
 				_Slider.Visible=true
 				Input_Frame_Stroke.Enabled=true
 				Input.Size=const_StaticInputRange
-				SelectedValue=value
+				SelectedValue=value::Frame|any
 			end
 		end)
 		local incrementWorker:RBXScriptConnection?=nil
@@ -1743,7 +1744,7 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):(
 end
 local CachedConstants:{[any]:string}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_cachedConstants") or [[{[2.718281828459045]="math.exp(1)"}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_cachedConstants") or [[{[2.718281828459045]="math.exp(1)"}]])
 	if _try and type(ret)=="table" then
 		CachedConstants=ret
 	else
@@ -1775,6 +1776,40 @@ local function ConstructorTostring(type:string,data:any,Bypass:true?):(string,st
 end
 --Init ConstructorTostring
 (function():()
+	local function ToQuaternion(cf: CFrame): (number,number,number,number)
+		local _, _, _, 
+		m00, m01, m02,
+		m10, m11, m12,
+		m20, m21, m22 = cf:GetComponents()
+		local x, y, z, w:number
+		local trace:number = m00 + m11 + m22
+		if trace > 0 then
+			local s = math.sqrt(trace + 1) * 2
+			w = 0.25 * s
+			x = (m21 - m12) / s
+			y = (m02 - m20) / s
+			z = (m10 - m01) / s
+		elseif m00 > m11 and m00 > m22 then
+			local s = math.sqrt(1 + m00 - m11 - m22) * 2
+			x = 0.25 * s
+			y = (m01 + m10) / s
+			z = (m02 + m20) / s
+			w = (m21 - m12) / s
+		elseif m11 > m22 then
+			local s = math.sqrt(1 + m11 - m00 - m22) * 2
+			x = (m01 + m10) / s
+			y = 0.25 * s
+			z = (m12 + m21) / s
+			w = (m02 - m20) / s
+		else
+			local s = math.sqrt(1 + m22 - m00 - m11) * 2
+			x = (m02 + m20) / s
+			y = (m12 + m21) / s
+			z = 0.25 * s
+			w = (m10 - m01) / s
+		end
+		return x,y,z,w
+	end
 	local function IsCleanNumber(num:number):boolean
 		local absnum:number = math.abs(num)
 		if absnum > 10^-math.floor(ss.SN_Float) and absnum < 10^math.floor(ss.SN_Integer) then return false end
@@ -1846,23 +1881,23 @@ end
 			return ConstructorTostring("number",x)
 		elseif ss.MatrixCFrameMeasurements=="Balance" then
 			local mul = x/math.pi
-			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 			local sub = math.pi/x
 			if #tostring(sub%1)<7 then 
-				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 			else
 				return `math{(ss.IndexingBy=="Dots" and ".rad") or `[{ConstructorTostring("string","rad")}]`}({ConstructorTostring("number",deg)})`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("rad",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","rad"))}]`}({select(2,ConstructorTostring("number",deg))})`
 			end
 		else--Radians
 			local mul = x/math.pi
-			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
+			if #tostring(mul%1)<7 then return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}` end
 
 			local sub = math.pi/x
 			if #tostring(sub%1)<7 then 
-				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Div}{ConstructorTostring("number",sub)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}{ss.Div}{select(2,ConstructorTostring("number",sub))}` 
 			else
-				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
+				return `math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi")}]`}{ss.Mult}{ConstructorTostring("number",mul)}`,`{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi"))}]`}{ss.Mult}{select(2,ConstructorTostring("number",mul))}`
 			end
 		end
 	end
@@ -1879,9 +1914,9 @@ end
 			if ss.NanConstant==true and data~=data then
 				return ss.NanConstant_Name,ss.NanConstant_Name
 			elseif data==math.pi or data==-math.pi then
-				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".pi") or `["pi"]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
+				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi",Bypass)}]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
 			elseif data==math.huge or data==-math.huge then
-				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".huge") or `["huge"]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
+				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".huge") or `[{ConstructorTostring("string","huge",Bypass)}]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("huge",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","huge",Bypass))}]`}`
 			elseif data~=data then
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
@@ -1960,13 +1995,13 @@ end
 		Vector2 = function(data:Vector2,Bypass:true?):(string,string)
 			--Constants
 			if data==Vector2.one then
-				return `Vector2{(ss.IndexingBy=="Dots" and ".one") or `["one"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one"))}]`}`
+				return `Vector2{(ss.IndexingBy=="Dots" and ".one") or `[{ConstructorTostring("string","one",Bypass)}]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("one",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","one",Bypass))}]`}`
 			elseif data==Vector2.zero then
-				return `Vector2{(ss.IndexingBy=="Dots" and ".zero") or `["zero"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero"))}]`}`
+				return `Vector2{(ss.IndexingBy=="Dots" and ".zero") or `[{ConstructorTostring("string","zero",Bypass)}]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("zero",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","zero",Bypass))}]`}`
 			elseif data==Vector2.xAxis then
-				return `Vector2{(ss.IndexingBy=="Dots" and ".xAxis") or `["xAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis"))}]`}`
+				return `Vector2{(ss.IndexingBy=="Dots" and ".xAxis") or `[{ConstructorTostring("string","xAxis",Bypass)}]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("xAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","xAxis",Bypass))}]`}`
 			elseif data==Vector2.yAxis then
-				return `Vector2{(ss.IndexingBy=="Dots" and ".yAxis") or `["yAxis"]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis"))}]`}`
+				return `Vector2{(ss.IndexingBy=="Dots" and ".yAxis") or `[{ConstructorTostring("string","yAxis",Bypass)}]`}`,`{WriteRichText("Vector2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("yAxis",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","yAxis",Bypass))}]`}`
 			end
 			--Vector2
 			local X,Y = Round(data.X),Round(data.Y)
@@ -2047,6 +2082,10 @@ end
 					local rY,rY_rich = ToMatrixUnit(y)
 					local rZ,rZ_rich = ToMatrixUnit(z)
 					return `CFrame{(ss.IndexingBy=="Dots" and `.Angles`) or `[{ConstructorTostring("string","Angles",Bypass)}]`}({rX}{ss.FuncSeparator}{rY}{ss.FuncSeparator}{rZ})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("Angles",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","Angles",Bypass))}]`}({rX_rich}{ss.FuncSeparator}{rY_rich}{ss.FuncSeparator}{rZ_rich})`
+				elseif ss.CFrameFormatting=="Quaternions" then
+					local X,Y,Z,qX,qY,qZ,qW:number = data.X,data.Y,data.Z,ToQuaternion(data)
+					X,Y,Z = Round(X),Round(Y),Round(Z)
+					return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qZ,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qW,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qX,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qY,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qZ,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qW,Bypass))})`
 				else--RawCFrameNew
 					local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
 					X,Y,Z = Round(X),Round(Y),Round(Z)
@@ -2057,6 +2096,10 @@ end
 					local X,Y,Z = Round(data.X),Round(data.Y),Round(data.Z)
 					local txt,rich = ConstructorTostring("CFrame",data.Rotation)
 					return `{(ss.FastNamecall==true and `{ss.NC_CfrMul}(`) or ""}CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{txt}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}CFrame`) or ""}`) or ""}`,`{(ss.FastNamecall==true and `{WriteRichText(ss.NC_CfrMul,ScriptMethod)}(`) or ""}{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}){(ss.FastNamecall==true and ss.FuncSeparator) or ss.Mult}{rich}{(ss.FastNamecall==true and `){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("CFrame",Color3.new(0,1,1))}`) or ""}`) or ""}`
+				elseif ss.CFrameFormatting=="Quaternions" then
+					local X,Y,Z,qX,qY,qZ,qW:number = data.X,data.Y,data.Z,ToQuaternion(data)
+					X,Y,Z = Round(X),Round(Y),Round(Z)
+					return `CFrame{(ss.IndexingBy=="Dots" and ".new") or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",X,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Y,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",Z,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qX,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qY,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qZ,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",qW,Bypass)})`,`{WriteRichText("CFrame",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",X,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Y,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",Z,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qX,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qY,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qZ,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",qW,Bypass))})`
 				else--RawCFrameNew
 					local X,Y,Z,R00,R01,R02,R10,R11,R12,R20,R21,R22 = data:GetComponents()
 					X,Y,Z = Round(X),Round(Y),Round(Z)
@@ -2195,10 +2238,10 @@ end
 			if ss.UDIM2_MoreConstructors==true then
 				if data.X.Offset==0 and data.Y.Offset==0 and (data.X.Scale~=0 or data.Y.Scale~=0) then
 					--Scale constructor
-					return `UDim2{(ss.IndexingBy=="Dots" and `.fromScale`) or `[{ConstructorTostring("string","fromScale",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromScale",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromScale",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))})`
-				elseif (data.X.Offset~=0 or data.Y.Offset~=0) and data.X.Scale==0 and data.Y.Scale==0 then
+					return `UDim2{(ss.IndexingBy=="Dots" and `.fromScale`) or `[{ConstructorTostring("string","fromScale",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",(data::UDim2).Y.Scale,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromScale",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromScale",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))})`
+				elseif (data.X.Offset~=0 or (data::UDim2).Y.Offset~=0) and data.X.Scale==0 and (data::UDim2).Y.Scale==0 then
 					--Offset constructor
-					return `UDim2{(ss.IndexingBy=="Dots" and `.fromOffset`) or `[{ConstructorTostring("string","fromOffset",Bypass)}]`}({ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromOffset",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromOffset",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
+					return `UDim2{(ss.IndexingBy=="Dots" and `.fromOffset`) or `[{ConstructorTostring("string","fromOffset",Bypass)}]`}({ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",(data::UDim2).Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromOffset",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","fromOffset",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
 				end
 			end
 			return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
@@ -2236,11 +2279,11 @@ end
 	}::typeof(ConstructorTostring_Switch)
 
 	do
-		local function TableTostring(tbl:{[any]:any},Bypass:true?,Level:number?):(string,string)
-			local Level = (Level or 1)::number
+		local function TableTostring(tbl:{[any]:any}|any,Bypass:true?,Level:number?):(string,string)
+			Level = (Level or 1)::number
 			local tbl_txt,tbl_rich = "{\n","{\n"
 			for i,v in spairs(tbl) do
-				if type(i)~="number" or i%1~=0 then
+				if type(i)~="number" or i%1~=0 or (i~=1 and tbl[i-1]==nil) then
 					local regular,rich = ConstructorTostring(typeof(i),i,true)
 					tbl_txt..=`{string.rep("\t",Level)}[{regular}]{ss._Equal}`
 					tbl_rich..=`{string.rep("\t",Level)}[{rich}]{ss._Equal}`
@@ -2262,15 +2305,14 @@ end
 			tbl_rich..=string.rep("\t",Level-1).."}"
 			return tbl_txt,tbl_rich
 		end
-
-		ConstructorTostring_Switch.table=function(tbl:{[any]:any},Bypass:true?):(string,string)
+		ConstructorTostring_Switch.table=function(tbl:{[any]:any}|any,Bypass:true?):(string,string)
 			return TableTostring(tbl,Bypass)
 		end
 	end
 end)()
 local pathMacro:{[Instance]:string}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_pathMacro") or "{}")
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_pathMacro") or "{}")
 	if _try and type(ret)=="table" then
 		pathMacro=ret
 	else
@@ -2281,7 +2323,7 @@ end
 
 local IgnoredPropertiesList:{[any]:any}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}]])
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
@@ -2421,7 +2463,7 @@ do
 		Input_Rich.Text=tab_rich
 		if str~=nil then
 			IgnoredPropertiesList=tbl
-			plugin:SetSetting("HB_IgnoreProperties",str)
+			plugin:SetSetting("NE_IgnoreProperties",str)
 		end
 	end
 
@@ -2451,9 +2493,12 @@ do
 		end
 	end)
 end
-local _baseImports:{[string]:{string:any}}
+
+type _baseImports = {[string]:{[string]:any}}
+
+local _baseImports:_baseImports
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("HB_BaseImports") or "{}")
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_BaseImports") or "{}")
 	if _try and type(ret)=="table" then
 		_baseImports=ret
 	else
@@ -2625,7 +2670,7 @@ end
 				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
 				Imported.Text = tbl
 				Rich.Text = rich_tbl
-				plugin:SetSetting("HB_cachedConstants",Insert_txt)
+				plugin:SetSetting("NE_cachedConstants",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\tValue{ss._Equal}string\n\}`)
 			else
@@ -2760,7 +2805,7 @@ end
 				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
 				Imported.Text = tbl
 				Rich.Text = rich_tbl
-				plugin:SetSetting("HB_pathMacro",Insert_txt)
+				plugin:SetSetting("NE_pathMacro",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\tPath.To.Instance{ss._Equal}string\n\}`)
 			else
@@ -2898,7 +2943,7 @@ end
 				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
 				Imported.Text = tbl
 				Rich.Text = rich_tbl
-				plugin:SetSetting("HB_BaseImports",Insert_txt)
+				plugin:SetSetting("NE_BaseImports",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`)
 			else
@@ -2976,11 +3021,11 @@ end)()
 
 do
 	local sharedSettings,sharedSettings_Content = CreateTab("Shared Settings","rbxassetid://7059346373")
-	local Hierarchy_Builder,Hierarchy_Builder_Content = CreateTab("Hierarchy Builder","rbxassetid://72069099688057")
+	local Nestify,Nestify_Content = CreateTab("Nestify","rbxassetid://103418028764678")
 	local Raw_Luau,Raw_Luau_Content = CreateTab("Raw Luau","rbxassetid://18606791059")
-	Hierarchy_Builder.Visible=true
+	Nestify.Visible=true
 	BuildPropertiesList(sharedSettings_Content,require(script:WaitForChild("SharedSettings")))
-	BuildPropertiesList(Hierarchy_Builder_Content,require(script:WaitForChild("Properties_HierarchyBuilder")))
+	BuildPropertiesList(Nestify_Content,require(script:WaitForChild("Properties_Nestify")))
 	BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
 end
 local Converted_Code,Converted_Code_Content = CreateTab("Converted Code","rbxassetid://46342657")
@@ -3075,16 +3120,16 @@ do
 		path = ins
 		if IsRecursive==false then--Regular from top to bottom
 			if Recursive~=nil then path = Recursive end
-			while path~=nil do
+			while path::Instance?~=nil do
 				table.insert(Hierarchy,1,path)
-				if type(select(2,pcall(game.FindService,game,path.ClassName)))=="userdata" or pathMacro[path]~=nil then
+				if type(select(2,pcall(game.FindService,game,(path::Instance).ClassName::string))::Instance?|"string")=="userdata" or (pathMacro::{[Instance]:string})[path::Instance]~=nil then
 					break
 				end
 				--Move up
 				path=path.Parent::Instance
 			end
 		elseif Recursive~=nil then --Recursive
-			while path~=Recursive and path~=nil do
+			while (path::Instance?)~=(Recursive::Instance) and (path::Instance?)~=nil do
 				if Recursive:IsDescendantOf(path) then
 					--go down
 					for i,v in path:GetChildren() do
@@ -3173,11 +3218,11 @@ do
 			if v==game then
 				txt = "game"
 				rich = "game"
-			elseif pathMacro[v]~=nil then
+			elseif (pathMacro::{[Instance]:string})[v]~=nil then
 				--pathMacro
-				txt = pathMacro[v]
-				rich = pathMacro[v]
-			elseif type(select(2,pcall(game.FindService,game,v.ClassName)))=="userdata" then
+				txt = (pathMacro::{[Instance]:string})[v]
+				rich = (pathMacro::{[Instance]:string})[v]
+			elseif type(select(2,pcall(game.FindService,game,v.ClassName))::Instance?|"string")=="userdata" then
 				--service
 				if v==workspace then
 					txt = "workspace"
@@ -3231,11 +3276,12 @@ do
 		end
 		return txt,rich
 	end
-
 end
 
 --Converter stuff
 (function():()
+	local GoToIndexPath = GoToIndexPath::(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
+
 	local CreateStr = require(script:WaitForChild("strWrap"))
 	local strMaxSize:number = 199_999;
 
@@ -3320,8 +3366,13 @@ end
 		ApplyText()
 	end
 
+
+
 	local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
-		local dictionary,dictionary_rich = "{","{"
+		if ss.CMPAsyncService=="InsertService" then
+			return `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.RenderFidelity)}{(ss.CMPAsyncService_PassFuildFidility==true and `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.FluidFidelity)}`) or ""}`,`{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}{(ss.CMPAsyncService_PassFuildFidility==true and `{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}`) or ""}`
+		end
+		local dictionary,dictionary_rich:string = "{","{"
 		if ins.CollisionFidelity~=Enum.CollisionFidelity.Default then
 			dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss._Separator}`
 			dictionary_rich..=`CollisionFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss._Separator}`
@@ -3341,7 +3392,7 @@ end
 	end
 
 
-	local function HB_BuildProperties(ins:Instance,code:CreateStr.class,riched_code:CreateStr.class,Layer:number,Initiator:true?):()
+	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?):()
 		local properties = GetProperties(ins)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
@@ -3352,7 +3403,7 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer-1)}\{`
 		end
 		--Declearing ClassName
-		if ss._HB_Prop_Type_Newline==true then
+		if ss._NE_Prop_Type_Newline==true then
 			code..=`\n{string.rep(ss.t,Layer)}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}`
 		end
@@ -3363,41 +3414,41 @@ end
 				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 
 				if ss.UseMeshFunction==true then
-					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				elseif ss.FastNamecall==true then
-					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				else
-					code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				end
 			else
 				--Type
-				code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-				riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+				code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+				riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 			end
 		else
 			--Name
-			code..=`{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
-			riched_code..=`{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
+			code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
+			riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
 			--Type
 			--Declear instance for for mesh
 			if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
 				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 				if ss.UseMeshFunction==true then
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				elseif ss.FastNamecall==true then
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				else
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 				end
 			else
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",ss.HB_ClassName)}]`) or ss.HB_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.HB_ClassName))}]`) or ss.HB_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 			end
 		end
 		----------------------
@@ -3411,7 +3462,7 @@ end
 				local PropertyCount:number = 0
 				if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
 					for i,v in tab._exec.SetAttribute do
-						if Attributes[i]==v then Matches+=1 end
+						if Attributes[i::string]==v then Matches+=1 end
 						PropertyCount+=1
 					end
 				end
@@ -3422,7 +3473,7 @@ end
 					end
 				end
 				for i,v in tab do
-					if Classes[Type][i]==nil then break end
+					if (Classes[Type][i]::string?)==nil then break end
 					if properties[i]==v and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
 					if i=="_exec" then continue end
 					PropertyCount+=1
@@ -3438,8 +3489,8 @@ end
 			end
 			--Setting _base
 			if baseImport~=nil then
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
 			end
 		end
 		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
@@ -3456,42 +3507,42 @@ end
 			--Ignore List
 			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 			--Already in _base
-			if baseImport~=nil and _baseImports[baseImport][i]==v then continue end
+			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
 			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
 
 			local type:string = typeof(v)
 			if type=="Instance" then
-				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName)))=="Instance"))) then
+				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName))::any|string)=="Instance"))) then
 					--Outside of hierarchy
-					local c_code,c_rich = GoToIndexPath(v)
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
+					local c_code,c_rich = GoToIndexPath(v::Instance)
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 				end
 				continue
 			end
 			if ConstructorTostring_Switch[type]==nil then continue end
 
 			local c_code,c_rich = ConstructorTostring(type,v)
-			code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 		end
 		local _baseIncludesAllTagsAndAttributes:boolean = baseImport~=nil
 		local IncludesAllTags:boolean = _baseIncludesAllTagsAndAttributes
 		local IncludesAllAttributes:boolean = _baseIncludesAllTagsAndAttributes
 		if _baseIncludesAllTagsAndAttributes then
-			local import = _baseImports[baseImport::string]
+			local import = (_baseImports::_baseImports)[baseImport::string]
 			if type(import._exec)=="table" then
 				local _exec:{[any]:any} = import._exec
 				_baseIncludesAllTagsAndAttributes=((type(_exec.SetAttribute)=="table" or type(_exec.AddTag)=="table") and true )or false
 				if _baseIncludesAllTagsAndAttributes then
 					if type(_exec.SetAttribute)=="table" then
 						for i,v in Attributes do
-							if _exec.SetAttribute[i]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
+							if (_exec.SetAttribute::{[string]:any})[i::string]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
 						end
 					end
 					if type(_exec.AddTag)=="table" then
 						for i,v in Tags do
-							if table.find(_exec.AddTag,v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
+							if table.find(_exec.AddTag::{string},v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
 						end
 					end
 				end
@@ -3501,21 +3552,21 @@ end
 		end
 		--_init--
 		--IncludeInit?
-		local IncludeInit:boolean = (ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
 		if IncludeInit==false then
 			for i,v in properties do
-				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName)))~="Instance")))) then IncludeInit=true break end
+				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
 			end
 		end
 		--Actual _init here
 		--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
 		--Note that Instance property could be self
 		if IncludeInit then
-			code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			--Recursive Hierarchy
 			for key,value in spairs(properties) do
-				if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName)))~="Instance")))) then 
+				if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName))::any|string)~="Instance")))) then 
 					--Recursive hierarchy 
 					if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
 						--Recursive
@@ -3537,10 +3588,10 @@ end
 
 
 			--Tags and attributes
-			if ss._HB_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
+			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
 				--tags
 				if #Tags~=0 and IncludesAllTags==false then
-					local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+					local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
 					if ss.FastNamecall==true then
 						for i,v in Tags do
 							if table.find(IncludedTags,v)~=nil then continue end
@@ -3557,7 +3608,7 @@ end
 				end
 				--Attributes
 				if next(Attributes)~=nil and IncludesAllAttributes==false then
-					local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+					local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
 					if ss.FastNamecall==true then
 						for i,v in spairs(Attributes) do
 							if IncludedAttributes[i]~=nil then continue end
@@ -3582,16 +3633,16 @@ end
 						code..=`\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
 					else
-						code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}Destroy({ss.localMeshVariableName})`
-						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+						code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}Destroy({ss.localMeshVariableName})`
+						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
 					end
 				else
 					if ss.UseMeshFunction==true then
 						code..=`\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
 					else
-						code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}AssetService:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:Destroy()`
-						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+						code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:Destroy()`
+						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
 					end	
 				end
 				--TextureID
@@ -3611,24 +3662,24 @@ end
 		end
 
 		---_exec---
-		if ss._HB_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
+		if ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
 			if _baseIncludesAllTagsAndAttributes==false then
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
+				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
 				if #Tags~=0 and IncludesAllTags==false then
 					local txt,rich = "",""
-					local IncludedTags:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.AddTag)=="table" and (_baseImports[baseImport]::any)._exec.AddTag)) or {}
+					local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
 					for i,v in Tags do
 						if table.find(IncludedTags,v)~=nil then continue end
 						txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
 					end
-					code..=`\n{string.rep(ss.t,Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{((ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
+					code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
 				end
 				if next(Attributes)~=nil and IncludesAllAttributes==false then
-					code..=`\n{string.rep(ss.t,Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{(ss.HB_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
-					local IncludedAttributes:{any} = (baseImport~=nil and type((_baseImports[baseImport::string]::any)._exec)=="table" and (type((_baseImports[baseImport]::any)._exec.SetAttribute)=="table" and (_baseImports[baseImport]::any)._exec.SetAttribute)) or {}
+					code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
+					local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
 					for i,v in spairs(Attributes) do
 						if IncludedAttributes[i]~=nil then continue end
 						code..=`\n{string.rep(ss.t,Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
@@ -3652,7 +3703,7 @@ end
 			end
 			for i,v in children do
 				if ss.RespectArchivable==true and v.Archivable==false then continue end
-				HB_BuildProperties(v,code,riched_code,Layer+1)
+				NE_BuildProperties(v,code,riched_code,Layer+1)
 			end
 		end
 		-----
@@ -3672,9 +3723,51 @@ end
 		-----
 		--return code,riched_code
 	end
+	local function __IncludeTopCode__WriteTopFunctionHeader(txt:CreateStr.class|any,rich:CreateStr.class|any):()
+		txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
+		rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
+	end
+	local function __Write__HashTable(txt:CreateStr.class|any,rich:CreateStr.class|any):()
+		txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}` 				
+		rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}` 				
+		if ss.CMPAsyncService=="InsertService" then
+			txt..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}`) or ""}{ss._Equal}\{`
+			rich..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}`) or ""}{ss._Equal}\{`
+			for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
+				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
+				for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{\}{ss._Separator}`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{\}{ss._Separator}`
+				end
+				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
+				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
+			end
+		else
+			txt..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{`
+			rich..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{`
+			for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
+				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
+				for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
+					for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
+						txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
+						rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
+					end
+					txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}\}{ss._Separator}`
+					rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}\}{ss._Separator}`
+				end
+				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
+				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
+			end	
+		end
+		txt..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+		rich..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+	end
 
-	local function IncludeTopCode(IncludeFunctions:true?):(string,string)
-		local txt,rich = "",""
+	local function IncludeTopCode(txt:CreateStr.class|any,rich:CreateStr.class|any,IncludeFunctions:true?):()
 		if ss.DisplaySource==true then
 			local t:string = (SelectedInstance or workspace):GetFullName()
 			txt..=`{ss["--"]}@Source {t}\n`
@@ -3684,71 +3777,95 @@ end
 			if ss._SaveMeshes_Cache then
 				--local alloc
 				if ss.CacheTableType=="Array" then
-					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?\}\}`) or ""}{ss._Equal}\{\}\n`
-					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}\}`) or ""}{ss._Equal}\{\}\n`
+					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{(ss.CMPAsyncService=="InsertService" and "") or `{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?`}\}\}`) or ""}{ss._Equal}\{\}\n`
+					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{(ss.CMPAsyncService=="InsertService" and "") or `{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?`}\}\}`) or ""}{ss._Equal}\{\}\n`
 				else--Hash table
-					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{` 				
-					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{` 				
-					for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
-						txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
-						rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
-						for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
-							txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
-							rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
-							for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
-								txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
-								rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
-							end
-							txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}\}{ss._Separator}`
-							rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}\}{ss._Separator}`
-						end
-						txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
-						rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}\}{ss._Separator}`
-					end
-					txt..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
-					rich..=`{(ss.CacheHashTableSpacing==true and `\n`) or ""}\}\n`
+					__Write__HashTable(txt,rich)
 				end
-				--function open
-				txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
-				rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
-				--function body
+				__IncludeTopCode__WriteTopFunctionHeader(txt,rich)
 				if ss.CacheTableType=="Array" then
 					--for loop
-					txt..=`\n{ss.t}t{ss._Equal}t{ss["or"]}\{\}\n{ss.t}{ss._local}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}\n{ss.t}{ss["for"]}i{ss.TupleSeparator}v{ss["in"]}{ss._SaveMeshes_CacheTableName}{ss["do"]}\n{ss.t}{ss.t}{ss["if"]}v{(ss.IndexingBy=="Dots" and `.Id`) or `[{ConstructorTostring("string","Id")}]`}{ss["=="]}Id{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Cf`) or `[{ConstructorTostring("string","Cf")}]`}{ss["=="]}cf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Rf`) or `[{ConstructorTostring("string","Rf")}]`}{ss["=="]}rf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Ff`) or `[{ConstructorTostring("string","Ff")}]`}{ss["=="]}ff{ss["then"]} {ss["return"]} v{(ss.IndexingBy=="Dots" and `.M`) or `[{ConstructorTostring("string","M")}]`} {ss["end"]}\n{ss.t}{ss["end"]}`
-					rich..=`\n{ss.t}t{ss._Equal}t{WriteRichText(ss["or"],ScriptLuauKeyword)}\{\}\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}\n{ss.t}{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss.TupleSeparator}v{WriteRichText(ss["in"],ScriptLuauKeyword)}{ss._SaveMeshes_CacheTableName}{WriteRichText(ss["do"],ScriptLuauKeyword)}\n{ss.t}{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Id",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Id"))}]`}{ss["=="]}Id{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Cf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Cf"))}]`}{ss["=="]}cf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Rf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Rf"))}]`}{ss["=="]}rf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Ff",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Ff"))}]`}{ss["=="]}ff{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} v{(ss.IndexingBy=="Dots" and `.{WriteRichText("M",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","M"))}]`} {WriteRichText(ss["end"],ScriptLuauKeyword)}\n{ss.t}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
+					if ss.CMPAsyncService=="InsertService" then
+						txt..=`\n{ss.t}{ss["for"]}i{ss.TupleSeparator}v{ss["in"]}{ss._SaveMeshes_CacheTableName}{ss["do"]}\n{ss.t}{ss.t}{ss["if"]}v{(ss.IndexingBy=="Dots" and `.Id`) or `[{ConstructorTostring("string","Id")}]`}{ss["=="]}Id{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Cf`) or `[{ConstructorTostring("string","Cf")}]`}{ss["=="]}c{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Rf`) or `[{ConstructorTostring("string","Rf")}]`}{ss["=="]}r`
+						rich..=`\n{ss.t}{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss.TupleSeparator}v{WriteRichText(ss["in"],ScriptLuauKeyword)}{ss._SaveMeshes_CacheTableName}{WriteRichText(ss["do"],ScriptLuauKeyword)}\n{ss.t}{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Id",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Id"))}]`}{ss["=="]}Id{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Cf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Cf"))}]`}{ss["=="]}c{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Rf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Rf"))}]`}{ss["=="]}r`
+					else
+						txt..=`\n{ss.t}t{ss._Equal}t{ss["or"]}\{\}\n{ss.t}{ss._local}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}\n{ss.t}{ss["for"]}i{ss.TupleSeparator}v{ss["in"]}{ss._SaveMeshes_CacheTableName}{ss["do"]}\n{ss.t}{ss.t}{ss["if"]}v{(ss.IndexingBy=="Dots" and `.Id`) or `[{ConstructorTostring("string","Id")}]`}{ss["=="]}Id{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Cf`) or `[{ConstructorTostring("string","Cf")}]`}{ss["=="]}cf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Rf`) or `[{ConstructorTostring("string","Rf")}]`}{ss["=="]}rf{ss["and"]}v{(ss.IndexingBy=="Dots" and `.Ff`) or `[{ConstructorTostring("string","Ff")}]`}{ss["=="]}ff`
+						rich..=`\n{ss.t}t{ss._Equal}t{WriteRichText(ss["or"],ScriptLuauKeyword)}\{\}\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}cf{ss.TupleSeparator}rf{ss.TupleSeparator}ff{ss._Equal}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{ss.TupleSeparator}t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}\n{ss.t}{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss.TupleSeparator}v{WriteRichText(ss["in"],ScriptLuauKeyword)}{ss._SaveMeshes_CacheTableName}{WriteRichText(ss["do"],ScriptLuauKeyword)}\n{ss.t}{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Id",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Id"))}]`}{ss["=="]}Id{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Cf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Cf"))}]`}{ss["=="]}cf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Rf",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Rf"))}]`}{ss["=="]}rf{WriteRichText(ss["and"],ScriptLuauKeyword)}v{(ss.IndexingBy=="Dots" and `.{WriteRichText("Ff",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Ff"))}]`}{ss["=="]}ff`
+					end
+					--closing for loop
+					txt..=`{ss["then"]}{ss.s}{ss["return"]} v{(ss.IndexingBy=="Dots" and `.M`) or `[{ConstructorTostring("string","M")}]`}{ss.s}{ss["end"]}\n{ss.t}{ss["end"]}`
+					rich..=`{WriteRichText(ss["then"],ScriptLuauKeyword)}{ss.s}{WriteRichText(ss["return"],ScriptLuauKeyword)} v{(ss.IndexingBy=="Dots" and `.{WriteRichText("M",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","M"))}]`}{ss.s}{WriteRichText(ss["end"],ScriptLuauKeyword)}\n{ss.t}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
 					if ss.FastNamecall then
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{ss["return"]} mesh`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{ss["return"]} mesh`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
 					else
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}AssetService:CreateMeshPartAsync(Id{ss.FuncSeparator}t)\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{ss["return"]} mesh`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}t)\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					end
+					--insert
+					if ss.CMPAsyncService=="InsertService" then
+						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
+						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
+					else
+						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
+						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
+					end
+					--end
+					txt..=`\n{ss.t}{ss["return"]} mesh`
+					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
 				else--Hash table
 					--Retriving cache if possible
-					txt..=`\n{ss.t}t{ss._Equal}t{ss["or"]}\{\}\n{ss.t}{ss._local}M{(ss.Typechecking==true and `{ss.TC_Type}MeshPart?`) or ""}{ss._Equal}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]\n{ss.t}{ss["if"]}M{ss["then"]} {ss["return"]} M{(ss.Typechecking==true and `{ss.TC_Casting}MeshPart`) or ""} {ss["end"]}`
-					rich..=`\n{ss.t}t{ss._Equal}t{WriteRichText(ss["or"],ScriptLuauKeyword)}\{\}\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}M{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}?`) or ""}{ss._Equal}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]\n{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}M{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} M{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""} {WriteRichText(ss["end"],ScriptLuauKeyword)}`
+					--t = t or {}
+					if ss.CMPAsyncService~="InsertService" then
+						txt..=`\n{ss.t}t{ss._Equal}t{ss["or"]}\{\}`
+						rich..=`\n{ss.t}t{ss._Equal}t{WriteRichText(ss["or"],ScriptLuauKeyword)}\{\}`
+					end
+					--local M:MeshPart
+					txt..=`\n{ss.t}{ss._local}M{(ss.Typechecking==true and `{ss.TC_Type}MeshPart?`) or ""}{ss._Equal}{ss._SaveMeshes_CacheTableName}`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}M{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}?`) or ""}{ss._Equal}{ss._SaveMeshes_CacheTableName}`
+					--indexing
+					if ss.CMPAsyncService=="InsertService" then
+						txt..="[c][r][Id]"
+						rich..="[c][r][Id]"
+					else
+						txt..=`[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]`
+						rich..=`[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]`
+					end
+					--if return part
+					txt..=`\n{ss.t}{ss["if"]}M{ss["then"]} {ss["return"]} M{(ss.Typechecking==true and `{ss.TC_Casting}MeshPart`) or ""} {ss["end"]}`
+					rich..=`\n{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}M{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} M{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""} {WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
 					if ss.FastNamecall then
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]{ss._Equal}mesh\n{ss.t}{ss["return"]} mesh`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]{ss._Equal}mesh\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					else
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}AssetService:CreateMeshPartAsync(Id{ss.FuncSeparator}t)\n{ss.t}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]{ss._Equal}mesh\n{ss.t}{ss["return"]} mesh`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}t)\n{ss.t}{ss._SaveMeshes_CacheTableName}[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]{ss._Equal}mesh\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					end
+					--set cache
+					txt..=`\n{ss.t}{ss._SaveMeshes_CacheTableName}`
+					rich..=`\n{ss.t}{ss._SaveMeshes_CacheTableName}`
+					if ss.CMPAsyncService=="InsertService" then
+						txt..=`[c][r][Id]{ss._Equal}mesh`
+						rich..=`[c][r][Id]{ss._Equal}mesh`
+					else
+						txt..=`[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]{ss._Equal}mesh`
+						rich..=`[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]{ss._Equal}mesh`
+					end
+					txt..=`\n{ss.t}{ss["return"]}{ss.s}mesh`
+					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)}{ss.s}mesh`
 				end
 			else--No caching
 				--function open
-				txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
-				rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
-
+				__IncludeTopCode__WriteTopFunctionHeader(txt,rich)
 				--Create object
 				if ss.FastNamecall then
-					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}Id{ss.FuncSeparator}t)\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
 				else
-					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}AssetService:CreateMeshPartAsync(Id{ss.FuncSeparator}t)\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(game{((ss.IndexingBy=="Dots" and `.Destroy`) or `[{ConstructorTostring("string","Destroy")}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}AssetService:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}t)\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}({WriteRichText("game",ScriptBuiltInFunction)}{((ss.IndexingBy=="Dots" and `.{WriteRichText("Destroy",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Destroy"))}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(game{((ss.IndexingBy=="Dots" and `.Destroy`) or `[{ConstructorTostring("string","Destroy")}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}({WriteRichText("game",ScriptBuiltInFunction)}{((ss.IndexingBy=="Dots" and `.{WriteRichText("Destroy",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Destroy"))}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
 				end
 			end
 			--function close
@@ -3759,16 +3876,15 @@ end
 		return txt,rich
 	end
 
-	local function HierarchyBuilder_Convert(ins:Instance):()
-		local code,riched_code = CreateStr(),CreateStr()
-		local __c,__r = IncludeTopCode(true)
-		code..=__c
-		riched_code..=__r
-		code..=`{ss._local}{ss._HB_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._HB_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._HB_FN_BRACKETS==true and "(") or ""}\{`
-		HB_BuildProperties(ins,code,riched_code,1,true)
-		code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
-		riched_code..=`\}{(ss._HB_FN_BRACKETS==true and ")") or ""}`
+	local function Nestify_Convert(ins:Instance):()
+		local code:CreateStr.class|any = CreateStr()
+		local riched_code:CreateStr.class|any = CreateStr(ss.WriteRichText==false)
+		IncludeTopCode(code,riched_code,true)
+		code..=`{ss._local}{ss._NE_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._NE_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+		NE_BuildProperties(ins,code,riched_code,1,true)
+		code..=`\}{(ss._NE_FN_BRACKETS==true and ")") or ""}`
+		riched_code..=`\}{(ss._NE_FN_BRACKETS==true and ")") or ""}`
 		ShowText(code,riched_code)
 	end
 	local function RawLuau_Convert(ins:Instance):()
@@ -3778,19 +3894,20 @@ end
 
 
 	local function GrabPropertiesOfSingularInstance(ins:Instance):()
-		local code,riched_code = CreateStr(),CreateStr()
+		local code:CreateStr.class|any = CreateStr()
+		local riched_code:CreateStr.class|any = CreateStr()
 		code..= `--{ins.ClassName}`
 		riched_code..= WriteRichText(`--{ins.ClassName}`,ScriptComment)
 		for i,v in spairs(GetProperties(ins,true)) do
 			if typeof(v)=="Instance" then
 				local c,r = GoToIndexPath(v)
-				code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
-				riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+				code..=`\n{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
+				riched_code..=`\n{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
 				continue
 			end
 			local c,r = ConstructorTostring(typeof(v),v)
-			code..=`\n{(ss.HB_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
-			riched_code..=`\n{(ss.HB_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
+			code..=`\n{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c}`
+			riched_code..=`\n{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{r}`
 		end
 		ShowText(code,riched_code)
 	end
@@ -3804,11 +3921,11 @@ end
 		CodeOutput_Title.TextSize=ss.CodeOutputTextSize
 		--
 		SelectedInstance = Selection:Get()[1]
-		if SelectedInstance==nil then warn("Please select any instance to convert") return end
+		if (SelectedInstance::Instance?)==nil then warn("Please select any instance to convert") return end
 		if ss.Instance_PropGrab==true then
 			GrabPropertiesOfSingularInstance(SelectedInstance)
-		elseif CurrentConvertType=="Hierarchy Builder" then
-			HierarchyBuilder_Convert(SelectedInstance)
+		elseif CurrentConvertType=="Nestify" then
+			Nestify_Convert(SelectedInstance)
 		elseif CurrentConvertType=="Raw Luau" then
 			RawLuau_Convert(SelectedInstance)
 		else
@@ -3822,7 +3939,7 @@ end
 
 	do
 		--Connecting convert stuff
-		local ConvertKeybind = plugin:CreatePluginAction("HB_Convert","Convert","Convert","rbxassetid://75358548882112",true)
+		local ConvertKeybind = plugin:CreatePluginAction("NE_Convert","Convert","Convert","rbxassetid://75358548882112",true)
 		ConvertKeybind.Name = "Convert"
 		LowerBar_Convert.MouseButton1Click:Connect(BegginConvert)
 		ConvertKeybind.Triggered:Connect(BegginConvert)
