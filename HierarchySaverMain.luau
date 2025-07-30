@@ -3280,6 +3280,7 @@ end
 
 --Converter stuff
 (function():()
+	local FuzzyEq = CFrame.identity.FuzzyEq::(cf1:CFrame,cf2:CFrame,epsilon:number?)->boolean
 	local GoToIndexPath = GoToIndexPath::(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
 
 	local CreateStr = require(script:WaitForChild("strWrap"))
@@ -3390,13 +3391,41 @@ end
 		dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
 		return dictionary,dictionary_rich
 	end
+	
+	local function get__count(v:Instance,children:{Instance},_CountWrapped:{Instance}):number?
+		if ss.CountEnabled==true then
+			local ClassName:string = v.ClassName
+			local counter:number = 0
+			local properties = GetProperties(v)
+			for ii,vv in children do
+				if vv==v or vv.ClassName~=ClassName then continue end
+				local vv_prop = GetProperties(vv)
+				local Equal:boolean = true
+				for iii,vvv in vv_prop do
+					if properties[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(properties[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,properties[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
+				end
+				if Equal==false then continue end
+				for iii,vvv in properties do
+					if vv_prop[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(vv_prop[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,vv_prop[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
+				end
+				if Equal==false then continue end
+				table.insert(_CountWrapped,vv)
+				counter+=1	
+			end
+			if counter~=0 then return counter+1 end
+		end
+		return nil
+	end
+	
 
 
-	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?):()
+	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
 		local properties = GetProperties(ins)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
-
+		local HasMacros:boolean = false
+		local properties__bool:boolean = false
+		
 		--Brackets
 		if Initiator~=true then
 			code..=`\n{string.rep(ss.t,Layer-1)}\{`
@@ -3429,6 +3458,7 @@ end
 				riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 			end
 		else
+			properties__bool=true
 			--Name
 			code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
 			riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
@@ -3474,7 +3504,7 @@ end
 				end
 				for i,v in tab do
 					if (Classes[Type][i]::string?)==nil then break end
-					if properties[i]==v and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
+					if (properties[i]==v or (typeof(v)=="CFrame" and typeof(properties[i])=="CFrame") and FuzzyEq(v,properties[i],10^ss.FuzzyCFrame)) and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
 					if i=="_exec" then continue end
 					PropertyCount+=1
 				end
@@ -3491,7 +3521,13 @@ end
 			if baseImport~=nil then
 				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
 				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+				HasMacros=true	
 			end
+		end
+		if _count~=nil then
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_count")}]`) or "_count"}{ss._Equal}{ConstructorTostring("number",_count)}{ss._Separator}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_count"))}]`) or "_count"}{ss._Equal}{select(2,ConstructorTostring("number",_count))}{ss._Separator}`
+			HasMacros=true	
 		end
 		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
 		----------
@@ -3509,7 +3545,7 @@ end
 			--Already in _base
 			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
 			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
-
+			properties__bool=true
 			local type:string = typeof(v)
 			if type=="Instance" then
 				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName))::any|string)=="Instance"))) then
@@ -3562,6 +3598,7 @@ end
 		--Mainly for inner hierarchy/outer instance indexing with SafeIndex/Initiation of properties like MeshId
 		--Note that Instance property could be self
 		if IncludeInit then
+			HasMacros=true
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			--Recursive Hierarchy
@@ -3647,6 +3684,7 @@ end
 				end
 				--TextureID
 				if properties.TextureID~=nil then
+					properties__bool=true
 					if ss.FastNamecall==true then
 						code..=`\n{string.rep(ss.t,Layer+1)}{ss.NC_InsSetProperty}(self{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID)})`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID))})`
@@ -3664,6 +3702,7 @@ end
 		---_exec---
 		if ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
 			if _baseIncludesAllTagsAndAttributes==false then
+				HasMacros=true
 				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
 				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
 				if #Tags~=0 and IncludesAllTags==false then
@@ -3696,27 +3735,30 @@ end
 		-------
 		--Children----
 		local children = ins:GetChildren()
+		local children__bool:boolean = false
 		if #children~=0 then
+			local _CountWrapped = table.create(#children)::{Instance}
 			if ss.SeparateChildren==true then
 				code..="\n"
 				riched_code..="\n"
 			end
 			for i,v in children do
-				if ss.RespectArchivable==true and v.Archivable==false then continue end
-				NE_BuildProperties(v,code,riched_code,Layer+1)
+				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
+				NE_BuildProperties(v,code,riched_code,Layer+1,nil,get__count(v,children,_CountWrapped))
+				children__bool=true
 			end
 		end
 		-----
 		if Initiator~=true then
 			--Step out from Type/Name
-			if next(properties)~=nil or #children~=0 or #Tags~=0 or next(Attributes)~=nil or IncludeInit==true or baseImport~=nil then
+			if properties__bool==true or children__bool==true or #Tags~=0 or next(Attributes)~=nil or HasMacros==true then
 				code..=`\n{string.rep(ss.t,Layer-1)}`
 				riched_code..=`\n{string.rep(ss.t,Layer-1)}`
 			end
 			--Step out from instance constructor and close it
 			code..=`\}{ss._Separator}`
 			riched_code..=`\}{ss._Separator}`
-		elseif Initiator==true and ((#children==0 and next(properties)~=nil) or #children>0) then
+		elseif Initiator==true and ((children__bool==false and properties__bool==true) or #children>0) then
 			code..=`\n`
 			riched_code..=`\n`
 		end
