@@ -19,10 +19,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 plugin.Name="Hierarchy Saver (plugin)"
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local ScriptEditorService = game:GetService("ScriptEditorService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Selection = game:GetService("Selection")
+
 local SelectedInstance:Instance? = nil
 local Heartbeat = RunService.Heartbeat
 local Types = require(script:WaitForChild("Types"))
@@ -3028,7 +3030,7 @@ do
 	BuildPropertiesList(Nestify_Content,require(script:WaitForChild("Properties_Nestify")))
 	BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
 end
-local Converted_Code,Converted_Code_Content = CreateTab("Converted Code","rbxassetid://46342657")
+local Converted_Code,Converted_Code_Content = CreateTab("Converted Code","rbxassetid://103299698303653")
 do
 	local EvilScroll = Converted_Code_Content.Parent::ScrollingFrame
 	EvilScroll:Destroy()
@@ -3280,22 +3282,91 @@ end
 
 --Converter stuff
 (function():()
-	local FuzzyEq = CFrame.identity.FuzzyEq::(cf1:CFrame,cf2:CFrame,epsilon:number?)->boolean
+	local __FuzzyEq = CFrame.identity.FuzzyEq::(cf1:CFrame,cf2:CFrame,epsilon:number?)->boolean
+	local function FuzzyEq(cf1:CFrame,cf2:CFrame,epsilon:number?):boolean
+		if ss.Rounding==false then
+			return cf1==cf2
+		end
+		return __FuzzyEq(cf1,cf2,epsilon)
+	end
 	local GoToIndexPath = GoToIndexPath::(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
 
 	local CreateStr = require(script:WaitForChild("strWrap"))
 	local strMaxSize:number = 199_999;
 
 	local ComputedCode:{string} = {""}
+	local buffLen:number = 0
+	local buffString:buffer = buffer.create(0)
+	local buffTarget:string = ""
 	local ComputedRichCode:{string} = ComputedCode
 	local Num_Needle:number = 1
 
-	local udim2_Over200K:UDim2 = UDim2.new(0.65, 0,0.063, 0)
-	local udim2_Less200K:UDim2 = UDim2.new(1, 0,0.063, 0)
+	
+	local CodeOutput_Content = CodeOutput:WaitForChild("Content")
+	local CodeOutput_Title = CodeOutput_Content:WaitForChild("Hint")::TextLabel	
+	local CodeOutput_Title_Frame = CodeOutput_Content:WaitForChild("Frame")::Frame
+	local SaveScript = CodeOutput_Content:WaitForChild("SaveScript")::ImageButton
+	local SaveScript_Fill = SaveScript:WaitForChild("Fill")::Frame
+	local BuildScript = CodeOutput_Content:WaitForChild("BuildScript")::ImageButton
+	local BuildScript_Fill = BuildScript:WaitForChild("Fill")::Frame
+	local __sz_Full = {Size = UDim2_one}
+	local __sz_None = {Size = UDim2_zero}
+	local __tw_In,__tw_Out = TweenInfo.new(0.35,Enum.EasingStyle.Quint),TweenInfo.new(0.255,Enum.EasingStyle.Cubic)
+	
+	local BuildScript_Fill_In = TweenService:Create(BuildScript_Fill,__tw_In,__sz_Full)
+	local BuildScript_Fill_Out = TweenService:Create(BuildScript_Fill,__tw_Out,__sz_None)
+	local SaveScript_Fill_In = TweenService:Create(SaveScript_Fill,__tw_In,__sz_Full)
+	local SaveScript_Fill_Out = TweenService:Create(SaveScript_Fill,__tw_Out,__sz_None)
 
-	local CodeOutput_Title = CodeOutput:WaitForChild("TextLabel")::TextLabel	
-	local CodeOutput_Title_Frame = CodeOutput_Title:WaitForChild("Frame")::Frame
+	table.insert(ItemHoverList,SaveScript_Fill)
+	table.insert(ItemHoverList,BuildScript_Fill)
 
+	BuildScript.MouseEnter:Connect(function()
+		BuildScript_Fill_In:Play()
+	end)
+	BuildScript.MouseLeave:Connect(function()
+		BuildScript_Fill_Out:Play()
+	end)
+	SaveScript.MouseEnter:Connect(function()
+		SaveScript_Fill_In:Play()
+	end)
+	SaveScript.MouseLeave:Connect(function()
+		SaveScript_Fill_Out:Play()
+	end)
+	
+	
+	BuildScript.MouseButton1Click:Connect(function():()
+		local script:Script = Instance.new("Script")
+		script.Name = `{buffTarget} {os.date("%d.%m.%y - %H:%M: %S")}`
+		local try = pcall(SetProperty,script,"Parent",workspace)
+		if try==false then warn("No script access") script:Destroy() return end
+		script.Source = ""
+		Selection:Set({script})
+		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
+		if try==false then warn(err) return end
+		Heartbeat:Wait()
+		local ret = ScriptEditorService:FindScriptDocument(script)::ScriptDocument?
+		if ret==nil then warn("Unable to find script document") return end
+		ret:EditTextAsync(buffer.readstring(buffString,0,buffLen),1,1,1,-1)
+	end)
+	SaveScript.MouseButton1Click:Connect(function():()
+		local script:Script = Instance.new("Script")
+		local name:string = `{buffTarget} {os.date("%d.%m.%y - %H.%M. %S")}.hs`
+		script.Name = name
+		local try = pcall(SetProperty,script,"Parent",game)
+		if try==false then warn("No script access") script:Destroy() return end
+		script.Source = ""
+		Selection:Set({script})
+		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
+		if try==false then warn(err) return end
+		Heartbeat:Wait()
+		local ret = ScriptEditorService:FindScriptDocument(script)::ScriptDocument?
+		if ret==nil then warn("Unable to find script document") return end
+		ret:EditTextAsync(buffer.readstring(buffString,0,buffLen),1,1,1,-1)
+		plugin:PromptSaveSelection(name)
+		script:Destroy()
+	end)
+	
 	--[[Num]] local Num = CodeOutput_Title_Frame:WaitForChild("Num")::TextLabel
 	local Num_Left = CodeOutput_Title_Frame:WaitForChild("Left")::ImageButton
 	local Num_Right = CodeOutput_Title_Frame:WaitForChild("Right")::ImageButton
@@ -3303,7 +3374,6 @@ end
 	table.insert(ScrollbarButtons,Num_Right)
 	table.insert(BrightestText_Theme,Num)
 	CodeOutput_Title_Frame.Visible = false
-	CodeOutput_Title.Size = udim2_Less200K
 
 	local CodeOutput_Scrolling = CodeOutput:WaitForChild("ScrollingFrame")
 	local Code = CodeOutput_Scrolling:WaitForChild("Code")::TextBox
@@ -3346,14 +3416,15 @@ end
 	local function ShowText(txt:CreateStr.class,rich:CreateStr.class):()
 		Num_Needle = 1
 		Num.Text = "1"
+		buffString = txt.b
+		buffLen = txt.len
+		buffTarget = (SelectedInstance~=nil and SelectedInstance.Name) or "Code"
 		if ss.WriteRichText~=true or rich.len>strMaxSize then rich = txt end
 		if txt.len>strMaxSize then
 			rich = txt
 			CodeOutput_Title_Frame.Visible = true
-			CodeOutput_Title.Size = udim2_Over200K
 		else
 			CodeOutput_Title_Frame.Visible = false
-			CodeOutput_Title.Size = udim2_Less200K
 		end
 		if txt==rich then
 			local compute:{string} = txt:Extract()
@@ -3416,7 +3487,60 @@ end
 		end
 		return nil
 	end
+	local function NE____RecursiveHierarchy(ins:Instance,properties:cache_prop,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number):()
+		for key,value in spairs(properties) do
+			if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName))::any|string)~="Instance")))) then 
+				--Recursive hierarchy 
+				if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
+					--Recursive
+					local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
+					code..=c
+					riched_code..=r
+				else
+					--SafeIndex
+					local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
+					code..=c
+					riched_code..=r
+				end
+			end
+		end
+	end
 	
+	local function NE__TagsAndAttributes(code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Attributes:{[string]:any},Tags:{string},baseImport:string?,IncludesAllTags:boolean,IncludesAllAttributes:boolean):()
+		if #Tags~=0 and IncludesAllTags==false then
+			local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
+			if ss.FastNamecall==true then
+				for i,v in Tags do
+					if table.find(IncludedTags,v)~=nil then continue end
+					code..=`\n{string.rep(ss.t,Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
+				end
+			else
+				for i,v in Tags do
+					if table.find(IncludedTags,v)~=nil then continue end
+					code..=`\n{string.rep(ss.t,Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
+				end
+			end
+		end
+		--Attributes
+		if next(Attributes)~=nil and IncludesAllAttributes==false then
+			local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
+			if ss.FastNamecall==true then
+				for i,v in spairs(Attributes) do
+					if IncludedAttributes[i]~=nil then continue end
+					code..=`\n{string.rep(ss.t,Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+				end
+			else
+				for i,v in spairs(Attributes) do
+					if IncludedAttributes[i]~=nil then continue end
+					code..=`\n{string.rep(ss.t,Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+				end
+			end
+		end
+	end
 
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
@@ -3445,6 +3569,9 @@ end
 				if ss.UseMeshFunction==true then
 					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
+					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 				elseif ss.FastNamecall==true then
 					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
@@ -3469,6 +3596,9 @@ end
 				if ss.UseMeshFunction==true then
 					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+				elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 				elseif ss.FastNamecall==true then
 					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
@@ -3544,7 +3674,7 @@ end
 			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 			--Already in _base
 			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
-			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
+			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and (ss.MeshPartCreationMode=="Defered" or (ss.MeshPartCreationMode=="Compute"  and ss.UseMeshFunction==false and ss.NE_using_run==true)) and i::string=="TextureID") then continue end
 			properties__bool=true
 			local type:string = typeof(v)
 			if type=="Instance" then
@@ -3586,10 +3716,53 @@ end
 				_baseIncludesAllTagsAndAttributes=false
 			end
 		end
+		--_run--
+		--Include__run?
+		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true)
+		if Include__run==false and ss.NE_using_run==true then
+			for i,v in properties do
+				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
+			end
+		end
+		if Include__run==true then
+			HasMacros=true
+			--opening function
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_run")}]`) or `_run`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_run"))}]`) or `_run`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			if ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil) and _baseIncludesAllTagsAndAttributes == false then
+				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport,IncludesAllTags,IncludesAllAttributes)
+			end
+			--Mesh
+			if ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true then
+				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+				if ss.FastNamecall==true then
+					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}Destroy({ss.localMeshVariableName})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+				else
+					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:Destroy()`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+				end
+				--TextureID
+				if properties.TextureID~=nil then
+					properties__bool=true
+					if ss.FastNamecall==true then
+						code..=`\n{string.rep(ss.t,Layer+1)}{ss.NC_InsSetProperty}(self{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID)})`
+						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID))})`
+					else
+						code..=`\n{string.rep(ss.t,Layer+1)}self{(ss.Indexing_Instances_By=="Dots" and `.TextureID`) or `[{ConstructorTostring("string","TextureID")}]`}{ss._Equal}{ConstructorTostring("string",properties.TextureID)}`
+						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText("TextureID",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","TextureID"))}]`}{ss._Equal}{select(2,ConstructorTostring("string",properties.TextureID))}`
+					end
+				end
+			end
+			--closing function
+			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("end",ScriptLuauKeyword)}{ss._Separator}`
+		end
 		--_init--
 		--IncludeInit?
 		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
-		if IncludeInit==false then
+		if IncludeInit==false and ss.NE_using_run==false then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
 			end
@@ -3601,65 +3774,10 @@ end
 			HasMacros=true
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-			--Recursive Hierarchy
-			for key,value in spairs(properties) do
-				if typeof(value)=="Instance" and (value:IsDescendantOf(SelectedInstance::Instance) or value==ins or value==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((value.Parent~=game and typeof(select(2,pcall(game.FindService,game,(value.Parent::Instance).ClassName))::any|string)~="Instance")))) then 
-					--Recursive hierarchy 
-					if value:IsDescendantOf(SelectedInstance::Instance) or ins==value or SelectedInstance==value then
-						--Recursive
-						local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
-						code..=c
-						riched_code..=r
-					else
-						--SafeIndex
-						local c,r = GoToIndexPath(ins,value,{Text = "self",Rich = WriteRichText("self",ScriptSelf)},key,Layer+1)
-						code..=c
-						riched_code..=r
-					end
-				end
-			end
-
-
-
-
-
-
-			--Tags and attributes
-			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) and _baseIncludesAllTagsAndAttributes == false then
+			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil) and _baseIncludesAllTagsAndAttributes == false then
 				--tags
-				if #Tags~=0 and IncludesAllTags==false then
-					local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
-					if ss.FastNamecall==true then
-						for i,v in Tags do
-							if table.find(IncludedTags,v)~=nil then continue end
-							code..=`\n{string.rep(ss.t,Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
-							riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
-						end
-					else
-						for i,v in Tags do
-							if table.find(IncludedTags,v)~=nil then continue end
-							code..=`\n{string.rep(ss.t,Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
-							riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
-						end
-					end
-				end
-				--Attributes
-				if next(Attributes)~=nil and IncludesAllAttributes==false then
-					local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
-					if ss.FastNamecall==true then
-						for i,v in spairs(Attributes) do
-							if IncludedAttributes[i]~=nil then continue end
-							code..=`\n{string.rep(ss.t,Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
-							riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
-						end
-					else
-						for i,v in spairs(Attributes) do
-							if IncludedAttributes[i]~=nil then continue end
-							code..=`\n{string.rep(ss.t,Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
-							riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
-						end
-					end
-				end
+				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport,IncludesAllTags,IncludesAllAttributes)
 			end
 			--Meshes
 			if (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered") then
@@ -3751,7 +3869,7 @@ end
 		-----
 		if Initiator~=true then
 			--Step out from Type/Name
-			if properties__bool==true or children__bool==true or #Tags~=0 or next(Attributes)~=nil or HasMacros==true then
+			if (properties__bool==true or children__bool==true or #Tags~=0 or next(Attributes)~=nil or HasMacros==true) or ss._NE_Prop_Type_Newline==true then
 				code..=`\n{string.rep(ss.t,Layer-1)}`
 				riched_code..=`\n{string.rep(ss.t,Layer-1)}`
 			end
