@@ -1008,21 +1008,40 @@ else
 			warn(`Unable to send HTTP request; Using latest backup`)
 		else
 			--No perms and no backup
-			local ErrorTab,Content = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477")
+			local ErrorTab = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477");
+			(ErrorTab:WaitForChild("Scroll")::ScrollingFrame):Destroy();
+			((UpperBar::any)[ErrorTab.Name]::Frame):SetAttribute("Enabled",true)
 			local Data_UI = ErrorHTTP_UI:WaitForChild("Data")
-			local Effect = Data_UI:WaitForChild("Effect")
-			local Button_Try = Effect:WaitForChild("TextButton")
+			local EventHandler = Data_UI:WaitForChild("EventHandler")
+			local Effect = EventHandler:WaitForChild("Effect")
+			local Button_Try = Effect:WaitForChild("Button")
 			local Info = TweenInfo.new(0.25,Enum.EasingStyle.Bounce)
 			local Enter = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.5,0)})
 			local Leave = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.4,0)})
-			Button_Try.MouseEnter:Connect(function():()
+			local ButtonIdleColor:Color3 = Color3.new(0.376471, 1, 0.0901961)
+			local ButtonHoverColor:Color3 = Color3.new(0.243137, 0.647059, 0.0588235)
+			local ButtonClickColor:Color3 = Color3.new(0.145098, 0.380392, 0.0352941)
+			local __db_Hovering:boolean = false
+
+			EventHandler.MouseEnter:Connect(function():()
+				__db_Hovering=true
+				Button_Try.BackgroundColor3 = ButtonHoverColor
 				Enter:Play()
 			end)
-			Button_Try.MouseLeave:Connect(function():()
+			EventHandler.MouseLeave:Connect(function():()
+				__db_Hovering=false
+				Button_Try.BackgroundColor3 = ButtonIdleColor
 				Leave:Play()
 			end)
+			EventHandler.MouseButton1Down:Connect(function()
+				Button_Try.BackgroundColor3 = ButtonClickColor
+			end)
+			EventHandler.MouseButton1Up:Connect(function()
+				if __db_Hovering then Button_Try.BackgroundColor3 = ButtonHoverColor return end
+				Button_Try.BackgroundColor3 = ButtonIdleColor
+			end)
 			local button_DB:boolean = false
-			Button_Try.MouseButton1Click:Connect(function():()
+			EventHandler.MouseButton1Click:Connect(function():()
 				if button_DB==true then return end
 				button_DB=true
 				local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
@@ -1034,14 +1053,15 @@ else
 					DeleteTab(ErrorTab.Name)
 					coroutine.resume(WaitForData)
 				else
-					warn(`No access to HTTP requests: {ret}`)
+					warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
 				end
 				button_DB=false
 			end)
-			ErrorHTTP_UI.Parent=Content
+			ErrorHTTP_UI.Parent=ErrorTab
 			ErrorHTTP_UI.Visible=true
 			ErrorTab.Visible=true
-			warn(`No access to HTTP requests: {ret}`)
+			ThemeChanged()
+			warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
 			for i,v in ViewTabs:GetChildren()::{Frame} do
 				if v.Visible==true then
 					local Button = UpperBar:FindFirstChild(v.Name)
@@ -3036,8 +3056,7 @@ do
 	EvilScroll:Destroy()
 end
 
-
-warn("YAY",Classes,Data)
+--warn("YAY",Classes,Data)
 for i,v in ViewTabs:GetChildren()::{Frame} do
 	if v.Visible==true then
 		local Button = UpperBar:FindFirstChild(v.Name)
@@ -3339,7 +3358,7 @@ end
 		local script:Script = Instance.new("Script")
 		script.Name = `{buffTarget} {os.date("%d.%m.%y - %H:%M: %S")}`
 		local try = pcall(SetProperty,script,"Parent",workspace)
-		if try==false then warn("No script access") script:Destroy() return end
+		if try==false then warn("No script access. Please give script injection access.") script:Destroy() return end
 		script.Source = ""
 		Selection:Set({script})
 		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
@@ -3354,8 +3373,9 @@ end
 		local name:string = `{buffTarget} {os.date("%d.%m.%y - %H.%M. %S")}.hs`
 		script.Name = name
 		local try = pcall(SetProperty,script,"Parent",game)
-		if try==false then warn("No script access") script:Destroy() return end
+		if try==false then warn("No script access. Please give script injection access.") script:Destroy() return end
 		script.Source = ""
+		local OldSelection = Selection:Get()
 		Selection:Set({script})
 		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
 		if try==false then warn(err) return end
@@ -3365,6 +3385,7 @@ end
 		ret:EditTextAsync(buffer.readstring(buffString,0,buffLen),1,1,1,-1)
 		plugin:PromptSaveSelection(name)
 		script:Destroy()
+		Selection:Set(OldSelection)
 	end)
 	
 	--[[Num]] local Num = CodeOutput_Title_Frame:WaitForChild("Num")::TextLabel
