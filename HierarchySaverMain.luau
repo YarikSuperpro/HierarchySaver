@@ -119,46 +119,13 @@ local TranslateProperties:Types.FormattedClass = {
 }
 
 --*********************Assembling class
-local Data:Types.API_Dump? = nil
 local Classes:Types.FormattedClasses = {}
 local WaitForData = coroutine.running()
 
-local LasestCache:number = tonumber(plugin:GetSetting("HierarchySaver_LatestCache_Valid")) or 0
-local GET_SAVE:string? = plugin:GetSetting("HierarchySaver_CLASSES")
 
-local function SuccessResult(ret:string):()
-	Data = HttpService:JSONDecode(ret)::Types.API_Dump
-	local raw_Classes:Types.AllRobloxClasses = (Data :: Types.API_Dump).Classes
-	local Enums:Types.AllRobloxEnums = (Data :: Types.API_Dump).Enums
-	for i,v in raw_Classes do
-		--if v.MemoryCategory~="Instances" then continue end
-		if v.Tags~=nil and (table.find(v.Tags,"NotCreatable")~=nil or table.find(v.Tags,"NotScriptable")~=nil) then continue end
-		local tab:Types.FormattedClass = {}
-		local Superclass:string? = v.Name
-		while Superclass~=nil do
-			local search:number? = nil
-			for i,v in raw_Classes do
-				if v.Name==Superclass then search=i break end
-			end
-			if search==nil then break end
-			for ii,vv in raw_Classes[search].Members do
-				if vv.MemberType~="Property" then continue end
-				if (type(vv.Security)=="string" and vv.Security~="None") or (type(vv.Security)=="table" and (vv.Security.Write~="None" or vv.Security.Read~="None")) then continue end
-				if vv.ValueType==nil then continue end
-				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil) then continue end
-				tab[vv.Name]=(vv.ValueType.Category=="Class" and "Instance") or (vv.ValueType.Category=="Enum" and `Enum.{vv.ValueType.Name}`) or (TranslateProperties[vv.ValueType.Name] or vv.ValueType.Name)
-			end
-			Superclass=raw_Classes[search].Superclass
-		end
-		Classes[v.Name]=tab
-	end
-	plugin:SetSetting("HierarchySaver_CLASSES",HttpService:JSONEncode(Classes))
-	plugin:SetSetting("HierarchySaver_LatestCache_Valid",workspace:GetServerTimeNow()+60*60*24)
-	if WaitForData then coroutine.resume(WaitForData) end
-end
 --*********************Assembling widget
 local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
-local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://75358548882112","Open UI")
+local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
 Button.ClickableWhenViewportHidden=true
 local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID",DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float,
@@ -567,9 +534,9 @@ local OnConvert:BindableEvent = Instance.new("BindableEvent")
 local UncollapseCategoryies:BindableEvent = Instance.new("BindableEvent")
 local AllPropertyRelatives:{[TextLabel]:GuiObject} = {}--TextLabel.Text -> Target
 do
-	local SearchKeybind = plugin:CreatePluginAction("NE_StartSearch","Search","Search for property","rbxassetid://75358548882112",true)
+	local SearchKeybind = plugin:CreatePluginAction("NE_StartSearch","Search","Search for property","rbxassetid://98396137856895",true)
 	SearchKeybind.Name = "Search for property"
-	local CancelKeybind = plugin:CreatePluginAction("NE_CancelSearch","Cancel Search","Cancel Search for property","rbxassetid://75358548882112",true)
+	local CancelKeybind = plugin:CreatePluginAction("NE_CancelSearch","Cancel Search","Cancel Search for property","rbxassetid://98396137856895",true)
 	CancelKeybind.Name = "Cancel Search for property"
 	local SearchBox = Main:WaitForChild("Search")::TextBox
 	local SearchButton = LowerBar:WaitForChild("Search")
@@ -993,101 +960,177 @@ local function CreateTab(Name:string,Icon:string):(Frame,TextButton)
 	return Tab,List
 end
 
---*********************Obtaining classes
-if LasestCache>workspace:GetServerTimeNow() and type(GET_SAVE)=="string" then
-	Classes = HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
-	if WaitForData then coroutine.resume(WaitForData) end
-else
+
+local __classesData
+local LatestCache:number = tonumber(plugin:GetSetting("Classes_LatestCache_Valid")) or 0
+
+local GET_SAVE:string? = nil and plugin:GetSetting("HierarchySaver_CLASSES")
+
+local WidgetToggle__DB:boolean = false
+
+--Initializing
+if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTimeNow()) then
+	__classesData = {__loaded=false;_event = Instance.new("BindableEvent");}
+	_G.__classesData = __classesData
+
 	local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
 	if success then
-		SuccessResult(ret)
+		__classesData.Classes = HttpService:JSONDecode(ret::string)::Types.API_Dump
+		plugin:SetSetting("Classes_LatestCache_Valid",workspace:GetServerTimeNow()+60*60*24)	
+		;(__classesData::any).__loaded = true
+		;((__classesData::any)._event::BindableEvent):Fire()
 	else
 		-- No perms but has a backup
-		if type(GET_SAVE)=="string" then
-			Classes = HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
-			warn(`Unable to send HTTP request; Using latest backup`)
-		else
-			--No perms and no backup
-			local ErrorTab = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477");
-			(ErrorTab:WaitForChild("Scroll")::ScrollingFrame):Destroy();
-			((UpperBar::any)[ErrorTab.Name]::Frame):SetAttribute("Enabled",true)
-			local Data_UI = ErrorHTTP_UI:WaitForChild("Data")
-			local EventHandler = Data_UI:WaitForChild("EventHandler")
-			local Effect = EventHandler:WaitForChild("Effect")
-			local Button_Try = Effect:WaitForChild("Button")
-			local Info = TweenInfo.new(0.25,Enum.EasingStyle.Bounce)
-			local Enter = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.5,0)})
-			local Leave = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.4,0)})
-			local ButtonIdleColor:Color3 = Color3.new(0.376471, 1, 0.0901961)
-			local ButtonHoverColor:Color3 = Color3.new(0.243137, 0.647059, 0.0588235)
-			local ButtonClickColor:Color3 = Color3.new(0.145098, 0.380392, 0.0352941)
-			local __db_Hovering:boolean = false
 
-			EventHandler.MouseEnter:Connect(function():()
-				__db_Hovering=true
-				Button_Try.BackgroundColor3 = ButtonHoverColor
-				Enter:Play()
-			end)
-			EventHandler.MouseLeave:Connect(function():()
-				__db_Hovering=false
-				Button_Try.BackgroundColor3 = ButtonIdleColor
-				Leave:Play()
-			end)
-			EventHandler.MouseButton1Down:Connect(function()
-				Button_Try.BackgroundColor3 = ButtonClickColor
-			end)
-			EventHandler.MouseButton1Up:Connect(function()
-				if __db_Hovering then Button_Try.BackgroundColor3 = ButtonHoverColor return end
-				Button_Try.BackgroundColor3 = ButtonIdleColor
-			end)
-			local button_DB:boolean = false
-			EventHandler.MouseButton1Click:Connect(function():()
-				if button_DB==true then return end
-				button_DB=true
-				local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
-				if success then
-					Enter:Destroy()
-					Leave:Destroy()
-					Button_Try:Destroy()
-					SuccessResult(ret)
-					DeleteTab(ErrorTab.Name)
-					coroutine.resume(WaitForData)
-				else
-					warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
-				end
-				button_DB=false
-			end)
-			ErrorHTTP_UI.Parent=ErrorTab
-			ErrorHTTP_UI.Visible=true
-			ErrorTab.Visible=true
-			ThemeChanged()
-			warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
-			for i,v in ViewTabs:GetChildren()::{Frame} do
-				if v.Visible==true then
-					local Button = UpperBar:FindFirstChild(v.Name)
-					if Button==nil then continue end
-					Button:SetAttribute("Enabled",true)
-				end
+		--No perms and no backup
+		local ErrorTab = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477");
+		(ErrorTab:WaitForChild("Scroll")::ScrollingFrame):Destroy();
+		((UpperBar::any)[ErrorTab.Name]::Frame):SetAttribute("Enabled",true)
+		local Data_UI = ErrorHTTP_UI:WaitForChild("Data")
+		local EventHandler = Data_UI:WaitForChild("EventHandler")
+		local Effect = EventHandler:WaitForChild("Effect")
+		local Button_Try = Effect:WaitForChild("Button")
+		local Info = TweenInfo.new(0.25,Enum.EasingStyle.Bounce)
+		local Enter = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.5,0)})
+		local Leave = TweenService:Create(Button_Try,Info,{Position=UDim2.new(0.5,0,0.4,0)})
+		local ButtonIdleColor:Color3 = Color3.new(0.376471, 1, 0.0901961)
+		local ButtonHoverColor:Color3 = Color3.new(0.243137, 0.647059, 0.0588235)
+		local ButtonClickColor:Color3 = Color3.new(0.145098, 0.380392, 0.0352941)
+		local __db_Hovering:boolean = false
+
+		EventHandler.MouseEnter:Connect(function():()
+			__db_Hovering=true
+			Button_Try.BackgroundColor3 = ButtonHoverColor
+			Enter:Play()
+		end)
+		EventHandler.MouseLeave:Connect(function():()
+			__db_Hovering=false
+			Button_Try.BackgroundColor3 = ButtonIdleColor
+			Leave:Play()
+		end)
+		EventHandler.MouseButton1Down:Connect(function()
+			Button_Try.BackgroundColor3 = ButtonClickColor
+		end)
+		EventHandler.MouseButton1Up:Connect(function()
+			if __db_Hovering then Button_Try.BackgroundColor3 = ButtonHoverColor return end
+			Button_Try.BackgroundColor3 = ButtonIdleColor
+		end)
+		local button_DB:boolean = false
+		EventHandler.MouseButton1Click:Connect(function():()
+			if button_DB==true then return end
+			button_DB=true
+			local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
+			if success then
+				Enter:Destroy()
+				Leave:Destroy()
+				Button_Try:Destroy()
+				__classesData.Classes = HttpService:JSONDecode(ret::string)::Types.API_Dump
+				plugin:SetSetting("Classes_LatestCache_Valid",workspace:GetServerTimeNow()+60*60*24)
+				DeleteTab(ErrorTab.Name)
+				;(__classesData::any).__loaded = true
+				;((__classesData::any)._event::BindableEvent):Fire()
+			else
+				warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
 			end
+			button_DB=false
+		end)
+		ErrorHTTP_UI.Parent=ErrorTab
+		ErrorHTTP_UI.Visible=true
+		ErrorTab.Visible=true
+		ThemeChanged()
+		warn(`No access to HTTP requests: {string.gsub(ret,"%d+%.*$",plugin.Name)}`)
+		for i,v in ViewTabs:GetChildren()::{Frame} do
+			if v.Visible==true then
+				local Button = UpperBar:FindFirstChild(v.Name)
+				if Button==nil then continue end
+				Button:SetAttribute("Enabled",true)
+			end
+		end
+		Main.Parent=Widget
+		Button.Click:Connect(function()
+			Widget.Enabled = not Widget.Enabled
+		end)
+		WidgetToggle__DB = true
+		;((__classesData::any)._event::BindableEvent).Event:Wait()
+	end
+elseif _G.__classesData~=nil then
+	__classesData = _G.__classesData
+	if __classesData.__loaded==false then
+		local t:thread = task.delay(10,function():()
+			warn(`Waiting for Classes from different plugin; Make sure you aswell give them HTTP permissions perhabs or get rid of them.`)
+		end)
+		;((__classesData::any)._event::BindableEvent).Event:Wait()
+		if coroutine.status(t)~="dead" then
+			task.cancel(t)
 		end
 	end
 end
 
---********************* Assembling widget UI
-Main.Parent=Widget
-Button.Click:Connect(function()
-	Widget.Enabled = not Widget.Enabled
-end)
 
---********************* AFTER RECIVING CLASSES --[[
-if next(Classes)==nil and Data==nil then
-	--waiting for data
-	coroutine.yield()
+
+local function SuccessResult(ret:Types.API_Dump):()
+	local raw_Classes:Types.AllRobloxClasses = ret.Classes
+	local Enums:Types.AllRobloxEnums = ret.Enums
+	for i,v in raw_Classes do
+		--if v.MemoryCategory~="Instances" then continue end
+		if v.Tags~=nil and (table.find(v.Tags,"NotCreatable")~=nil or table.find(v.Tags,"NotScriptable")~=nil) then continue end
+		local tab:Types.FormattedClass = {}
+		local Superclass:string? = v.Name
+		while Superclass~=nil do
+			local search:number? = nil
+			for i,v in raw_Classes do
+				if v.Name==Superclass then search=i break end
+			end
+			if search==nil then break end
+			for ii,vv in raw_Classes[search].Members do
+				if vv.MemberType~="Property" then continue end
+				if (type(vv.Security)=="string" and vv.Security~="None") or (type(vv.Security)=="table" and (vv.Security.Write~="None" or vv.Security.Read~="None")) then continue end
+				if vv.ValueType==nil then continue end
+				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil) then continue end
+				tab[vv.Name]=(vv.ValueType.Category=="Class" and "Instance") or (vv.ValueType.Category=="Enum" and `Enum.{vv.ValueType.Name}`) or (TranslateProperties[vv.ValueType.Name] or vv.ValueType.Name)
+			end
+			Superclass=raw_Classes[search].Superclass
+		end
+		Classes[v.Name]=tab
+	end
+	if _G.__classesData~=nil then
+		(_G.__classesData::any).HierarchySaver_CLASSES = Classes
+	end
+	plugin:SetSetting("HierarchySaver_CLASSES",HttpService:JSONEncode(Classes))
 end
+
+if GET_SAVE~=nil and LatestCache>workspace:GetServerTimeNow() then
+	Classes = (_G.__classesData~=nil and _G.__classesData.HierarchySaver_CLASSES::Types.FormattedClasses?) or HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
+	--if WaitForData then coroutine.resume(WaitForData) end
+else
+	SuccessResult(__classesData.Classes::Types.API_Dump)
+end
+
+
+--*********************Obtaining classes
+--if LatestCache>workspace:GetServerTimeNow() and type(GET_SAVE)=="string" then
+--	Classes = HttpService:JSONDecode(GET_SAVE)::Types.FormattedClasses
+--	if WaitForData then coroutine.resume(WaitForData) end
+--else
+
+--end
+
+--********************* Assembling widget UI
+if WidgetToggle__DB==false then
+	Main.Parent=Widget
+	Button.Click:Connect(function()
+		Widget.Enabled = not Widget.Enabled
+	end)
+end
+--********************* AFTER RECIVING CLASSES --[[
+--if next(Classes)==nil and Data==nil then
+--	--waiting for data
+--	coroutine.yield()
+--end
 LowerBar.Visible=true
 if ErrorHTTP_UI then ErrorHTTP_UI:Destroy() end
 --Typecheker plz shut up
-if Classes==nil and Data==nil then return end
+--if Classes==nil and Data==nil then return end
 --Thanks typecheker for shutting up
 --]]
 type cache_prop = {[string]:any}
@@ -3320,7 +3363,7 @@ end
 	local ComputedRichCode:{string} = ComputedCode
 	local Num_Needle:number = 1
 
-	
+
 	local CodeOutput_Content = CodeOutput:WaitForChild("Content")
 	local CodeOutput_Title = CodeOutput_Content:WaitForChild("Hint")::TextLabel	
 	local CodeOutput_Title_Frame = CodeOutput_Content:WaitForChild("Frame")::Frame
@@ -3331,7 +3374,7 @@ end
 	local __sz_Full = {Size = UDim2_one}
 	local __sz_None = {Size = UDim2_zero}
 	local __tw_In,__tw_Out = TweenInfo.new(0.35,Enum.EasingStyle.Quint),TweenInfo.new(0.255,Enum.EasingStyle.Cubic)
-	
+
 	local BuildScript_Fill_In = TweenService:Create(BuildScript_Fill,__tw_In,__sz_Full)
 	local BuildScript_Fill_Out = TweenService:Create(BuildScript_Fill,__tw_Out,__sz_None)
 	local SaveScript_Fill_In = TweenService:Create(SaveScript_Fill,__tw_In,__sz_Full)
@@ -3352,8 +3395,8 @@ end
 	SaveScript.MouseLeave:Connect(function()
 		SaveScript_Fill_Out:Play()
 	end)
-	
-	
+
+
 	BuildScript.MouseButton1Click:Connect(function():()
 		local script:Script = Instance.new("Script")
 		script.Name = `{buffTarget} {os.date("%d.%m.%y - %H:%M: %S")}`
@@ -3387,7 +3430,7 @@ end
 		script:Destroy()
 		Selection:Set(OldSelection)
 	end)
-	
+
 	--[[Num]] local Num = CodeOutput_Title_Frame:WaitForChild("Num")::TextLabel
 	local Num_Left = CodeOutput_Title_Frame:WaitForChild("Left")::ImageButton
 	local Num_Right = CodeOutput_Title_Frame:WaitForChild("Right")::ImageButton
@@ -3483,7 +3526,7 @@ end
 		dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
 		return dictionary,dictionary_rich
 	end
-	
+
 	local function get__count(v:Instance,children:{Instance},_CountWrapped:{Instance}):number?
 		if ss.CountEnabled==true then
 			local ClassName:string = v.ClassName
@@ -3526,7 +3569,7 @@ end
 			end
 		end
 	end
-	
+
 	local function NE__TagsAndAttributes(code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Attributes:{[string]:any},Tags:{string},baseImport:string?,IncludesAllTags:boolean,IncludesAllAttributes:boolean):()
 		if #Tags~=0 and IncludesAllTags==false then
 			local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
@@ -3570,66 +3613,79 @@ end
 		local Attributes = ins:GetAttributes()
 		local HasMacros:boolean = false
 		local properties__bool:boolean = false
-		
+		local Type:string = GetTypeOfInstance(ins)
+
 		--Brackets
 		if Initiator~=true then
-			code..=`\n{string.rep(ss.t,Layer-1)}\{`
-			riched_code..=`\n{string.rep(ss.t,Layer-1)}\{`
+			if ss.NE_NewArgConstructor==true then
+				--code..=`{ss._local}{ss._NE_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+				code..=`\n{string.rep(ss.t,Layer-1)}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{select(2,ConstructorTostring("string",Type))}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+			else
+				code..=`\n{string.rep(ss.t,Layer-1)}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer-1)}\{`
+			end
 		end
 		--Declearing ClassName
 		if ss._NE_Prop_Type_Newline==true then
 			code..=`\n{string.rep(ss.t,Layer)}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}`
 		end
-		local Type:string = GetTypeOfInstance(ins)
-		if properties.Name==nil then
-			--Declear instance for for mesh
-			if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
-				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-
-				if ss.UseMeshFunction==true then
-					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-				elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
-					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-				elseif ss.FastNamecall==true then
-					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-				else
-					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-				end
-			else
-				--Type
-				code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-				riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-			end
-		else
-			properties__bool=true
-			--Name
+		if ss.NE_NewArgConstructor==true and properties.Name~=nil and ss.NameOnTop==true then
 			code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
 			riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
-			--Type
-			--Declear instance for for mesh
-			if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
-				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-				if ss.UseMeshFunction==true then
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
-				elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-				elseif ss.FastNamecall==true then
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+		end
+
+		if ss.NE_NewArgConstructor==false then
+			if properties.Name==nil or ss.NameOnTop==false then
+				--Declear instance for for mesh
+				if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+					local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+
+					if ss.UseMeshFunction==true then
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+					elseif ss.FastNamecall==true then
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					else
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					end
 				else
-					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					--Type
+					code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+					riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
 				end
 			else
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+				properties__bool=true
+				--Name
+				code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string","Name")}]`) or "Name"}{ss._Equal}{ConstructorTostring("string",properties.Name::string)}{ss._Separator}`
+				riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string","Name"))}]`) or "Name"}{ss._Equal}{select(2,ConstructorTostring("string",properties.Name::string))}{ss._Separator}`
+				--Type
+				--Declear instance for for mesh
+				if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+					local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+					if ss.UseMeshFunction==true then
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+					elseif ss.FastNamecall==true then
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					else
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					end
+				else
+					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
+				end
 			end
 		end
 		----------------------
@@ -3683,7 +3739,7 @@ end
 		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
 		----------
 		for i,v in spairs(properties) do
-			if i=="Name" then continue end
+			if i=="Name" and ss.NameOnTop==true then continue end
 			local foundBreak:boolean = false
 			for ii,vv in IgnoredPropertiesList do
 				if ins:IsA(ii) and table.find(vv,i)~=nil then
@@ -3695,7 +3751,7 @@ end
 			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 			--Already in _base
 			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
-			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and (ss.MeshPartCreationMode=="Defered" or (ss.MeshPartCreationMode=="Compute"  and ss.UseMeshFunction==false and ss.NE_using_run==true)) and i::string=="TextureID") then continue end
+			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and (ss.MeshPartCreationMode=="Defered" or (ss.MeshPartCreationMode=="Compute"  and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)) and i::string=="TextureID") then continue end
 			properties__bool=true
 			local type:string = typeof(v)
 			if type=="Instance" then
@@ -3739,7 +3795,7 @@ end
 		end
 		--_run--
 		--Include__run?
-		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true)
+		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)
 		if Include__run==false and ss.NE_using_run==true then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
@@ -3877,14 +3933,22 @@ end
 		local children__bool:boolean = false
 		if #children~=0 then
 			local _CountWrapped = table.create(#children)::{Instance}
-			if ss.SeparateChildren==true then
-				code..="\n"
-				riched_code..="\n"
+			
+			code..=string.rep("\n",ss.SeparateChildren::number)
+			riched_code..=string.rep("\n",ss.SeparateChildren::number)
+			
+			if ss.NE_ChildrenTable==true then
+				code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
 			end
 			for i,v in children do
 				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
-				NE_BuildProperties(v,code,riched_code,Layer+1,nil,get__count(v,children,_CountWrapped))
+				NE_BuildProperties(v,code,riched_code,Layer+1+((ss.NE_ChildrenTable==true and 1) or 0)::number,nil,get__count(v,children,_CountWrapped))
 				children__bool=true
+			end
+			if ss.NE_ChildrenTable==true then
+				code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
 			end
 		end
 		-----
@@ -3895,8 +3959,8 @@ end
 				riched_code..=`\n{string.rep(ss.t,Layer-1)}`
 			end
 			--Step out from instance constructor and close it
-			code..=`\}{ss._Separator}`
-			riched_code..=`\}{ss._Separator}`
+			code..=`\}{(ss.NE_NewArgConstructor==true and ss._NE_FN_BRACKETS==true and ")") or ""}{ss._Separator}`
+			riched_code..=`\}{(ss.NE_NewArgConstructor==true and ss._NE_FN_BRACKETS==true and ")") or ""}{ss._Separator}`
 		elseif Initiator==true and ((children__bool==false and properties__bool==true) or #children>0) then
 			code..=`\n`
 			riched_code..=`\n`
@@ -4060,9 +4124,10 @@ end
 	local function Nestify_Convert(ins:Instance):()
 		local code:CreateStr.class|any = CreateStr()
 		local riched_code:CreateStr.class|any = CreateStr(ss.WriteRichText==false)
+		local Type:string = GetTypeOfInstance(ins)
 		IncludeTopCode(code,riched_code,true)
-		code..=`{ss._local}{ss._NE_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss._NE_FN_BRACKETS==true and "(") or ""}\{`
-		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._NE_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+		code..=`{ss._local}{ss._NE_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+		riched_code..=`{WriteRichText(ss._local,ScriptLocal)}{ss._NE_HierrarchyName}{ss._Equal}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{select(2,ConstructorTostring("string",Type))}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
 		NE_BuildProperties(ins,code,riched_code,1,true)
 		code..=`\}{(ss._NE_FN_BRACKETS==true and ")") or ""}`
 		riched_code..=`\}{(ss._NE_FN_BRACKETS==true and ")") or ""}`
@@ -4092,7 +4157,7 @@ end
 		end
 		ShowText(code,riched_code)
 	end
-	local function BegginConvert():()
+	local function __BegginConvert():()
 		--Mutate variables
 		UpdateSS()
 		OnConvert:Fire()
@@ -4116,11 +4181,21 @@ end
 		CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
 		SelectButtonByName("Converted Code")
 	end
+	local function BegginConvert():()
+		local try,err = (pcall::(func:typeof(__BegginConvert))->(boolean,string?))(__BegginConvert)
+		if not try then
+			if string.find(err::string,"bounds")~=nil then
+				warn("Please increase \"Buffer Size\" property inside Shared Settings")
+			else
+				warn(err)
+			end
+		end
+	end
 
 
 	do
 		--Connecting convert stuff
-		local ConvertKeybind = plugin:CreatePluginAction("NE_Convert","Convert","Convert","rbxassetid://75358548882112",true)
+		local ConvertKeybind = plugin:CreatePluginAction("NE_Convert","Convert","Convert","rbxassetid://98396137856895",true)
 		ConvertKeybind.Name = "Convert"
 		LowerBar_Convert.MouseButton1Click:Connect(BegginConvert)
 		ConvertKeybind.Triggered:Connect(BegginConvert)
