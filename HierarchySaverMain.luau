@@ -3445,13 +3445,16 @@ end
 	CodeOutput_Title.TextSize=ss.CodeOutputTextSize
 	Rich.TextSize = ss.CodeOutputTextSize
 	Code.TextSize = ss.CodeOutputTextSize
-	CodeOutput_Title.Text="--CTRL+A and then CTRL+C code below:"
+	CodeOutput_Title.Text=ss["--"].."CTRL+A and then CTRL+C code below:"
 	table.insert(ScriptBackground_List,CodeOutput)
 	table.insert(ScriptTextColor_List,Rich)
 	table.insert(ScriptTextColor_List,Code)
 	table.insert(ScriptComment_List,CodeOutput_Title)
 	table.insert(ScrollingFramesScrollBar,CodeOutput_Scrolling)
-
+	Code:GetPropertyChangedSignal("Text"):Connect(function():()
+		if not Code:IsFocused() then return end
+		Code.Text = ComputedCode[Num_Needle] or ""
+	end)
 	local function ApplyText():()
 		Num.Text = tostring(Num_Needle)
 		Code.Text = ComputedCode[Num_Needle] or ""
@@ -3532,6 +3535,7 @@ end
 			local ClassName:string = v.ClassName
 			local counter:number = 0
 			local properties = GetProperties(v)
+
 			for ii,vv in children do
 				if vv==v or vv.ClassName~=ClassName then continue end
 				local vv_prop = GetProperties(vv)
@@ -3606,9 +3610,57 @@ end
 		end
 	end
 
+	local function NE__Base(Attributes:{[string]:any},Tags:{string},Type:string,bypass__properties:{[string]:any}):string?
+		if ss.Use_Base_Imports and Classes[Type]~=nil then
+			local baseImport:string? = nil
+			--Grabbing best match for _base
+			local persentage:number = 0
+			for _base,tab in _baseImports do
+				local Matches:number = 0
+				local PropertyCount:number = 0
+				if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
+					for i,v in tab._exec.SetAttribute do
+						if Attributes[i::string]==v then Matches+=1 end
+						PropertyCount+=1
+					end
+				end
+				if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
+					for i,v in tab._exec.AddTag do
+						if table.find(Tags,v)~=nil then Matches+=1 end
+						PropertyCount+=1
+					end
+				end
+				for i,v in tab do
+					if (Classes[Type][i]::string?)==nil then break end
+					if (bypass__properties[i]==v or (typeof(v)=="CFrame" and typeof(bypass__properties[i])=="CFrame") and FuzzyEq(v,bypass__properties[i],10^ss.FuzzyCFrame)) and (typeof(bypass__properties[i])==typeof(v) or (v==nil or bypass__properties[i]==nil)) then Matches+=1 end
+					if i=="_exec" then continue end
+					PropertyCount+=1
+				end
+
+				if Matches~=0 and PropertyCount~=0 then
+					local _procentage:number = PropertyCount/Matches*100
+					if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
+						baseImport = _base
+						persentage = _procentage
+					end
+				end
+			end
+			return baseImport
+		end
+		return nil
+	end
+	local function IsBlocked(ins:Instance,prop:string):boolean
+		for ii,vv in IgnoredPropertiesList do
+			if ins:IsA(ii) and table.find(vv,prop)~=nil then
+				return true
+			end
+		end
+		return false
+	end
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
 		local properties = GetProperties(ins)
+		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
 		local HasMacros:boolean = false
@@ -3637,7 +3689,7 @@ end
 		end
 
 		if ss.NE_NewArgConstructor==false then
-			if properties.Name==nil or ss.NameOnTop==false then
+			if properties.Name==nil or IsBlocked(ins,"Name") or ss.NameOnTop==false then
 				--Declear instance for for mesh
 				if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
 					local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
@@ -3690,47 +3742,14 @@ end
 		end
 		----------------------
 		---_base---
-		local baseImport:string? = nil
-		if ss.Use_Base_Imports and Classes[Type]~=nil then
-			--Grabbing best match for _base
-			local persentage:number = 0
-			for _base,tab in _baseImports do
-				local Matches:number = 0
-				local PropertyCount:number = 0
-				if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
-					for i,v in tab._exec.SetAttribute do
-						if Attributes[i::string]==v then Matches+=1 end
-						PropertyCount+=1
-					end
-				end
-				if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
-					for i,v in tab._exec.AddTag do
-						if table.find(Tags,v)~=nil then Matches+=1 end
-						PropertyCount+=1
-					end
-				end
-				for i,v in tab do
-					if (Classes[Type][i]::string?)==nil then break end
-					if (properties[i]==v or (typeof(v)=="CFrame" and typeof(properties[i])=="CFrame") and FuzzyEq(v,properties[i],10^ss.FuzzyCFrame)) and (typeof(properties[i])==typeof(v) or (v==nil or properties[i]==nil)) then Matches+=1 end
-					if i=="_exec" then continue end
-					PropertyCount+=1
-				end
-
-				if Matches~=0 and PropertyCount~=0 then
-					local _procentage:number = PropertyCount/Matches*100
-					if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
-						baseImport = _base
-						persentage = _procentage
-					end
-				end
-			end
-			--Setting _base
-			if baseImport~=nil then
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
-				HasMacros=true	
-			end
+		local baseImport:string? = NE__Base(Attributes,Tags,Type,bypass__properties)
+		--Setting _base
+		if baseImport~=nil then
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_base")}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_base"))}]`) or "_base"}{ss._Equal}{baseImport}{ss._Separator}`
+			HasMacros=true	
 		end
+
 		if _count~=nil then
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_count")}]`) or "_count"}{ss._Equal}{ConstructorTostring("number",_count)}{ss._Separator}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_count"))}]`) or "_count"}{ss._Equal}{select(2,ConstructorTostring("number",_count))}{ss._Separator}`
@@ -3740,13 +3759,7 @@ end
 		----------
 		for i,v in spairs(properties) do
 			if i=="Name" and ss.NameOnTop==true then continue end
-			local foundBreak:boolean = false
-			for ii,vv in IgnoredPropertiesList do
-				if ins:IsA(ii) and table.find(vv,i)~=nil then
-					foundBreak=true
-					break
-				end
-			end
+			local foundBreak:boolean = IsBlocked(ins,i)
 			--Ignore List
 			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 			--Already in _base
@@ -3933,10 +3946,12 @@ end
 		local children__bool:boolean = false
 		if #children~=0 then
 			local _CountWrapped = table.create(#children)::{Instance}
-			
+
 			code..=string.rep("\n",ss.SeparateChildren::number)
 			riched_code..=string.rep("\n",ss.SeparateChildren::number)
-			
+			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
+			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
+
 			if ss.NE_ChildrenTable==true then
 				code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
 				riched_code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
@@ -3950,6 +3965,9 @@ end
 				code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
 				riched_code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
 			end
+			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
+			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
+
 		end
 		-----
 		if Initiator~=true then
@@ -4015,8 +4033,16 @@ end
 	local function IncludeTopCode(txt:CreateStr.class|any,rich:CreateStr.class|any,IncludeFunctions:true?):()
 		if ss.DisplaySource==true then
 			local t:string = (SelectedInstance or workspace):GetFullName()
-			txt..=`{ss["--"]}@Source {t}\n`
-			rich..=WriteRichText(`{ss["--"]}@Source {t}`,ScriptComment).."\n"
+			txt..=`{ss["--"]}@Source {t}`
+			rich..=WriteRichText(`{ss["--"]}@Source {t}`,ScriptComment)
+		end
+		if ss.DisplayDate==true then
+			txt..=`{(ss.DisplaySource==true and " ") or ""}{ss["--"]}{os.date("%d.%m.%Y - %H:%M : %S")}`
+			rich..=WriteRichText(`{(ss.DisplaySource==true and " ") or ""}{ss["--"]}{os.date("%d.%m.%Y - %H:%M : %S")}`,ScriptComment)
+		end
+		if ss.DisplaySource==true or ss.DisplayDate==true then
+			txt..="\n"
+			rich..="\n"
 		end
 		if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
 			if ss._SaveMeshes_Cache then
@@ -4120,6 +4146,157 @@ end
 		end
 		return txt,rich
 	end
+	
+	
+	-- true = no any properties nor children, nil = no properties but have children,false = has properties and maybe children
+	local function __IsPropertieLessDoEnd(ins:Instance,baseImport:string?,Attributes:{[string]:any},Tags:{string},properties:{[string]:any}):boolean
+		if ss.RL_Referanceless==true and baseImport==nil and next(Attributes)==nil and #Tags==0 then
+			local HasProperties:boolean = false 
+			for i,v in properties do
+				local foundBreak:boolean = IsBlocked(ins,i)
+				--Ignore List
+				if foundBreak then continue end
+				--Already in _base
+				if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
+				return false
+			end
+		else
+			return false
+		end
+		return true
+	end	
+
+
+	local function Luau_Recursion(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,b_Layer:buffer,ClaimedVariableNames:{[string]:true},b_Registers:buffer,DirrectAccessToVarAvalible:{[Instance]:string},SameChildren:number?,Parent:string?):()
+		local properties = GetProperties(ins)
+		local bypass__properties = GetProperties(ins,true)
+		local Tags = ins:GetTags()
+		local Attributes = ins:GetAttributes()
+		local Children = ins:GetChildren()
+		local Type:string = GetTypeOfInstance(ins)
+		local Registers:number = buffer.readu32(b_Registers,0)
+		local Layer:number = buffer.readu32(b_Layer,0)
+
+		local baseImport:string? = NE__Base(Attributes,Tags,Type,bypass__properties)
+
+		local varName:string = string.gsub(ins.Name,"[^%w_]","_")
+		if string.match(varName,"^%d") then
+			varName = `_{varName}`
+		end
+		if ClaimedVariableNames[varName]==true then
+			local Indexator:number = 1
+			while ClaimedVariableNames[`{varName}_{Indexator}`]==true do
+				Indexator+=1
+			end
+			varName..=`_{Indexator}`
+		end
+		local IsPropertieLessDoEnd:boolean = __IsPropertieLessDoEnd(ins,baseImport,Attributes,Tags,properties)
+
+		ClaimedVariableNames[varName]=true
+		DirrectAccessToVarAvalible[ins]=varName
+
+		--MAKE RECURSIVES UNNASESIBLE FOR THIS SORT OF VARIABLES IF ITS A COMPLEX RECURSION/Unable to referance them either
+		if SameChildren~=nil then
+			code..=`{string.rep(ss.t,Layer)}\n{ss._local}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}\n{string.rep(ss.t,Layer)}{ss["for"]}i{ss._Equal}{ConstructorTostring("number",1)}{ss.TupleSeparator}{ConstructorTostring("number",SameChildren)}{ss["do"]}`
+			riched_code..=`{string.rep(ss.t,Layer)}\n{WriteRichText(ss._local,ScriptLocal)}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}{string.rep(ss.t,Layer)}\n{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss._Equal}{select(2,ConstructorTostring("number",1))}{ss.TupleSeparator}{select(2,ConstructorTostring("number",SameChildren))}{WriteRichText(ss["do"],ScriptLuauKeyword)}`
+			Layer+=1
+
+			code..=`\n{string.rep(ss.t,Layer)}{varName}{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+		else
+			code..=`\n{string.rep(ss.t,Layer)}{ss._local}{varName}{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+		end
+
+
+		if ss.RL_WrapPropDoEnd==true and IsPropertieLessDoEnd==false then
+			Layer+=1
+			code..=`{ss["do"]}`
+			riched_code..=`{WriteRichText(ss["do"],ScriptLuauKeyword)}`
+		end
+		--Prop
+		--Setting _base
+		if baseImport~=nil then
+			code..=`\n{string.rep(ss.t,Layer)}_base{baseImport}({varName})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(`_base{baseImport}`,ScriptMethod)}({varName})`
+		end
+		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
+		if ss.NameOnTop==true and properties.Name~=nil and IsBlocked(ins,"Name")==false then
+			local i:string = "Name"
+			local c_code,c_rich = ConstructorTostring("string",properties.Name::string)
+			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+		end
+		----------
+		for i,v in spairs(properties) do
+			if i=="Name" and ss.NameOnTop==true then continue end
+			local foundBreak:boolean = false
+			for ii,vv in IgnoredPropertiesList do
+				if ins:IsA(ii) and table.find(vv,i)~=nil then
+					foundBreak=true
+					break
+				end
+			end
+			--Ignore List
+			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
+			--Already in _base
+			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
+			--if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and (ss.MeshPartCreationMode=="Defered" or (ss.MeshPartCreationMode=="Compute"  and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)) and i::string=="TextureID") then continue end
+			local type:string = typeof(v)
+			if type=="Instance" then
+				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName))::any|string)=="Instance"))) then
+					--Outside of hierarchy
+					local c_code,c_rich = GoToIndexPath(v::Instance)
+					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+				end
+				continue
+			end
+			if ConstructorTostring_Switch[type]==nil then continue end
+			local c_code,c_rich = ConstructorTostring(type,v)
+			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+		end
+
+		--Parent
+		if Parent~=nil and IsPropertieLessDoEnd==false then
+			local i:string = "Parent"
+			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{Parent}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{Parent}`
+		end
+		--Closing do end
+		if ss.RL_WrapPropDoEnd==true  and IsPropertieLessDoEnd==false then
+			Layer-=1
+			code..=`\n{string.rep(ss.t,Layer)}{ss["end"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
+		end
+		--closing for loop
+		if SameChildren~=nil then
+			code..=`\n{string.rep(ss.t,Layer-1)}{ss["end"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
+		end
+		Registers+=1
+		buffer.writeu32(b_Registers,0,Registers)
+		buffer.writeu32(b_Layer,0,Layer)
+
+		--children
+		if #Children~=0 then
+			local _CountWrapped = table.create(#Children)::{Instance}
+
+			code..=string.rep("\n",ss.SeparateChildren::number)
+			riched_code..=string.rep("\n",ss.SeparateChildren::number)
+			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
+			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
+			for i,v in Children do
+				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
+				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,get__count(v,Children,_CountWrapped),varName)
+			end
+			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
+			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
+
+		end
+
+	end
 
 	local function Nestify_Convert(ins:Instance):()
 		local code:CreateStr.class|any = CreateStr()
@@ -4134,16 +4311,23 @@ end
 		ShowText(code,riched_code)
 	end
 	local function RawLuau_Convert(ins:Instance):()
-		Rich.Text = "WIP"
-		Code.Text = "WIP"
+		local code:CreateStr.class|any = CreateStr()
+		local riched_code:CreateStr.class|any = CreateStr(ss.WriteRichText==false)
+		IncludeTopCode(code,riched_code,true)
+		local u_int32_Buff:buffer = buffer.create(4)
+		buffer.writeu32(u_int32_Buff,0,0)
+		local b_Layer = buffer.create(4)
+		buffer.writeu32(b_Layer,0,0)
+		Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,{},nil,nil)
+		ShowText(code,riched_code)
 	end
 
 
 	local function GrabPropertiesOfSingularInstance(ins:Instance):()
 		local code:CreateStr.class|any = CreateStr()
 		local riched_code:CreateStr.class|any = CreateStr()
-		code..= `--{ins.ClassName}`
-		riched_code..= WriteRichText(`--{ins.ClassName}`,ScriptComment)
+		code..= `{ss["--"]}{ins.ClassName}`
+		riched_code..= WriteRichText(`{ss["--"]}{ins.ClassName}`,ScriptComment)
 		for i,v in spairs(GetProperties(ins,true)) do
 			if typeof(v)=="Instance" then
 				local c,r = GoToIndexPath(v)
