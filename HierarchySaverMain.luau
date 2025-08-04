@@ -29,6 +29,12 @@ local SelectedInstance:Instance? = nil
 local Heartbeat = RunService.Heartbeat
 local Types = require(script:WaitForChild("Types"))
 
+local _ss_module = require(script:WaitForChild("ss"))
+local ss,UpdateSS = _ss_module.ss,_ss_module.Update
+
+local SessionData = require(script:WaitForChild("SessionData"))
+
+
 --[[
 Inverse Lerp Interpolation
 Example:
@@ -508,8 +514,10 @@ local function DeleteTab(Name:string):()
 		Tab:Destroy()
 	end
 end
-local CurrentConvertType:string = "Nestify"
+local CurrentConvertType:string = ss.___CurrentConvertType::string? or "Nestify"
 local function SelectButtonByName(name:string):()
+	SessionData.___CurrentTab = name
+	ss.___CurrentTab = name
 	local button = UpperBar:FindFirstChild(name)::Frame?
 	local viewport = ViewTabs:FindFirstChild(name)::Frame?
 	for i,v in TabViewports do
@@ -528,7 +536,11 @@ local function SelectButtonByName(name:string):()
 		button.BackgroundColor3=ViewPortBackground
 	end
 	RemoveSelectionButton()
-	if name~="Converted Code" and name~="Shared Settings" then CurrentConvertType = name end
+	if name~="Converted Code" and name~="Shared Settings" then
+		SessionData.___CurrentConvertType = name
+		ss.___CurrentConvertType = name
+		CurrentConvertType = name
+	end
 end
 local OnConvert:BindableEvent = Instance.new("BindableEvent")
 local UncollapseCategoryies:BindableEvent = Instance.new("BindableEvent")
@@ -1184,7 +1196,7 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	return prop
 end
 
-local SessionData = require(script:WaitForChild("SessionData"))
+
 
 --local RecursionFunctionIncld__1,RecursionFunctionIncld__2 = [[local function ]],[[(self:Instance,Up:number,Path:{string}):()
 --	local dir:Instance = self
@@ -1205,8 +1217,7 @@ Using :ApplyMesh resets the texture!!
 
 ]]
 
-local _ss_module = require(script:WaitForChild("ss"))
-local ss,UpdateSS = _ss_module.ss,_ss_module.Update
+
 
 
 
@@ -3088,7 +3099,7 @@ do
 	local sharedSettings,sharedSettings_Content = CreateTab("Shared Settings","rbxassetid://7059346373")
 	local Nestify,Nestify_Content = CreateTab("Nestify","rbxassetid://103418028764678")
 	local Raw_Luau,Raw_Luau_Content = CreateTab("Raw Luau","rbxassetid://18606791059")
-	Nestify.Visible=true
+	--Nestify.Visible=true
 	BuildPropertiesList(sharedSettings_Content,require(script:WaitForChild("SharedSettings")))
 	BuildPropertiesList(Nestify_Content,require(script:WaitForChild("Properties_Nestify")))
 	BuildPropertiesList(Raw_Luau_Content,require(script:WaitForChild("Properties_RawLuau")))
@@ -3155,193 +3166,188 @@ local function RecursionFindFirstChildSafeMethod(txt:string,rich:string,Index:nu
 	rich..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 	return txt,rich
 end
-
-
-local GoToIndexPath:(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
-do
-	local function ___IsAProperty(ins:any,prop:string):any
-		return ins[prop]
-	end
-	local function IsAProperty(ins:any|Instance,prop:string):boolean
-		local try,res = pcall(___IsAProperty,ins,prop)
-		return (try and ins:FindFirstChild(prop) ~= res) or ins:IsA("ObjectValue")
-	end
-	GoToIndexPath = function(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?):(string,string)
-		local Layer:number = (Layer or 1)::number
-		ValueProperty = (ValueProperty~=nil and ValueProperty) or "Unknown"
-		local IsRecursive:boolean = (Recursive~=nil and (Recursive:IsDescendantOf(SelectedInstance::Instance) or ins==Recursive or SelectedInstance==Recursive)) or false
-		local txt,rich = "",""
-
-		local Mode:"SafeIndex"|"Index"|"WaitForChild" = ss.OutsideHierarchyInstances
-		--Hierarchy
-		local arraySize:number = 0
-		local path:Instance? = ins
-		while path~=nil do
-			arraySize += 1
-			path = path.Parent
-		end
-		local Hierarchy:{Instance} = table.create(arraySize)::{Instance}
-		path = ins
-		if IsRecursive==false then--Regular from top to bottom
-			if Recursive~=nil then path = Recursive end
-			while path::Instance?~=nil do
-				table.insert(Hierarchy,1,path)
-				if type(select(2,pcall(game.FindService,game,(path::Instance).ClassName::string))::Instance?|"string")=="userdata" or (pathMacro::{[Instance]:string})[path::Instance]~=nil then
-					break
-				end
-				--Move up
-				path=path.Parent::Instance
-			end
-		elseif Recursive~=nil then --Recursive
-			while (path::Instance?)~=(Recursive::Instance) and (path::Instance?)~=nil do
-				if Recursive:IsDescendantOf(path) then
-					--go down
-					for i,v in path:GetChildren() do
-						if Recursive:IsDescendantOf(v) or v==Recursive then
-							path=v::Instance
-							table.insert(Hierarchy,path)
-							break
-						end
-					end
-				else
-					--go up
-					path=path.Parent::Instance
-					table.insert(Hierarchy,path)
-				end
-			end
-		end
-		--Recursive
-		if IsRecursive and Recursive~=nil then--Recursive
-			if Value~=nil then
-				txt,rich = Value.Text,Value.Rich	
-			end
-			for i,v in Hierarchy do
-				if v:IsAncestorOf(ins) then
-					--Down
-					if ss.FastNamecall==true then
-						txt = `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string","Parent")}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
-						rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string","Parent"))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-						continue
-					elseif ss.Indexing_Instances_By=="Dots" then
-						txt =`{(ss.Typechecking==true and "(")or""}{txt}.Parent{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-						rich =`{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText("Parent",ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						continue
-					end
-					txt =`{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string","Parent")}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-					rich =`{(ss.Typechecking==true and "(")or""}{rich}[{select(2,ConstructorTostring("string","Parent"))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-				else--Up
-					--If child has a name "Parent" there so having to use FindFirstChild
-					if i~=1 and IsAProperty(Hierarchy[i-1],v.Name) then
-						if ss.FastNamecall==true then
-							txt = `{(ss.Typechecking==true and "(")or""}FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-							rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						else
-							txt = `{(ss.Typechecking==true and "(")or""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-							rich = `{(ss.Typechecking==true and "(")or""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						end
-						continue
-					end
-					--Normal
-					if ss.FastNamecall==true then
-						txt = `{(ss.Typechecking==true and "(")or""}{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-						rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						continue
-					elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
-						txt = `{(ss.Typechecking==true and "(")or""}{txt}.{v.Name}{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-						rich = `{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText(v.Name,ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						continue
-					end
-					txt = `{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string",v.Name)}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-					rich =`{(ss.Typechecking==true and "(")or""}{txt}[{select(2,ConstructorTostring("string",v.Name))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-				end
-			end
-			if ss.FastNamecall==true and Value~=nil then
-				txt = `\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({Value.Text}{ss.FuncSeparator}{ConstructorTostring("string",ValueProperty)}{ss.FuncSeparator}{txt})`
-				rich = `\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({Value.Rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",ValueProperty))}{ss.FuncSeparator}{rich})`
-			elseif Value~=nil then
-				txt = `\n{string.rep(ss.t,Layer)}{Value.Text}{(ss.Indexing_Instances_By=="Dots" and `.{ValueProperty}`) or `[{ConstructorTostring("string",ValueProperty)}]`}{ss._Equal}{txt}`
-				rich = `\n{string.rep(ss.t,Layer)}{Value.Rich}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText(ValueProperty::string,ScriptProperty)}`) or `[{select(2,ConstructorTostring("string",ValueProperty))}]`}{ss._Equal}{rich}`
-			end
-			return txt,rich
-		elseif Recursive~=nil then--Safe index
-			--SAFEINDEX
-			local prevVar:string = "Unknown"
-			local grab = Hierarchy[1]::Instance
-			if grab==workspace then
-				prevVar = "workspace"
-			elseif grab==game then
-				prevVar = "game"
-			else
-				prevVar = grab.ClassName
-			end
-			txt,rich = RecursionFindFirstChildSafeMethod(txt,rich,2,Hierarchy,Layer,prevVar,Value::{Text:string;Rich:string},ValueProperty::string)	
-			return txt,rich
-		end
-		--Top- to-Bottom
-		for i,v in Hierarchy do
-			if v==game then
-				txt = "game"
-				rich = "game"
-			elseif (pathMacro::{[Instance]:string})[v]~=nil then
-				--pathMacro
-				txt = (pathMacro::{[Instance]:string})[v]
-				rich = (pathMacro::{[Instance]:string})[v]
-			elseif type(select(2,pcall(game.FindService,game,v.ClassName))::Instance?|"string")=="userdata" then
-				--service
-				if v==workspace then
-					txt = "workspace"
-					rich = WriteRichText("workspace",ScriptBuiltInFunction)
-					continue
-				end
-				txt = v.ClassName
-				rich = v.ClassName
-			else--Instances
-				if Mode=="SafeIndex" then
-					if ss.FastNamecall==true then
-						txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
-						rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
-					else
-						txt = `{txt}:FindFirstChild({ConstructorTostring("string",v.Name)})`
-						rich = `{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
-					end
-				elseif Mode=="WaitForChild" then
-					if ss.FastNamecall==true then
-						txt = `WaitForChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
-						rich = `{WriteRichText("WaitForChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
-					else
-						txt = `{txt}:WaitForChild({ConstructorTostring("string",v.Name)})`
-						rich = `{rich}:{WriteRichText("WaitForChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
-					end
-				else--Index
-					--Make sure to check for peoperties
-					if IsAProperty(Hierarchy[i-1],v.Name)==true then
-						--Using FindFirstChild Instead
-						if ss.FastNamecall==true then
-							txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
-							rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-						else
-							txt = `{(ss.Typechecking==true and "(") or ""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
-							rich = `{(ss.Typechecking==true and "(") or ""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
-						end
-						continue
-					end
-					if ss.FastNamecall==true then
-						txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
-						rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-					elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
-						txt = `{txt}.{v.Name}`
-						rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
-					else--Brackets
-						txt = `{txt}[{ConstructorTostring("string",v.Name)}]`
-						rich = `{rich}[{select(2,ConstructorTostring("string",v.Name))}]`
-					end
-				end
-			end
-		end
-		return txt,rich
-	end
+local function ___IsAProperty(ins:any,prop:string):any
+	return ins[prop]
+end
+local function IsAProperty(ins:any|Instance,prop:string):boolean
+	local try,res = pcall(___IsAProperty,ins,prop)
+	return (try and ins:FindFirstChild(prop) ~= res) or ins:IsA("ObjectValue")
 end
 
+local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?):(string,string)
+	local Layer:number = (Layer or 1)::number
+	ValueProperty = (ValueProperty~=nil and ValueProperty) or "Unknown"
+	local IsRecursive:boolean = (Recursive~=nil and (Recursive:IsDescendantOf(SelectedInstance::Instance) or ins==Recursive or SelectedInstance==Recursive)) or false
+	local txt,rich = "",""
+
+	local Mode:"SafeIndex"|"Index"|"WaitForChild" = ss.OutsideHierarchyInstances
+	--Hierarchy
+	local arraySize:number = 0
+	local path:Instance? = ins
+	while path~=nil do
+		arraySize += 1
+		path = path.Parent
+	end
+	local Hierarchy:{Instance} = table.create(arraySize)::{Instance}
+	path = ins
+	if IsRecursive==false then--Regular from top to bottom
+		if Recursive~=nil then path = Recursive end
+		while path::Instance?~=nil do
+			table.insert(Hierarchy,1,path)
+			if type(select(2,pcall(game.FindService,game,(path::Instance).ClassName::string))::Instance?|"string")=="userdata" or (pathMacro::{[Instance]:string})[path::Instance]~=nil then
+				break
+			end
+			--Move up
+			path=path.Parent::Instance
+		end
+	elseif Recursive~=nil then --Recursive
+		while (path::Instance?)~=(Recursive::Instance) and (path::Instance?)~=nil do
+			if Recursive:IsDescendantOf(path) then
+				--go down
+				for i,v in path:GetChildren() do
+					if Recursive:IsDescendantOf(v) or v==Recursive then
+						path=v::Instance
+						table.insert(Hierarchy,path)
+						break
+					end
+				end
+			else
+				--go up
+				path=path.Parent::Instance
+				table.insert(Hierarchy,path)
+			end
+		end
+	end
+	--Recursive
+	if IsRecursive and Recursive~=nil then--Recursive
+		if Value~=nil then
+			txt,rich = Value.Text,Value.Rich	
+		end
+		for i,v in Hierarchy do
+			if v:IsAncestorOf(ins) then
+				--Down
+				if ss.FastNamecall==true then
+					txt = `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string","Parent")}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+					rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string","Parent"))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+					continue
+				elseif ss.Indexing_Instances_By=="Dots" then
+					txt =`{(ss.Typechecking==true and "(")or""}{txt}.Parent{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+					rich =`{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText("Parent",ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					continue
+				end
+				txt =`{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string","Parent")}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+				rich =`{(ss.Typechecking==true and "(")or""}{rich}[{select(2,ConstructorTostring("string","Parent"))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+			else--Up
+				--If child has a name "Parent" there so having to use FindFirstChild
+				if i~=1 and IsAProperty(Hierarchy[i-1],v.Name) then
+					if ss.FastNamecall==true then
+						txt = `{(ss.Typechecking==true and "(")or""}FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					else
+						txt = `{(ss.Typechecking==true and "(")or""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich = `{(ss.Typechecking==true and "(")or""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					end
+					continue
+				end
+				--Normal
+				if ss.FastNamecall==true then
+					txt = `{(ss.Typechecking==true and "(")or""}{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+					rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					continue
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+					txt = `{(ss.Typechecking==true and "(")or""}{txt}.{v.Name}{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+					rich = `{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText(v.Name,ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					continue
+				end
+				txt = `{(ss.Typechecking==true and "(")or""}{txt}[{ConstructorTostring("string",v.Name)}]{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+				rich =`{(ss.Typechecking==true and "(")or""}{txt}[{select(2,ConstructorTostring("string",v.Name))}]{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+			end
+		end
+		if ss.FastNamecall==true and Value~=nil then
+			txt = `\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({Value.Text}{ss.FuncSeparator}{ConstructorTostring("string",ValueProperty)}{ss.FuncSeparator}{txt})`
+			rich = `\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({Value.Rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",ValueProperty))}{ss.FuncSeparator}{rich})`
+		elseif Value~=nil then
+			txt = `\n{string.rep(ss.t,Layer)}{Value.Text}{(ss.Indexing_Instances_By=="Dots" and `.{ValueProperty}`) or `[{ConstructorTostring("string",ValueProperty)}]`}{ss._Equal}{txt}`
+			rich = `\n{string.rep(ss.t,Layer)}{Value.Rich}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText(ValueProperty::string,ScriptProperty)}`) or `[{select(2,ConstructorTostring("string",ValueProperty))}]`}{ss._Equal}{rich}`
+		end
+		return txt,rich
+	elseif Recursive~=nil then--Safe index
+		--SAFEINDEX
+		local prevVar:string = "Unknown"
+		local grab = Hierarchy[1]::Instance
+		if grab==workspace then
+			prevVar = "workspace"
+		elseif grab==game then
+			prevVar = "game"
+		else
+			prevVar = grab.ClassName
+		end
+		txt,rich = RecursionFindFirstChildSafeMethod(txt,rich,2,Hierarchy,Layer,prevVar,Value::{Text:string;Rich:string},ValueProperty::string)	
+		return txt,rich
+	end
+	--Top- to-Bottom
+	for i,v in Hierarchy do
+		if v==game then
+			txt = "game"
+			rich = "game"
+		elseif (pathMacro::{[Instance]:string})[v]~=nil then
+			--pathMacro
+			txt = (pathMacro::{[Instance]:string})[v]
+			rich = (pathMacro::{[Instance]:string})[v]
+		elseif type(select(2,pcall(game.FindService,game,v.ClassName))::Instance?|"string")=="userdata" then
+			--service
+			if v==workspace then
+				txt = "workspace"
+				rich = WriteRichText("workspace",ScriptBuiltInFunction)
+				continue
+			end
+			txt = v.ClassName
+			rich = v.ClassName
+		else--Instances
+			if Mode=="SafeIndex" then
+				if ss.FastNamecall==true then
+					txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
+					rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
+				else
+					txt = `{txt}:FindFirstChild({ConstructorTostring("string",v.Name)})`
+					rich = `{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
+				end
+			elseif Mode=="WaitForChild" then
+				if ss.FastNamecall==true then
+					txt = `WaitForChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
+					rich = `{WriteRichText("WaitForChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
+				else
+					txt = `{txt}:WaitForChild({ConstructorTostring("string",v.Name)})`
+					rich = `{rich}:{WriteRichText("WaitForChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
+				end
+			else--Index
+				--Make sure to check for peoperties
+				if IsAProperty(Hierarchy[i-1],v.Name)==true then
+					--Using FindFirstChild Instead
+					if ss.FastNamecall==true then
+						txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+						rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+					else
+						txt = `{(ss.Typechecking==true and "(") or ""}{txt}:FindFirstChild({ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
+						rich = `{(ss.Typechecking==true and "(") or ""}{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
+					end
+					continue
+				end
+				if ss.FastNamecall==true then
+					txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
+					rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+					txt = `{txt}.{v.Name}`
+					rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
+				else--Brackets
+					txt = `{txt}[{ConstructorTostring("string",v.Name)}]`
+					rich = `{rich}[{select(2,ConstructorTostring("string",v.Name))}]`
+				end
+			end
+		end
+	end
+	return txt,rich
+end
 --Converter stuff
 (function():()
 	local __FuzzyEq = CFrame.identity.FuzzyEq::(cf1:CFrame,cf2:CFrame,epsilon:number?)->boolean
@@ -3351,7 +3357,7 @@ end
 		end
 		return __FuzzyEq(cf1,cf2,epsilon)
 	end
-	local GoToIndexPath = GoToIndexPath::(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
+	--local GoToIndexPath = GoToIndexPath::(ins:Instance,Recursive:Instance?,Value:{Text:string;Rich:string}?,ValueProperty:string?,Layer:number?)->(string,string)
 
 	local CreateStr = require(script:WaitForChild("strWrap"))
 	local strMaxSize:number = 199_999;
@@ -3574,35 +3580,29 @@ end
 		end
 	end
 
-	local function NE__TagsAndAttributes(code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Attributes:{[string]:any},Tags:{string},baseImport:string?,IncludesAllTags:boolean,IncludesAllAttributes:boolean):()
-		if #Tags~=0 and IncludesAllTags==false then
-			local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
+	local function NE__TagsAndAttributes(code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Attributes:{[string]:any},Tags:{string},baseImport:string?):()
+		if #Tags~=0 then
 			if ss.FastNamecall==true then
 				for i,v in Tags do
-					if table.find(IncludedTags,v)~=nil then continue end
 					code..=`\n{string.rep(ss.t,Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
 				end
 			else
 				for i,v in Tags do
-					if table.find(IncludedTags,v)~=nil then continue end
 					code..=`\n{string.rep(ss.t,Layer+1)}self:AddTag({ConstructorTostring("string",v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
 				end
 			end
 		end
 		--Attributes
-		if next(Attributes)~=nil and IncludesAllAttributes==false then
-			local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
+		if next(Attributes)~=nil then
 			if ss.FastNamecall==true then
 				for i,v in spairs(Attributes) do
-					if IncludedAttributes[i]~=nil then continue end
 					code..=`\n{string.rep(ss.t,Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
 				end
 			else
 				for i,v in spairs(Attributes) do
-					if IncludedAttributes[i]~=nil then continue end
 					code..=`\n{string.rep(ss.t,Layer+1)}self:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
 				end
@@ -3610,6 +3610,7 @@ end
 		end
 	end
 
+	--Removes alredy added tags and attributes and returns <strong>baseimport</strong> if such is found
 	local function NE__Base(Attributes:{[string]:any},Tags:{string},Type:string,bypass__properties:{[string]:any}):string?
 		if ss.Use_Base_Imports and Classes[Type]~=nil then
 			local baseImport:string? = nil
@@ -3617,34 +3618,53 @@ end
 			local persentage:number = 0
 			for _base,tab in _baseImports do
 				local Matches:number = 0
-				local PropertyCount:number = 0
+				local MatcheCount:number = 0
 				if type(tab._exec)=="table" and type(tab._exec.SetAttribute)=="table" then
 					for i,v in tab._exec.SetAttribute do
 						if Attributes[i::string]==v then Matches+=1 end
-						PropertyCount+=1
+						MatcheCount+=1
 					end
 				end
 				if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
 					for i,v in tab._exec.AddTag do
 						if table.find(Tags,v)~=nil then Matches+=1 end
-						PropertyCount+=1
+						MatcheCount+=1
 					end
 				end
 				for i,v in tab do
 					if (Classes[Type][i]::string?)==nil then break end
 					if (bypass__properties[i]==v or (typeof(v)=="CFrame" and typeof(bypass__properties[i])=="CFrame") and FuzzyEq(v,bypass__properties[i],10^ss.FuzzyCFrame)) and (typeof(bypass__properties[i])==typeof(v) or (v==nil or bypass__properties[i]==nil)) then Matches+=1 end
 					if i=="_exec" then continue end
-					PropertyCount+=1
+					MatcheCount+=1
 				end
 
-				if Matches~=0 and PropertyCount~=0 then
-					local _procentage:number = PropertyCount/Matches*100
+				if Matches~=0 and MatcheCount~=0 then
+					local _procentage:number = Matches/MatcheCount*100
 					if _procentage>persentage and _procentage>=ss.Use_Base_Properties_MatchPersentage then
 						baseImport = _base
 						persentage = _procentage
 					end
 				end
 			end
+			if baseImport==nil then return nil end
+			local import = (_baseImports::_baseImports)[baseImport::string]
+			if type(import._exec)=="table" then
+				local _exec:{[any]:any}&{SetAttribute:{[string]:any};AddTag:{string}} = import._exec
+				if type(_exec.SetAttribute)=="table" then
+					for i,v in _exec.SetAttribute do
+						Attributes[i] = nil
+					end
+				end
+				if type(_exec.AddTag)=="table" then
+					for i,v in _exec.AddTag do
+						local needle:number? = table.find(Tags,v)
+						if needle~=nil then
+							table.remove(Tags,needle::number)
+						end
+					end
+				end
+			end
+
 			return baseImport
 		end
 		return nil
@@ -3666,6 +3686,7 @@ end
 		local HasMacros:boolean = false
 		local properties__bool:boolean = false
 		local Type:string = GetTypeOfInstance(ins)
+		local children = ins:GetChildren()
 
 		--Brackets
 		if Initiator~=true then
@@ -3782,33 +3803,10 @@ end
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{c_code}{ss._Separator}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 		end
-		local _baseIncludesAllTagsAndAttributes:boolean = baseImport~=nil
-		local IncludesAllTags:boolean = _baseIncludesAllTagsAndAttributes
-		local IncludesAllAttributes:boolean = _baseIncludesAllTagsAndAttributes
-		if _baseIncludesAllTagsAndAttributes then
-			local import = (_baseImports::_baseImports)[baseImport::string]
-			if type(import._exec)=="table" then
-				local _exec:{[any]:any} = import._exec
-				_baseIncludesAllTagsAndAttributes=((type(_exec.SetAttribute)=="table" or type(_exec.AddTag)=="table") and true )or false
-				if _baseIncludesAllTagsAndAttributes then
-					if type(_exec.SetAttribute)=="table" then
-						for i,v in Attributes do
-							if (_exec.SetAttribute::{[string]:any})[i::string]~=v then _baseIncludesAllTagsAndAttributes = false IncludesAllAttributes=false break end
-						end
-					end
-					if type(_exec.AddTag)=="table" then
-						for i,v in Tags do
-							if table.find(_exec.AddTag::{string},v)==nil then _baseIncludesAllTagsAndAttributes = false IncludesAllTags=false break end
-						end
-					end
-				end
-			else
-				_baseIncludesAllTagsAndAttributes=false
-			end
-		end
+
 		--_run--
 		--Include__run?
-		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)
+		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)
 		if Include__run==false and ss.NE_using_run==true then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
@@ -3820,8 +3818,8 @@ end
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_run")}]`) or `_run`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_run"))}]`) or `_run`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
-			if ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil) and _baseIncludesAllTagsAndAttributes == false then
-				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport,IncludesAllTags,IncludesAllAttributes)
+			if ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil) then
+				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport)
 			end
 			--Mesh
 			if ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true then
@@ -3851,7 +3849,7 @@ end
 		end
 		--_init--
 		--IncludeInit?
-		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
 		if IncludeInit==false and ss.NE_using_run==false then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
@@ -3865,9 +3863,9 @@ end
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
-			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil) and _baseIncludesAllTagsAndAttributes == false then
+			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil) then
 				--tags
-				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport,IncludesAllTags,IncludesAllAttributes)
+				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport)
 			end
 			--Meshes
 			if (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered") then
@@ -3908,41 +3906,37 @@ end
 		end
 
 		---_exec---
-		if ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and (#ins:GetTags()~=0 or next(ins:GetAttributes())~=nil) then
-			if _baseIncludesAllTagsAndAttributes==false then
-				HasMacros=true
-				code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
-				if #Tags~=0 and IncludesAllTags==false then
-					local txt,rich = "",""
-					local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
-					for i,v in Tags do
-						if table.find(IncludedTags,v)~=nil then continue end
-						txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
-					end
-					code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
+		if ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and (#Tags~=0 or next(Attributes)~=nil) then
+			HasMacros=true
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_exec")}]`) or "_exec"}{ss._Equal}\{`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
+			if #Tags~=0 then
+				local txt,rich = "",""
+				local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
+				for i,v in Tags do
+					if table.find(IncludedTags,v)~=nil then continue end
+					txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
 				end
-				if next(Attributes)~=nil and IncludesAllAttributes==false then
-					code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
-					local IncludedAttributes:{[string]:any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.SetAttribute)) or {}
-					for i,v in spairs(Attributes) do
-						if IncludedAttributes[i]~=nil then continue end
-						code..=`\n{string.rep(ss.t,Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
-						riched_code..=`\n{string.rep(ss.t,Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
-					end
-					code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
+				code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
+				riched_code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
+			end
+			if next(Attributes)~=nil then
+				code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
+				for i,v in spairs(Attributes) do
+					code..=`\n{string.rep(ss.t,Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
+					riched_code..=`\n{string.rep(ss.t,Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
 				end
-				--Closing _exec
-				code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
-			end	
+				code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
+				riched_code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
+			end
+			--Closing _exec
+			code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}\}{ss._Separator}`
 		end
 		-------
 		--Children----
-		local children = ins:GetChildren()
+
 		local children__bool:boolean = false
 		if #children~=0 then
 			local _CountWrapped = table.create(#children)::{Instance}
@@ -4049,7 +4043,7 @@ end
 				--local alloc
 				if ss.CacheTableType=="Array" then
 					txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[number]{ss.TC_Type}\{M{ss.TC_Type}MeshPart{ss._Separator}Id{ss.TC_Type}string{ss._Separator}Cf{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}Rf{ss.TC_Type}Enum.RenderFidelity?{(ss.CMPAsyncService=="InsertService" and "") or `{ss._Separator}Ff{ss.TC_Type}Enum.FluidFidelity?`}\}\}`) or ""}{ss._Equal}\{\}\n`
-					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{(ss.CMPAsyncService=="InsertService" and "") or `{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?`}\}\}`) or ""}{ss._Equal}\{\}\n`
+					rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("number",Color3.new(0,1,1))}]{ss.TC_Type}\{M{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}{ss._Separator}Id{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}{ss._Separator}Cf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}Rf{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{(ss.CMPAsyncService=="InsertService" and "") or `{ss._Separator}Ff{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?`}\}\}`) or ""}{ss._Equal}\{\}\n`	
 				else--Hash table
 					__Write__HashTable(txt,rich)
 				end
@@ -4067,24 +4061,24 @@ end
 					txt..=`{ss["then"]}{ss.s}{ss["return"]} v{(ss.IndexingBy=="Dots" and `.M`) or `[{ConstructorTostring("string","M")}]`}{ss.s}{ss["end"]}\n{ss.t}{ss["end"]}`
 					rich..=`{WriteRichText(ss["then"],ScriptLuauKeyword)}{ss.s}{WriteRichText(ss["return"],ScriptLuauKeyword)} v{(ss.IndexingBy=="Dots" and `.{WriteRichText("M",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","M"))}]`}{ss.s}{WriteRichText(ss["end"],ScriptLuauKeyword)}\n{ss.t}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
-					if ss.FastNamecall then
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{ss["return"]} mesh`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					if ss.FastNamecall==true then
+						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					else
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					end
 					--insert
 					if ss.CMPAsyncService=="InsertService" then
-						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
-						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
+						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}{ss.localMeshVariableName}{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
+						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}{ss.localMeshVariableName}{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}c{ss._Separator}Rf{ss._Equal}r\})`
 					else
-						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
-						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}mesh{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
+						txt..=`\n{ss.t}table{(ss.IndexingBy=="Dots" and `.insert`) or `[{ConstructorTostring("string","insert")}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}{ss.localMeshVariableName}{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
+						rich..=`\n{ss.t}{WriteRichText("table",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("insert",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","insert"))}]`}({ss._SaveMeshes_CacheTableName}{ss.FuncSeparator}\{M{ss._Equal}{ss.localMeshVariableName}{ss._Separator}Id{ss._Equal}Id{ss._Separator}Cf{ss._Equal}cf{ss._Separator}Rf{ss._Equal}rf{ss._Separator}Ff{ss._Equal}ff\})`
 					end
 					--end
-					txt..=`\n{ss.t}{ss["return"]} mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					txt..=`\n{ss.t}{ss["return"]} {ss.localMeshVariableName}`
+					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} {ss.localMeshVariableName}`
 				else--Hash table
 					--Retriving cache if possible
 					--t = t or {}
@@ -4108,35 +4102,35 @@ end
 					rich..=`\n{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}M{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} M{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""} {WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
 					if ss.FastNamecall then
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					else
-						txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					end
 					--set cache
 					txt..=`\n{ss.t}{ss._SaveMeshes_CacheTableName}`
 					rich..=`\n{ss.t}{ss._SaveMeshes_CacheTableName}`
 					if ss.CMPAsyncService=="InsertService" then
-						txt..=`[c][r][Id]{ss._Equal}mesh`
-						rich..=`[c][r][Id]{ss._Equal}mesh`
+						txt..=`[c][r][Id]{ss._Equal}{ss.localMeshVariableName}`
+						rich..=`[c][r][Id]{ss._Equal}{ss.localMeshVariableName}`
 					else
-						txt..=`[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]{ss._Equal}mesh`
-						rich..=`[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]{ss._Equal}mesh`
+						txt..=`[t{(ss.IndexingBy=="Dots" and `.CollisionFidelity`) or `[{ConstructorTostring("string","CollisionFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default)}][t{(ss.IndexingBy=="Dots" and `.RenderFidelity`) or `[{ConstructorTostring("string","RenderFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic)}][t{(ss.IndexingBy=="Dots" and `.FluidFidelity`) or `[{ConstructorTostring("string","FluidFidelity")}]`}{ss["or"]}{ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic)}][Id]{ss._Equal}{ss.localMeshVariableName}`
+						rich..=`[t{(ss.IndexingBy=="Dots" and `.{WriteRichText("CollisionFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","CollisionFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.CollisionFidelity.Default))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("RenderFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","RenderFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.RenderFidelity.Automatic))}][t{(ss.IndexingBy=="Dots" and `.{WriteRichText("FluidFidelity",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","FluidFidelity"))}]`}{WriteRichText(ss["or"],ScriptLuauKeyword)}{select(2,ConstructorTostring("EnumItem",Enum.FluidFidelity.Automatic))}][Id]{ss._Equal}{ss.localMeshVariableName}`
 					end
-					txt..=`\n{ss.t}{ss["return"]}{ss.s}mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)}{ss.s}mesh`
+					txt..=`\n{ss.t}{ss["return"]}{ss.s}{ss.localMeshVariableName}`
+					rich..=`\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)}{ss.s}{ss.localMeshVariableName}`
 				end
 			else--No caching
 				--function open
 				__IncludeTopCode__WriteTopFunctionHeader(txt,rich)
 				--Create object
 				if ss.FastNamecall then
-					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}(Destroy{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}{ss.localMeshVariableName})`) or ""}\n{ss.t}{ss["return"]} {ss.localMeshVariableName}`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}(Destroy{ss.FuncSeparator}{ss.localMeshVariableName})`) or ""}\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} {ss.localMeshVariableName}`
 				else
-					txt..=`\n{ss.t}{ss._local}mesh{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(game{((ss.IndexingBy=="Dots" and `.Destroy`) or `[{ConstructorTostring("string","Destroy")}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{ss["return"]} mesh`
-					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}mesh{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}({WriteRichText("game",ScriptBuiltInFunction)}{((ss.IndexingBy=="Dots" and `.{WriteRichText("Destroy",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Destroy"))}]`)}{ss.FuncSeparator}mesh)\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} mesh`
+					txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(game{((ss.IndexingBy=="Dots" and `.Destroy`) or `[{ConstructorTostring("string","Destroy")}]`)}{ss.FuncSeparator}{ss.localMeshVariableName})`) or ""}\n{ss.t}{ss["return"]} {ss.localMeshVariableName}`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}({WriteRichText("game",ScriptBuiltInFunction)}{((ss.IndexingBy=="Dots" and `.{WriteRichText("Destroy",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","Destroy"))}]`)}{ss.FuncSeparator}{ss.localMeshVariableName})` or "")}\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} {ss.localMeshVariableName}`
 				end
 			end
 			--function close
@@ -4146,8 +4140,8 @@ end
 		end
 		return txt,rich
 	end
-	
-	
+
+
 	-- true = no any properties nor children, nil = no properties but have children,false = has properties and maybe children
 	local function __IsPropertieLessDoEnd(ins:Instance,baseImport:string?,Attributes:{[string]:any},Tags:{string},properties:{[string]:any}):boolean
 		if ss.RL_Referanceless==true and baseImport==nil and next(Attributes)==nil and #Tags==0 then
@@ -4167,7 +4161,7 @@ end
 	end	
 
 
-	local function Luau_Recursion(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,b_Layer:buffer,ClaimedVariableNames:{[string]:true},b_Registers:buffer,DirrectAccessToVarAvalible:{[Instance]:string},SameChildren:number?,Parent:string?):()
+	local function Luau_Recursion(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,b_Layer:buffer,ClaimedVariableNames:{[string]:true},b_Registers:buffer,DirrectAccessToVarAvalible:{[Instance]:string},SameChildren:number?,Parent:string?,RecursiveHierarchyQueue:{[Instance]:{{Prop:string;Var:string}}}):()
 		local properties = GetProperties(ins)
 		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
@@ -4195,37 +4189,106 @@ end
 		ClaimedVariableNames[varName]=true
 		DirrectAccessToVarAvalible[ins]=varName
 
-		--MAKE RECURSIVES UNNASESIBLE FOR THIS SORT OF VARIABLES IF ITS A COMPLEX RECURSION/Unable to referance them either
-		if SameChildren~=nil then
-			code..=`{string.rep(ss.t,Layer)}\n{ss._local}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}\n{string.rep(ss.t,Layer)}{ss["for"]}i{ss._Equal}{ConstructorTostring("number",1)}{ss.TupleSeparator}{ConstructorTostring("number",SameChildren)}{ss["do"]}`
-			riched_code..=`{string.rep(ss.t,Layer)}\n{WriteRichText(ss._local,ScriptLocal)}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}{string.rep(ss.t,Layer)}\n{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss._Equal}{select(2,ConstructorTostring("number",1))}{ss.TupleSeparator}{select(2,ConstructorTostring("number",SameChildren))}{WriteRichText(ss["do"],ScriptLuauKeyword)}`
-			Layer+=1
-
-			code..=`\n{string.rep(ss.t,Layer)}{varName}{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
-		else
-			code..=`\n{string.rep(ss.t,Layer)}{ss._local}{varName}{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+		--Registers and closures
+		if Registers>=ss.RegisterLimit::number then	
+			code..=`\n{string.rep(ss.t,Layer)}(function(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}({WriteRichText("function",ScriptFunction)}(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			Registers=0
+			Layer+=1	
 		end
 
+
+		--MAKE RECURSIVES UNNASESIBLE FOR THIS SORT OF VARIABLES IF ITS A COMPLEX RECURSION/Unable to referance them either
+		if SameChildren~=nil then
+			code..=`\n{string.rep(ss.t,Layer)}{ss._local}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}\n{string.rep(ss.t,Layer)}{ss["for"]}i{ss._Equal}{ConstructorTostring("number",1)}{ss.TupleSeparator}{ConstructorTostring("number",SameChildren)}{ss["do"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}{string.rep(ss.t,Layer)}\n{WriteRichText(ss["for"],ScriptLuauKeyword)}i{ss._Equal}{select(2,ConstructorTostring("number",1))}{ss.TupleSeparator}{select(2,ConstructorTostring("number",SameChildren))}{WriteRichText(ss["do"],ScriptLuauKeyword)}`
+			Layer+=1
+			--if ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+			code..=`\n{string.rep(ss.t,Layer)}{varName}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}`
+		else
+			code..=`\n{string.rep(ss.t,Layer)}{ss._local}{varName}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}`
+		end
+		if ins.ClassName == "MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Compute" then
+			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+			if ss.UseMeshFunction==true then
+				if ss._SaveMeshes_Cache==true then
+					code..=`{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.fromExisting`) or `[{ConstructorTostring("string","fromExisting")}]`}({ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
+					riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("fromExisting",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","fromExisting")}]`}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
+				else
+					code..=`{ss._Equal}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+					riched_code..=`{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
+				end
+			else
+				if ss.FastNamecall==true then
+					code..=`{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+					riched_code..=`{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
+				else
+					code..=`{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+					riched_code..=`{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
+				end
+			end
+		else
+			code..=`{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+			riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+		end
 
 		if ss.RL_WrapPropDoEnd==true and IsPropertieLessDoEnd==false then
 			Layer+=1
 			code..=`{ss["do"]}`
 			riched_code..=`{WriteRichText(ss["do"],ScriptLuauKeyword)}`
 		end
+		if ins.ClassName == "MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Defered" then
+			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
+			code..=`\n{string.rep(ss.t,Layer)}{ss.RL_Deffered_Fn_Mesh}({varName}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID::string? or "")}{dictionary})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.RL_Deffered_Fn_Mesh,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID::string? or ""))}{dictionary_rich})`
+		end
 		--Prop
+		--Tags and Attributes
+		if ss.RL_AttributesTags==true then
+			--Attributes
+			if ss.FastNamecall==true then
+				for i,v in Attributes do
+					code..=`\n{string.rep(ss.t,Layer)}SetAttribute({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("SetAttribute",ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+				end
+			else
+				for i,v in Attributes do
+					code..=`\n{string.rep(ss.t,Layer)}{varName}:SetAttribute({ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
+				end
+			end
+			--Tags
+			if ss.FastNamecall==true then
+				for i,v in Tags do
+					code..=`\n{string.rep(ss.t,Layer)}AddTag({varName}{ss.FuncSeparator}{ConstructorTostring("string",v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("AddTag",ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
+				end
+			else
+				for i,v in Tags do
+					code..=`\n{string.rep(ss.t,Layer)}{varName}:AddTag({ConstructorTostring("string",v)})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",v))})`
+				end
+			end
+		end
+
 		--Setting _base
 		if baseImport~=nil then
-			code..=`\n{string.rep(ss.t,Layer)}_base{baseImport}({varName})`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(`_base{baseImport}`,ScriptMethod)}({varName})`
+			code..=`\n{string.rep(ss.t,Layer)}{ss.Base_Imports_FN_subName}{baseImport}({varName})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(`{ss.Base_Imports_FN_subName}{baseImport}`,ScriptMethod)}({varName})`
 		end
 		local AllowPositionOverCFrame:boolean = (ss.PreferVectorForEmptyRotCFrame==true and properties.CFrame~=nil and properties.Position~=nil and vector.magnitude(vector.create((properties.CFrame::CFrame):ToOrientation()))==0) or false
 		if ss.NameOnTop==true and properties.Name~=nil and IsBlocked(ins,"Name")==false then
 			local i:string = "Name"
 			local c_code,c_rich = ConstructorTostring("string",properties.Name::string)
-			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+			if ss.FastNamecall==true then
+				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{Parent})`
+			else
+				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+			end	
 		end
 		----------
 		for i,v in spairs(properties) do
@@ -4241,28 +4304,65 @@ end
 			if (foundBreak and (i~="Position" or AllowPositionOverCFrame==false)) or (i::string=="CFrame" and AllowPositionOverCFrame==true) then continue end
 			--Already in _base
 			if baseImport~=nil and (_baseImports::_baseImports)[baseImport][i]==v then continue end
-			--if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and (ss.MeshPartCreationMode=="Defered" or (ss.MeshPartCreationMode=="Compute"  and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true) and ss.NE_using_run==true)) and i::string=="TextureID") then continue end
+			if (ss.AvoiddoubleTextureID==true and ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered" and i::string=="TextureID") then continue end
 			local type:string = typeof(v)
 			if type=="Instance" then
 				if not (v::Instance):IsDescendantOf(SelectedInstance::Instance) and v~=ins and v~=SelectedInstance and (ss.OutsideHierarchyInstances~="SafeIndex" or (v~=SelectedInstance and (v.Parent==game or typeof(select(2,pcall(game.FindService,game,v.Parent.ClassName))::any|string)=="Instance"))) then
 					--Outside of hierarchy
 					local c_code,c_rich = GoToIndexPath(v::Instance)
+					if ss.FastNamecall==true then
+						code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{c_code})`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{c_rich})`
+						continue
+					end
 					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+				elseif v==ins or v==SelectedInstance or (ss.RL_RecursionWrite=="Instant" and ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]~=nil)) then	
+					--Recursive hierarchy instance already exists
+					if ss.FastNamecall==true then
+						code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{DirrectAccessToVarAvalible[v]::string? or varName})`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{DirrectAccessToVarAvalible[v]::string? or varName})`
+						continue
+					end
+					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
+				elseif (v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]::string?==nil then
+					--Recursive hierarchy write
+					if RecursiveHierarchyQueue[v]==nil then
+						RecursiveHierarchyQueue[v]={{Var=varName;Prop=i;}}
+					else
+						table.insert(RecursiveHierarchyQueue[v],{Var=varName;Prop=i;})
+					end
+				elseif ss.OutsideHierarchyInstances=="SafeIndex" and type=="Instance" then
+					--Safe index
+					local c,r = GoToIndexPath(ins,v::Instance,{Text = varName,Rich = varName},i,Layer+1)
+					code..=`\n{string.rep(ss.t,Layer)}do`..c..`\n{string.rep(ss.t,Layer)}end`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("do",ScriptLuauKeyword)}`..r..`\n{string.rep(ss.t,Layer)}{WriteRichText("end",ScriptLuauKeyword)}`
 				end
 				continue
 			end
 			if ConstructorTostring_Switch[type]==nil then continue end
 			local c_code,c_rich = ConstructorTostring(type,v)
+			if ss.FastNamecall==true then
+				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{c_code})`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{c_rich})`
+				continue
+			end
 			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 		end
 
+
 		--Parent
 		if Parent~=nil and IsPropertieLessDoEnd==false then
 			local i:string = "Parent"
-			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{Parent}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{Parent}`
+			if ss.FastNamecall==true then
+				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{Parent})`
+			else
+				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{Parent}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{Parent}`
+			end	
 		end
 		--Closing do end
 		if ss.RL_WrapPropDoEnd==true  and IsPropertieLessDoEnd==false then
@@ -4275,9 +4375,32 @@ end
 			code..=`\n{string.rep(ss.t,Layer-1)}{ss["end"]}`
 			riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 		end
+
+		--late recursive hierarchy
+		if ss.RL_RecursionWrite=="Instant" and RecursiveHierarchyQueue[ins]~=nil then
+			if ss.FastNamecall==true then
+				for i,v in RecursiveHierarchyQueue[ins] do
+					local Var,Prop = v.Var,v.Prop
+					code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({Var}{ss.FuncSeparator}{ConstructorTostring("string",Prop)}{ss.FuncSeparator}{varName})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({Var}{ss.FuncSeparator}{select(2,ConstructorTostring("string",Prop))}{ss.FuncSeparator}{varName})`
+				end
+			else
+				for i,v in RecursiveHierarchyQueue[ins] do
+					local Var,Prop = v.Var,v.Prop
+					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
+				end	
+			end
+			RecursiveHierarchyQueue[ins]=nil
+		end
+
+
 		Registers+=1
 		buffer.writeu32(b_Registers,0,Registers)
 		buffer.writeu32(b_Layer,0,Layer)
+
+
+
 
 		--children
 		if #Children~=0 then
@@ -4289,7 +4412,7 @@ end
 			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
 			for i,v in Children do
 				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
-				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,get__count(v,Children,_CountWrapped),varName)
+				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,get__count(v,Children,_CountWrapped),varName,RecursiveHierarchyQueue)
 			end
 			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
 			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
@@ -4318,7 +4441,34 @@ end
 		buffer.writeu32(u_int32_Buff,0,0)
 		local b_Layer = buffer.create(4)
 		buffer.writeu32(b_Layer,0,0)
-		Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,{},nil,nil)
+		local RecursiveHierarchyQueue:{[Instance]:{{Prop:string;Var:string}}} = {}
+		local DirrectAccessToVarAvalible:{[Instance]:string} = {}
+		
+Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAvalible,nil,nil,RecursiveHierarchyQueue)
+		local Layer:number = buffer.readu32(b_Layer,0)
+		
+		--Adding recursive properties that has been set to InTheEnd
+		for i,__v in RecursiveHierarchyQueue do
+			local varName:string = DirrectAccessToVarAvalible[i]::string? or "____ERROR0xdeadbeef"
+			if ss.FastNamecall==true then
+				for i,v in __v do
+					local Var,Prop = v.Var,v.Prop
+					code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({Var}{ss.FuncSeparator}{ConstructorTostring("string",Prop)}{ss.FuncSeparator}{varName})`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({Var}{ss.FuncSeparator}{select(2,ConstructorTostring("string",Prop))}{ss.FuncSeparator}{varName})`
+				end
+			else
+				for i,v in __v do
+					local Var,Prop = v.Var,v.Prop
+					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
+				end	
+			end
+		end
+		--closing closures
+		for i=Layer,1,-1 do
+			code..=`\n{string.rep(ss.t,i)}end)()`
+			riched_code..=`\n{string.rep(ss.t,i)}{WriteRichText("end",ScriptLuauKeyword)})()`
+		end
 		ShowText(code,riched_code)
 	end
 
@@ -4389,7 +4539,7 @@ end
 
 end)()
 ThemeChanged()
-
+SelectButtonByName(ss.___CurrentTab::string? or "Nestify")
 
 
 
