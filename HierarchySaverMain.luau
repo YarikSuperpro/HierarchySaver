@@ -4317,7 +4317,7 @@ end
 					end
 					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
-				elseif v==ins or v==SelectedInstance or (ss.RL_RecursionWrite=="Instant" and ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]~=nil)) then	
+				elseif ((ss.RL_RecursionWrite=="Instant" or ss.RL_RecursionWrite=="Hybrid") and (v==ins or v==SelectedInstance)) or ((ss.RL_RecursionWrite=="Instant" or ss.RL_RecursionWrite=="Hybrid") and ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]~=nil)) then	
 					--Recursive hierarchy instance already exists
 					if ss.FastNamecall==true then
 						code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{DirrectAccessToVarAvalible[v]::string? or varName})`
@@ -4326,7 +4326,7 @@ end
 					end
 					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
-				elseif (v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]::string?==nil then
+				elseif ss.RL_RecursionWrite=="InTheEnd" or ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]::string?==nil) then
 					--Recursive hierarchy write
 					if RecursiveHierarchyQueue[v]==nil then
 						RecursiveHierarchyQueue[v]={{Var=varName;Prop=i;}}
