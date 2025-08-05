@@ -20,7 +20,6 @@ plugin.Name="Hierarchy Saver (plugin)"
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
-local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Selection = game:GetService("Selection")
@@ -126,7 +125,7 @@ local TranslateProperties:Types.FormattedClass = {
 
 --*********************Assembling class
 local Classes:Types.FormattedClasses = {}
-local WaitForData = coroutine.running()
+--local WaitForData = coroutine.running()
 
 
 --*********************Assembling widget
@@ -142,6 +141,245 @@ local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy S
 Widget.Name="Hierarchy Saver"
 Widget.Title="Hierarchy Saver"
 Widget:SetAttribute("Manage",false)
+
+
+;(function():()
+	local HierarchySaver_Settings_Connection:RBXScriptConnection = plugin.Unloading:Once(function()
+		plugin:SetSetting("HierarchySaver_Settings",HttpService:JSONEncode(SessionData))
+	end)
+	local CurrentMainDebug_Scroll:ScrollingFrame? = nil
+	
+	local function BuildNewTempWidget():()
+		if CurrentMainDebug_Scroll~=nil then return end
+		local Temp:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID_Temp",DockWidgetPluginGuiInfo.new(
+			Enum.InitialDockState.Float,
+			false,
+			false,
+			400,800,100,200
+			))
+		Temp.Title = "Manage Hierarchy Saver Data"
+		Temp.Name = "_tempMHSD"
+		local MainDebug = Instance.new("Frame") do
+			MainDebug.Name = "MainDebug"
+			MainDebug.BackgroundColor3 = Color3.new(0.85098, 0.97255, 1)
+			MainDebug.BorderColor3 = Color3.new(0, 0, 0)
+			MainDebug.BorderSizePixel = 0
+			MainDebug.Size = UDim2.new(1, 0, 1, 0)
+		end
+		--[Children] {
+		local UIGradient = Instance.new("UIGradient") do
+			UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.67843, 0.67843, 0.67843));ColorSequenceKeypoint.new(0.4481, Color3.new(0.88628, 0.88628, 0.88628));ColorSequenceKeypoint.new(1, Color3.new(63/85, 63/85, 63/85));})
+			UIGradient.Rotation = 90
+			UIGradient.Parent = MainDebug
+		end
+		local TextLabel = Instance.new("TextLabel") do
+			TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+			TextLabel.BackgroundColor3 = Color3.new(1, 1, 1)
+			TextLabel.BackgroundTransparency = 1
+			TextLabel.BorderColor3 = Color3.new(0, 0, 0)
+			TextLabel.BorderSizePixel = 0
+			TextLabel.Font = Enum.Font.SourceSans
+			TextLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+			TextLabel.Position = UDim2.new(0.4995, 0, 0.1089, 0)
+			TextLabel.Size = UDim2.new(0.68995, 0, 0.19129, 0)
+			TextLabel.Text = "Data removal"
+			TextLabel.TextColor3 = Color3.new(1, 1, 1)
+			TextLabel.TextScaled = true
+			TextLabel.ZIndex = 2
+			TextLabel.Parent = MainDebug
+		end
+		--[Children] {
+		local UIGradient_1 = Instance.new("UIGradient") do
+			UIGradient_1.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.67843, 0.67843, 0.67843));ColorSequenceKeypoint.new(0.06055, Color3.new(0.61961, 0.61961, 0.61961));ColorSequenceKeypoint.new(23/34, Color3.new(1, 1, 1));ColorSequenceKeypoint.new(1, Color3.new(63/85, 63/85, 63/85));})
+			UIGradient_1.Rotation = 90
+			UIGradient_1.Parent = TextLabel
+		end
+		local UIStroke = Instance.new("UIStroke") do
+			UIStroke.Color = Color3.new(9/17, 9/17, 9/17)
+			UIStroke.Parent = TextLabel
+		end
+		--}
+		local Content = Instance.new("ScrollingFrame") do
+			Content.Name = "Content"
+			Content.Active = true
+			Content.BackgroundColor3 = Color3.new(1, 1, 1)
+			Content.BackgroundTransparency = 0.96
+			Content.BorderColor3 = Color3.new(0, 0, 0)
+			Content.BorderSizePixel = 0
+			Content.Position = UDim2.new(0, 0, 0.20455, 0)
+			Content.ScrollBarImageColor3 = Color3.new(0, 0, 0)
+			Content.Size = UDim2.new(1, 0, 0.79545, 0)
+			Content.Transparency = 0.96
+			Content.ZIndex = 2
+			Content.Parent = MainDebug
+		end
+		--[Children] {
+		local UIListLayout = Instance.new("UIListLayout") do
+			UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			UIListLayout.Parent = Content
+		end
+		UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function():()
+			Content.CanvasSize=UDim2.new(0,0,0,UIListLayout.AbsoluteContentSize.Y)
+		end)
+		--}
+		--}
+		CurrentMainDebug_Scroll=Content
+		MainDebug.Parent=Temp
+		Temp.Enabled=true
+		local SelfDestructConnectionWidget:RBXScriptConnection
+		local function DestructTemp():()
+			CurrentMainDebug_Scroll=nil
+			if SelfDestructConnectionWidget.Connected==true then
+				SelfDestructConnectionWidget:Disconnect()
+			end
+			Temp:Destroy()
+			Widget:SetAttribute("Manage",false)
+		end
+		MainDebug.Destroying:Connect(DestructTemp)
+		MainDebug.DescendantRemoving:Connect(DestructTemp)
+		SelfDestructConnectionWidget = Temp:GetPropertyChangedSignal("Enabled"):Once(function()
+			MainDebug:Destroy()
+		end)	
+	end
+	type local_info_temp = {
+		{
+			PluginData:string;
+			Display:string?;
+			func:(()->())?;
+		}
+	}
+	local function BuildPropertiesTemp(info:local_info_temp):()
+		if CurrentMainDebug_Scroll==nil then return end
+		for i,v in info do
+			--@Source StarterGui.Debug.Line --05.08.2025 - 23:13 : 24
+
+			local Line = Instance.new("Frame") do
+				Line.Name = "Line"
+				Line.BackgroundColor3 = Color3.new(1, 1, 1)
+				Line.BorderColor3 = Color3.new(0, 0, 0)
+				Line.BorderSizePixel = 0
+				Line.ClipsDescendants = true
+				Line.Size = UDim2.new(1, -12, 0, 50)
+				Line.ZIndex = 3
+			end
+			--[Children] {
+			local TextLabel = Instance.new("TextLabel") do
+				TextLabel.BackgroundColor3 = Color3.new(1, 1, 1)
+				TextLabel.BackgroundTransparency = 1
+				TextLabel.BorderColor3 = Color3.new(0, 0, 0)
+				TextLabel.BorderSizePixel = 0
+				TextLabel.Font = Enum.Font.SourceSans
+				TextLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+				TextLabel.Size = UDim2.new(0.5, 0, 1, 0)
+				TextLabel.Text = v.Display or v.PluginData
+				TextLabel.TextColor3 = Color3.new(0, 0, 0)
+				TextLabel.TextScaled = true
+				TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+				TextLabel.ZIndex = 4
+				TextLabel.Parent = Line
+			end
+			local TextLabel_1 = Instance.new("Frame") do
+				TextLabel_1.Name = "TextLabel"
+				TextLabel_1.BackgroundColor3 = Color3.new(1, 1, 1)
+				TextLabel_1.BackgroundTransparency = 1
+				TextLabel_1.BorderColor3 = Color3.new(0, 0, 0)
+				TextLabel_1.BorderSizePixel = 0
+				TextLabel_1.Position = UDim2.new(0.5, 0, 0, 0)
+				TextLabel_1.Size = UDim2.new(0.5, 0, 1, 0)
+				TextLabel_1.ZIndex = 4
+				TextLabel_1.Parent = Line
+			end
+			--[Children] {
+			local ImageButton = Instance.new("TextButton") do
+				ImageButton.Name = "ImageButton"
+				ImageButton.AnchorPoint = Vector2.new(0.5, 0.5)
+				ImageButton.BackgroundColor3 = Color3.new(1, 0, 0)
+				ImageButton.BorderColor3 = Color3.new(0, 0, 0)
+				ImageButton.BorderSizePixel = 0
+				ImageButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+				ImageButton.Size = UDim2.new(1, 0, 1, 0)
+				ImageButton.Text = "X"
+				ImageButton.TextColor3 = Color3.new(1, 1, 1)
+				ImageButton.TextScaled = true
+				ImageButton.TextSize = 20
+				ImageButton.TextWrapped = true
+				ImageButton.ZIndex = 5
+				ImageButton.Parent = TextLabel_1
+			end
+			--[Children] {
+			local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint") do
+				UIAspectRatioConstraint.AspectRatio = 1.5
+				UIAspectRatioConstraint.Parent = ImageButton
+			end
+			local UICorner = Instance.new("UICorner") do
+				UICorner.CornerRadius = UDim.new(0.25, 0)
+				UICorner.Parent = ImageButton
+			end
+			--}
+			local Removed = Instance.new("TextLabel") do
+				Removed.Name = "Removed"
+				Removed.AnchorPoint = Vector2.new(1, 0.5)
+				Removed.BackgroundColor3 = Color3.new(1, 1, 1)
+				Removed.BackgroundTransparency = 1
+				Removed.BorderColor3 = Color3.new(0, 0, 0)
+				Removed.BorderSizePixel = 0
+				Removed.Font = Enum.Font.SourceSans
+				Removed.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+				Removed.Position = UDim2.new(1, 0, 0.5, 0)
+				Removed.Size = UDim2.new(1, 0, 1, 0)
+				Removed.Text = ""
+				Removed.TextColor3 = Color3.new(1, 0, 0)
+				Removed.TextScaled = true
+				Removed.ZIndex = 5
+				Removed.Parent = TextLabel_1
+			end
+			--[Children] {
+			local UIAspectRatioConstraint_1 = Instance.new("UIAspectRatioConstraint", Removed)
+			--}
+			--}
+			local UICorner_1 = Instance.new("UICorner") do
+				UICorner_1.CornerRadius = UDim.new(0.2, 0)
+				UICorner_1.Parent = Line
+			end
+			--}
+			
+			ImageButton.MouseButton1Click:Once(function():()
+				plugin:SetSetting(v.PluginData,nil)
+				if v.func~=nil then
+					(v.func::()->())()
+				end
+				Removed.Text="•"
+			end)
+			Line.Parent=CurrentMainDebug_Scroll
+		end
+	end
+	local info:local_info_temp = {
+		{
+			PluginData = "HierarchySaver_Settings";
+			Display = "HierarchySaver Settings";
+			func = function():()
+				if HierarchySaver_Settings_Connection.Connected==true then
+					HierarchySaver_Settings_Connection:Disconnect()
+				end
+			end;
+		};
+		{PluginData="NE_BaseImports"};
+		{PluginData="NE_pathMacro"};
+		{PluginData="NE_cachedConstants"};
+		{PluginData="NE_IgnoreProperties"};
+		{PluginData="HierarchySaver_CLASSES"};
+		{PluginData="Classes_LatestCache_Valid"};
+	}
+	Widget:GetAttributeChangedSignal("Manage"):Connect(function():()
+		if Widget:GetAttribute("Manage") == false then if CurrentMainDebug_Scroll~=nil then CurrentMainDebug_Scroll:Destroy() end return end
+		BuildNewTempWidget()
+		BuildPropertiesTemp(info)
+	end)
+end)()
+
+
+
+
 --Elements
 local Elements = script:WaitForChild("Components")
 local TabButton = Elements:WaitForChild("TabButton")--Button to open tab
@@ -991,6 +1229,7 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 		plugin:SetSetting("Classes_LatestCache_Valid",workspace:GetServerTimeNow()+60*60*24)	
 		;(__classesData::any).__loaded = true
 		;((__classesData::any)._event::BindableEvent):Fire()
+		;((__classesData::any)._event::BindableEvent):Destroy()
 	else
 		-- No perms but has a backup
 
@@ -2399,11 +2638,11 @@ end
 
 local IgnoredPropertiesList:{[any]:any}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency"};["TextLabel"]={"Font"};["TextBox"]={"Font"};}]])
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
-		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["Script"]={"Source"};["LocalScript"]={"Source"};["ModuleScript"]={"Source"};["Motor6D"] = {"Transform"};}
+		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency"};["TextLabel"]={"Font"};["TextBox"]={"Font"};}
 	end
 end
 
@@ -2419,15 +2658,14 @@ do
 	local ContentScroll = Ignored_Properies:WaitForChild("Content")
 	local Input_txt = ContentScroll:WaitForChild("TextBox")
 	local Input_Rich = Input_txt:WaitForChild("Rich")
-	local function AdjustCanvas():()
-		local sz:Vector2 = TextService:GetTextSize(Input_txt.Text,Input_txt.TextSize,Input_txt.Font,Vector2.new(math.huge,math.huge))
-		ContentScroll.CanvasSize=UDim2.new(0,sz.X,0,sz.Y)
-	end
+	
+	Input_txt:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+		ContentScroll.CanvasSize=UDim2.new(0,Input_txt.TextBounds.X,0,Input_txt.TextBounds.Y)
+	end)
 	local function AdjustTextSize():()
 		Input_txt.TextSize=ss.CodeOutputTextSize
 		Input_Rich.TextSize=ss.CodeOutputTextSize
 	end
-	Input_txt:GetPropertyChangedSignal("Text"):Connect(AdjustCanvas)
 	Input_txt.Focused:Connect(function()
 		Input_Rich.Visible = false
 		Input_txt.TextTransparency=0
@@ -2437,7 +2675,6 @@ do
 		Input_txt.TextTransparency=0.99
 	end)
 	OnConvert.Event:Connect(AdjustTextSize)
-	task.defer(AdjustCanvas)
 	task.defer(AdjustTextSize)
 	table.insert(BrightestText_Theme,Import)
 	table.insert(BrightestText_Theme,Exit)
@@ -2718,16 +2955,14 @@ end
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
-			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
-			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
 		end)
 		Insert_Scroll.CanvasSize = UDim2_zero
 		local function ScaleImported():()
-			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
-			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
 		end
-		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+		Imported:GetPropertyChangedSignal("TextBounds"):Connect(ScaleImported)
 		task.defer(ScaleImported)
 
 		Import_box.MouseButton1Click:Connect(function():()
@@ -2853,16 +3088,14 @@ end
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
-			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
-			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
 		end)
 		Insert_Scroll.CanvasSize = UDim2_zero
 		local function ScaleImported():()
-			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
-			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
 		end
-		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
+		Imported:GetPropertyChangedSignal("TextBounds"):Connect(ScaleImported)
 		task.defer(ScaleImported)
 
 		Import_box.MouseButton1Click:Connect(function():()
@@ -2991,14 +3224,12 @@ end
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("Text"):Connect(function():()
-			local Size:Vector2 = TextService:GetTextSize(Insert.Text,Insert.TextSize,Insert.Font,Vector2.new(math.huge,math.huge))
-			Insert_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
 		end)
 		Insert_Scroll.CanvasSize = UDim2_zero
 		local function ScaleImported():()
-			local Size:Vector2 = TextService:GetTextSize(Imported.Text,Imported.TextSize,Imported.Font,Vector2.new(math.huge,math.huge))
-			Imported_Scroll.CanvasSize = UDim2.new(0,Size.X,0,Size.Y)
+			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
 		end
 		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
 		task.defer(ScaleImported)
@@ -3536,16 +3767,38 @@ end
 		return dictionary,dictionary_rich
 	end
 
-	local function get__count(v:Instance,children:{Instance},_CountWrapped:{Instance}):number?
+	local function get__count(v:Instance,children:{Instance},_CountWrapped:{Instance},Attributes:{[string]:any},Tags:{string},DirrectAccessToVarAvalible:{[Instance]:string}?,varName:string?):number?
 		if ss.CountEnabled==true then
 			local ClassName:string = v.ClassName
 			local counter:number = 0
 			local properties = GetProperties(v)
-
-			for ii,vv in children do
-				if vv==v or vv.ClassName~=ClassName then continue end
+			for ii,vv in children::{Instance} do
+				if vv==v or vv.ClassName~=ClassName or table.find(_CountWrapped,vv)~=nil then continue end
 				local vv_prop = GetProperties(vv)
 				local Equal:boolean = true
+				--tags
+				local _tags = (vv::any):GetTags()::{string}
+				if #_tags~=#Tags then Equal = false continue end
+				for iii,vvv in Tags do
+					if table.find(_tags,vvv)==nil then Equal = false break end
+				end
+				if Equal==false then continue end
+				for iii,vvv in _tags do
+					if table.find(Tags,vvv)==nil then Equal = false break end
+				end
+				if Equal==false then continue end
+				--Attributes
+				local _attributes = (vv::any):GetAttributes()::{[string]:any}
+				if (next(Attributes)==nil and next(_attributes)~=nil) or (next(_attributes)==nil and next(Attributes)~=nil) then Equal = false continue end
+				for iii,vvv in Attributes do
+					if _attributes[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(_attributes[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,_attributes[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
+				end
+				if Equal==false then continue end
+				for iii,vvv in _attributes do
+					if Attributes[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(Attributes[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,Attributes[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
+				end
+				if Equal==false then continue end
+				--prop
 				for iii,vvv in vv_prop do
 					if properties[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(properties[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,properties[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
@@ -3554,6 +3807,9 @@ end
 					if vv_prop[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(vv_prop[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,vv_prop[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
 				if Equal==false then continue end
+				if DirrectAccessToVarAvalible~=nil then
+					DirrectAccessToVarAvalible[(vv::any)::Instance] = varName or "RefError_0xbadc0ffee"
+				end
 				table.insert(_CountWrapped,vv)
 				counter+=1	
 			end
@@ -3912,10 +4168,16 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_exec"))}]`) or "_exec"}{ss._Equal}\{`
 			if #Tags~=0 then
 				local txt,rich = "",""
-				local IncludedTags:{any} = (baseImport~=nil and type(((_baseImports::_baseImports)[baseImport::string]::any)._exec)=="table" and (type(((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)=="table" and ((_baseImports::_baseImports)[baseImport]::any)._exec.AddTag)) or {}
-				for i,v in Tags do
-					if table.find(IncludedTags,v)~=nil then continue end
-					txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
+				if ss.NE_New_exec==true then
+					for i,v in Tags do
+						txt..=`{ConstructorTostring("string",v)}{ss._Separator}`;
+						rich..=`{select(2,ConstructorTostring("string",v))}{ss._Separator}`
+					end
+				else
+					for i,v in Tags do
+						txt..=`\{{ConstructorTostring("string",v)}\}{ss._Separator}`;
+						rich..=`\{{select(2,ConstructorTostring("string",v))}\}{ss._Separator}`
+					end
 				end
 				code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","AddTag")}]`) or "AddTag")}{ss._Equal}\{{txt}\}{ss._Separator}`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}{((ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","AddTag"))}]`) or "AddTag")}{ss._Equal}\{{rich}\}{ss._Separator}`
@@ -3923,9 +4185,16 @@ end
 			if next(Attributes)~=nil then
 				code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","SetAttribute")}]`) or "SetAttribute"}{ss._Equal}\{`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","SetAttribute"))}]`) or "SetAttribute"}{ss._Equal}\{`
-				for i,v in spairs(Attributes) do
-					code..=`\n{string.rep(ss.t,Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\};`
-					riched_code..=`\n{string.rep(ss.t,Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\};`
+				if ss.NE_New_exec==true then
+					for i,v in spairs(Attributes) do
+						code..=`\n{string.rep(ss.t,Layer+2)}{(ss.NE_New_exec_AttributeBrackets==true and `[{ConstructorTostring("string",i)}]`) or i}{ss._Equal}{ConstructorTostring(typeof(v),v)}{ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer+2)}{(ss.NE_New_exec_AttributeBrackets==true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{select(2,ConstructorTostring(typeof(v),v))}{ss._Separator}`
+					end
+				else
+					for i,v in spairs(Attributes) do
+						code..=`\n{string.rep(ss.t,Layer+2)}\{{ConstructorTostring("string",i)}{ss._Separator}{ConstructorTostring(typeof(v),v)}\}{ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer+2)}\{{select(2,ConstructorTostring("string",i))}{ss._Separator}{select(2,ConstructorTostring(typeof(v),v))}\}{ss._Separator}`
+					end
 				end
 				code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}\}{ss._Separator}`
@@ -3940,6 +4209,7 @@ end
 		local children__bool:boolean = false
 		if #children~=0 then
 			local _CountWrapped = table.create(#children)::{Instance}
+			local _CountWinners:{[Instance]:number} = {}
 
 			code..=string.rep("\n",ss.SeparateChildren::number)
 			riched_code..=string.rep("\n",ss.SeparateChildren::number)
@@ -3950,9 +4220,15 @@ end
 				code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
 				riched_code..=`\n{string.rep(ss.t,Layer)}[{ss.NE_ChildrenTable__Name}]{ss._Equal}\{`
 			end
+			if ss.CountEnabled==true then
+				for i,v in children do
+					if table.find(_CountWrapped,v)~=nil then continue end
+					_CountWinners[v] = get__count(v,children,_CountWrapped,v:GetAttributes(),v:GetTags())
+				end
+			end
 			for i,v in children do
 				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
-				NE_BuildProperties(v,code,riched_code,Layer+1+((ss.NE_ChildrenTable==true and 1) or 0)::number,nil,get__count(v,children,_CountWrapped))
+				NE_BuildProperties(v,code,riched_code,Layer+1+((ss.NE_ChildrenTable==true and 1) or 0)::number,nil,_CountWinners[v]::number?)
 				children__bool=true
 			end
 			if ss.NE_ChildrenTable==true then
@@ -4134,10 +4410,79 @@ end
 				end
 			end
 			--function close
-			txt..=`\n{ss["end"]}\n\n`
-			rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n\n`
+			txt..=`\n{ss["end"]}\n`
+			rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n`
 
 		end
+
+		if CurrentConvertType=="Raw Luau" and ss.RL_DFM_Include==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
+			--function open
+			txt..=`{ss._local}function __{ss.RL_Deffered_Fn_Mesh}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText("__"..ss.RL_Deffered_Fn_Mesh,ScriptFunctionName)}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			if ss._SaveMeshes_Cache==true then
+				if ss.FastNamecall==true then
+					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
+					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
+				else
+					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh({ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
+				end
+
+			elseif ss.UseMeshFunction==true then
+				--Manually apply meshes but through function
+				txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+				rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+				if ss.FastNamecall==true then
+					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}Destroy(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
+
+					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
+					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
+				else
+					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+
+					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
+				end
+			else--Manually apply meshes
+				if ss.FastNamecall==true then
+					txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+
+					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}Destroy(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
+
+					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
+					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
+				else
+					txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+
+
+					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+
+					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
+				end
+			end
+			--function close
+			txt..=`\n{ss["end"]}\n`
+			rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n`
+
+			--Proxy function
+			--function open
+			txt..=`{ss._local}function {ss.RL_Deffered_Fn_Mesh}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss.RL_Deffered_Fn_Mesh,ScriptFunctionName)}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			--body
+			txt..=`\n{ss.t}task{(ss.IndexingBy=="Dots" and `.spawn`) or `[{ConstructorTostring("string","spawn")}]`}(__{ss.RL_Deffered_Fn_Mesh}{ss.FuncSeparator}{ss.localMeshVariableName}{ss.FuncSeparator}tx{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+			rich..=`\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("spawn",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","spawn"))}]`}(__{ss.RL_Deffered_Fn_Mesh}{ss.FuncSeparator}{ss.localMeshVariableName}{ss.FuncSeparator}tx{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
+			--function close
+			txt..=`\n{ss["end"]}\n`
+			rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n`
+		end
+
 		return txt,rich
 	end
 
@@ -4191,8 +4536,8 @@ end
 
 		--Registers and closures
 		if Registers>=ss.RegisterLimit::number then	
-			code..=`\n{string.rep(ss.t,Layer)}(function(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}({WriteRichText("function",ScriptFunction)}(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			code..=`\n{string.rep(ss.t,Layer)}(function(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}({WriteRichText("function",ScriptFunction)}(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
 			Registers=0
 			Layer+=1	
 		end
@@ -4241,8 +4586,8 @@ end
 		end
 		if ins.ClassName == "MeshPart" and (ins::MeshPart).MeshId~="" and ss._SaveMeshes==true and ss.MeshPartCreationMode=="Defered" then
 			local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-			code..=`\n{string.rep(ss.t,Layer)}{ss.RL_Deffered_Fn_Mesh}({varName}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID::string? or "")}{dictionary})`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.RL_Deffered_Fn_Mesh,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID::string? or ""))}{dictionary_rich})`
+			code..=`\n{string.rep(ss.t,Layer)}{ss.RL_Deffered_Fn_Mesh}({varName}{ss.FuncSeparator}{ConstructorTostring("string",properties.TextureID::string? or "")}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.RL_Deffered_Fn_Mesh,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",properties.TextureID::string? or ""))}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 		end
 		--Prop
 		--Tags and Attributes
@@ -4335,9 +4680,9 @@ end
 					end
 				elseif ss.OutsideHierarchyInstances=="SafeIndex" and type=="Instance" then
 					--Safe index
-					local c,r = GoToIndexPath(ins,v::Instance,{Text = varName,Rich = varName},i,Layer+1)
-					code..=`\n{string.rep(ss.t,Layer)}do`..c..`\n{string.rep(ss.t,Layer)}end`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("do",ScriptLuauKeyword)}`..r..`\n{string.rep(ss.t,Layer)}{WriteRichText("end",ScriptLuauKeyword)}`
+					local c,r = GoToIndexPath(ins,v::Instance,{Text = varName,Rich = varName},i,Layer+((ss.RL_WrapSafeIndexDoEnd==true  and 1) or 0)::number)
+					code..=((ss.RL_WrapSafeIndexDoEnd==true and `\n{string.rep(ss.t,Layer)}do`) or "")..c..((ss.RL_WrapSafeIndexDoEnd==true and `\n{string.rep(ss.t,Layer)}end`) or "")
+					riched_code..=((ss.RL_WrapSafeIndexDoEnd==true and `\n{string.rep(ss.t,Layer)}{WriteRichText("do",ScriptLuauKeyword)}`) or "")..r..((ss.RL_WrapSafeIndexDoEnd==true and `\n{string.rep(ss.t,Layer)}{WriteRichText("end",ScriptLuauKeyword)}`) or "")
 				end
 				continue
 			end
@@ -4372,8 +4717,9 @@ end
 		end
 		--closing for loop
 		if SameChildren~=nil then
-			code..=`\n{string.rep(ss.t,Layer-1)}{ss["end"]}`
-			riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
+			Layer-=1
+			code..=`\n{string.rep(ss.t,Layer)}{ss["end"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 		end
 
 		--late recursive hierarchy
@@ -4405,14 +4751,32 @@ end
 		--children
 		if #Children~=0 then
 			local _CountWrapped = table.create(#Children)::{Instance}
+			local _CountWinners:{[Instance]:number} = {}
 
 			code..=string.rep("\n",ss.SeparateChildren::number)
 			riched_code..=string.rep("\n",ss.SeparateChildren::number)
 			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
 			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.Separate_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
+			if ss.CountEnabled==true then
+				for i,v in Children do
+					if table.find(_CountWrapped,v)~=nil then continue end
+					local varName:string = string.gsub(v.Name,"[^%w_]","_")
+					if string.match(varName,"^%d") then
+						varName = `_{varName}`
+					end
+					if ClaimedVariableNames[varName]==true then
+						local Indexator:number = 1
+						while ClaimedVariableNames[`{varName}_{Indexator}`]==true do
+							Indexator+=1
+						end
+						varName..=`_{Indexator}`
+					end
+					_CountWinners[v] = get__count(v,Children,_CountWrapped,v:GetAttributes(),v:GetTags(),DirrectAccessToVarAvalible,varName)
+				end
+			end
 			for i,v in Children do
 				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
-				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,get__count(v,Children,_CountWrapped),varName,RecursiveHierarchyQueue)
+				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,_CountWinners[v]::number?,varName,RecursiveHierarchyQueue)
 			end
 			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
 			riched_code..=string.rep(ss.t,Layer)..WriteRichText(string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n"),ScriptComment)
@@ -4438,15 +4802,15 @@ end
 		local riched_code:CreateStr.class|any = CreateStr(ss.WriteRichText==false)
 		IncludeTopCode(code,riched_code,true)
 		local u_int32_Buff:buffer = buffer.create(4)
-		buffer.writeu32(u_int32_Buff,0,0)
+		buffer.writeu32(u_int32_Buff,0,ss.StartRegisterCount::number? or 0)
 		local b_Layer = buffer.create(4)
 		buffer.writeu32(b_Layer,0,0)
 		local RecursiveHierarchyQueue:{[Instance]:{{Prop:string;Var:string}}} = {}
 		local DirrectAccessToVarAvalible:{[Instance]:string} = {}
-		
-Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAvalible,nil,nil,RecursiveHierarchyQueue)
+
+		Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAvalible,nil,nil,RecursiveHierarchyQueue)
 		local Layer:number = buffer.readu32(b_Layer,0)
-		
+
 		--Adding recursive properties that has been set to InTheEnd
 		for i,__v in RecursiveHierarchyQueue do
 			local varName:string = DirrectAccessToVarAvalible[i]::string? or "____ERROR0xdeadbeef"
@@ -4466,8 +4830,8 @@ Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAv
 		end
 		--closing closures
 		for i=Layer,1,-1 do
-			code..=`\n{string.rep(ss.t,i)}end)()`
-			riched_code..=`\n{string.rep(ss.t,i)}{WriteRichText("end",ScriptLuauKeyword)})()`
+			code..=`\n{string.rep(ss.t,i)}{ss["end"]})()`
+			riched_code..=`\n{string.rep(ss.t,i)}{WriteRichText(ss["end"],ScriptLuauKeyword)})()`
 		end
 		ShowText(code,riched_code)
 	end
@@ -4491,6 +4855,10 @@ Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAv
 		end
 		ShowText(code,riched_code)
 	end
+	Code:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+		CodeOutput_Scrolling.CanvasSize = UDim2.new(0,Code.TextBounds.X,0,Code.TextBounds.Y)
+	end)
+	
 	local function __BegginConvert():()
 		--Mutate variables
 		UpdateSS()
@@ -4511,8 +4879,6 @@ Luau_Recursion(ins,code,riched_code,b_Layer,{},u_int32_Buff,DirrectAccessToVarAv
 		else
 			error("Something unexpected heppened somehow, This tab converter does not exist")
 		end
-		local bounds = TextService:GetTextSize(Code.Text,Code.TextSize,Code.Font,Vector2.new(math.huge,math.huge))
-		CodeOutput_Scrolling.CanvasSize = UDim2.new(0,bounds.X,0,bounds.Y)
 		SelectButtonByName("Converted Code")
 	end
 	local function BegginConvert():()
