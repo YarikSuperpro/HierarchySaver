@@ -1414,7 +1414,7 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	--Bypass
 	if AllPropertiesBypass==true then
 		local prop:{[string]:any} = {}
-		for i,v in Classes[ClassName] do
+		for i,v in Classes[ClassName] or {} do
 			local try,ret = pcall(__Index,instance::Instance,i)
 			if try then
 				prop[i]=ret
