@@ -17,6 +17,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ]]
 
 plugin.Name="Hierarchy Saver (plugin)"
+local TestService = game:GetService("TestService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
@@ -148,7 +149,7 @@ Widget:SetAttribute("Manage",false)
 		plugin:SetSetting("HierarchySaver_Settings",HttpService:JSONEncode(SessionData))
 	end)
 	local CurrentMainDebug_Scroll:ScrollingFrame? = nil
-	
+
 	local function BuildNewTempWidget():()
 		if CurrentMainDebug_Scroll~=nil then return end
 		local Temp:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID_Temp",DockWidgetPluginGuiInfo.new(
@@ -328,7 +329,7 @@ Widget:SetAttribute("Manage",false)
 				Removed.Position = UDim2.new(1, 0, 0.5, 0)
 				Removed.Size = UDim2.new(1, 0, 1, 0)
 				Removed.Text = ""
-				Removed.TextColor3 = Color3.new(1, 0, 0)
+				Removed.TextColor3 = Color3.new(0, 1, 0)
 				Removed.TextScaled = true
 				Removed.ZIndex = 5
 				Removed.Parent = TextLabel_1
@@ -342,7 +343,7 @@ Widget:SetAttribute("Manage",false)
 				UICorner_1.Parent = Line
 			end
 			--}
-			
+
 			ImageButton.MouseButton1Click:Once(function():()
 				plugin:SetSetting(v.PluginData,nil)
 				if v.func~=nil then
@@ -1404,13 +1405,20 @@ local InstanceDefPropertiesFallback:cache_prop = {
 	Sandboxed = false;
 }
 
+local function __Index(ins:Instance,prop:string):any
+	return (ins::any)[prop]::any
+end
+
 local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	local ClassName:string = instance.ClassName
 	--Bypass
 	if AllPropertiesBypass==true then
 		local prop:{[string]:any} = {}
 		for i,v in Classes[ClassName] do
-			prop[i]=instance[i]
+			local try,ret = pcall(__Index,instance::Instance,i)
+			if try then
+				prop[i]=ret
+			end
 		end
 		return prop
 	end
@@ -1420,7 +1428,9 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 		local try,ins = pcall(Instance.new,ClassName)
 		if try then
 			for i,v in Classes[ClassName] or InstanceClassProperties do
-				cache_prop[i]=ins[i]
+				local try,ret = pcall(__Index,(ins::any)::Instance,i)
+				if not try then continue end
+				cache_prop[i]=ret
 			end
 			(ins::Instance|any):Destroy()
 			Default_Properties_Cache[ClassName]=cache_prop
@@ -1429,8 +1439,10 @@ local function GetProperties(instance:any,AllPropertiesBypass:true?):cache_prop
 	local cache_prop:cache_prop = Default_Properties_Cache[ClassName] or InstanceDefPropertiesFallback
 	local prop:{[string]:any} = {}
 	for i,v in Classes[ClassName] or InstanceClassProperties do
-		if instance[i]==cache_prop[i] or i=="ClassName" or i=="className" or i=="Parent" then continue end
-		prop[i]=instance[i]
+		local try,ret = pcall(__Index,instance::Instance,i)
+		if not try then continue end
+		if ret==cache_prop[i] or i=="ClassName" or i=="className" or i=="Parent" then continue end
+		prop[i]=ret
 	end
 	return prop
 end
@@ -2216,6 +2228,18 @@ end
 			end
 		end
 	end
+	local escapes_str:{[string]:string} = {
+		["\\"] = "\\\\",
+		["\n"] = "\\n",
+		["\t"] = "\\t",
+		["\r"] = "\\r",
+		["\""] = "\\\"",
+		["\b"] = "\\b",
+		["\v"] = "\\v",
+		["\f"] = "\\f",
+	}
+	local match_escapes_str_ptrn:string = "[\n\t\r\\\"\b\v\f]"
+
 	ConstructorTostring_Switch = {
 		EnumItem = function(data:EnumItem,Bypass:true?):(string,string)
 			if ss.IndexingBy=="Dots" then
@@ -2561,17 +2585,23 @@ end
 			end
 			return `UDim2{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new",Bypass)}]`}({ConstructorTostring("number",data.X.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.X.Offset,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Scale,Bypass)}{ss.FuncSeparator}{ConstructorTostring("number",data.Y.Offset,Bypass)})`,`{WriteRichText("UDim2",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new",Bypass))}]`}({select(2,ConstructorTostring("number",data.X.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.X.Offset,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Scale,Bypass))}{ss.FuncSeparator}{select(2,ConstructorTostring("number",data.Y.Offset,Bypass))})`
 		end;
-		string = function(data:string):(string,string)
+		string = function(data:string,Bypass:true?):(string,string)
 			--Its for a joke mainly idk why i added that
+			if Bypass==true then return `"{data}"`,WriteRichText(`"{data}"`,ScriptString) end
 			if ss.HexademicalString==true then
 				local ret:string = ""
-				for char in string.gmatch(data, ".") do
-					ret ..= `\\x{string.format("%x", utf8.codepoint(char))}`
+				for s,e in utf8.graphemes(data) do
+					local char:string = string.sub(data,s,e)
+					for i = 1, #char do
+						local byte:number = string.byte(char, i)
+						ret..=`\\x{string.format("%02X", byte)}`
+					end
 				end
 				return `"{ret}"`,WriteRichText(`"{ret}"`,ScriptString)
 			end
 			-------------------------------------
-			data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"",`\"`)
+			data = string.gsub(data,match_escapes_str_ptrn,escapes_str)
+			--data=data:gsub("\\","\\\\"):gsub("\n","\\n"):gsub("\t","\\t"):gsub("\r","\\r"):gsub("\"","\\\""):gsub("\b","\\b"):gsub("\v","\\v"):gsub("\f","\\f"):gsub("\"",`\"`)
 			return `"{data}"`,WriteRichText(`"{data}"`,ScriptString)
 		end;
 		SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
@@ -2638,11 +2668,11 @@ end
 
 local IgnoredPropertiesList:{[any]:any}
 do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency"};["TextLabel"]={"Font"};["TextBox"]={"Font"};}]])
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency";"Font"};}]])
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
-		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency"};["TextLabel"]={"Font"};["TextBox"]={"Font"};}
+		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency";"Font"};}
 	end
 end
 
@@ -2658,9 +2688,9 @@ do
 	local ContentScroll = Ignored_Properies:WaitForChild("Content")
 	local Input_txt = ContentScroll:WaitForChild("TextBox")
 	local Input_Rich = Input_txt:WaitForChild("Rich")
-	
+
 	Input_txt:GetPropertyChangedSignal("TextBounds"):Connect(function():()
-		ContentScroll.CanvasSize=UDim2.new(0,Input_txt.TextBounds.X,0,Input_txt.TextBounds.Y)
+		ContentScroll.CanvasSize=UDim2.new(0,math.max(Input_txt.TextBounds.X,Input_Rich.TextBounds.X),0,math.max(Input_txt.TextBounds.Y,Input_Rich.TextBounds.Y))
 	end)
 	local function AdjustTextSize():()
 		Input_txt.TextSize=ss.CodeOutputTextSize
@@ -4314,6 +4344,49 @@ end
 			txt..="\n"
 			rich..="\n"
 		end
+		--base imports
+		if ss.Use_Base_Imports==true and ss.RL_Compile_baseFunctions==true and CurrentConvertType=="Raw Luau" then
+			local _base:string = ss.Base_Imports_FN_subName::string
+			for i,v in _baseImports do
+				txt..=`{ss._local}function {_base}{i}(ins{(ss.Typechecking==true and `{ss.TC_Type}Instance`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+				rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(`{_base}{i}`,ScriptFunctionName)}(ins{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Instance",Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+				local _exec:{[any]:any} = (type(v._exec)=="table" and v._exec) or {}
+				local Attributes:{[any]:any} = (type(_exec.SetAttribute)=="table" and _exec.SetAttribute) or {}
+				local Tags:{[any]:any} = (type(_exec.AddTag)=="table" and _exec.AddTag) or {}
+				if ss.FastNamecall==true then
+					for ii,vv in Attributes do
+						txt..=`\n{ss.t}SetAttribute(ins{ss.FuncSeparator}{ConstructorTostring("string",tostring(ii))}{ss.FuncSeparator}{ConstructorTostring(typeof(vv),vv)})`
+						rich..=`\n{ss.t}{WriteRichText("SetAttribute",ScriptMethod)}(ins{ss.FuncSeparator}{select(2,ConstructorTostring("string",tostring(ii)))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(vv),vv))})`
+					end
+					for ii,vv in Tags do
+						txt..=`\n{ss.t}AddTag(ins{ss.FuncSeparator}{ConstructorTostring("string",tostring(vv))})`
+						rich..=`\n{ss.t}{WriteRichText("AddTag",ScriptMethod)}(ins{ss.FuncSeparator}{select(2,ConstructorTostring("string",tostring(vv)))})`
+					end
+					for ii,vv in v do
+						if ii=="_exec" then continue end
+						txt..=`\n{ss.t}{ss.NC_InsSetProperty}(ins{ss.FuncSeparator}{ConstructorTostring("string",ii)}{ss.FuncSeparator}{ConstructorTostring(typeof(vv),vv)})`
+						rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}(ins{ss.FuncSeparator}{select(2,ConstructorTostring("string",ii))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(vv),vv))})`
+					end
+				else
+					for ii,vv in Attributes do
+						txt..=`\n{ss.t}ins:SetAttribute({ConstructorTostring("string",tostring(ii))}{ss.FuncSeparator}{ConstructorTostring(typeof(vv),vv)})`
+						rich..=`\n{ss.t}ins:{WriteRichText("SetAttribute",ScriptMethod)}({select(2,ConstructorTostring("string",tostring(ii)))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(vv),vv))})`
+					end
+					for ii,vv in Tags do
+						txt..=`\n{ss.t}ins:AddTag({ConstructorTostring("string",tostring(vv))})`
+						rich..=`\n{ss.t}ins:{WriteRichText("AddTag",ScriptMethod)}({select(2,ConstructorTostring("string",tostring(vv)))})`
+					end
+					for ii,vv in v do
+						if ii=="_exec" then continue end
+						txt..=`\n{ss.t}ins{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",ii)}]`) or "."..ii}{ss._Equal}{ConstructorTostring(typeof(vv),vv)}`
+						rich..=`\n{ss.t}ins{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",ii))}]`) or "."..WriteRichText(ii,ScriptProperty)}{ss._Equal}{select(2,ConstructorTostring(typeof(vv),vv))}`
+					end
+				end
+				txt..=`\n{ss["end"]}\n`
+				rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n`
+			end
+		end
+
 		if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
 			if ss._SaveMeshes_Cache then
 				--local alloc
@@ -4858,6 +4931,8 @@ end
 	Code:GetPropertyChangedSignal("TextBounds"):Connect(function():()
 		CodeOutput_Scrolling.CanvasSize = UDim2.new(0,Code.TextBounds.X,0,Code.TextBounds.Y)
 	end)
+	Code.Text = "--Code here"
+	Rich.Text = WriteRichText("--Code here",ScriptComment)
 	
 	local function __BegginConvert():()
 		--Mutate variables
@@ -4881,15 +4956,18 @@ end
 		end
 		SelectButtonByName("Converted Code")
 	end
-	local function BegginConvert():()
-		local try,err = (pcall::(func:typeof(__BegginConvert))->(boolean,string?))(__BegginConvert)
-		if not try then
-			if string.find(err::string,"bounds")~=nil then
-				warn("Please increase \"Buffer Size\" property inside Shared Settings")
-			else
-				warn(err)
-			end
+	local function ErrPrintFunc(...:any):()
+		local msg:string = ...
+		if string.find(msg::string,"bounds")~=nil then
+			warn("Please increase \"Buffer Size\" property inside Shared Settings")
+		else
+			warn(...)
+			TestService:Message(debug.traceback(coroutine.running()),script)
 		end
+	end
+
+	local function BegginConvert():()
+		xpcall(__BegginConvert,ErrPrintFunc)
 	end
 
 
