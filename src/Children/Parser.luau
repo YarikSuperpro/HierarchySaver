@@ -73,6 +73,11 @@ local function Tokenize(YSFFLUAU_TABLE:string):Tokens
 			end
 			if value=="number" then
 				if string.match(match,"^[-+]?[%.?%d_]*")=="" then continue end
+				local real_match:string = string.gsub(match,"_","")
+				table.insert(Tokens, {Context = value;Value = real_match}::Token)
+				i += #match
+				found = true
+				break
 			end
 			if value=="string" then
 				if string.find(match,"\\") then--Character escaping
