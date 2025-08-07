@@ -9,15 +9,15 @@ local function Update():()
 	ss._HierarchyBuilderFunctionName = tostring(SessionData["HierarchyBuilderFunctionName"] or "Nestify");
 	ss._NE_FN_BRACKETS = SessionData["NE_FN_BRACKETS"]==true;
 	ss._NE_Prop_Type_Newline = SessionData["NE_Prop_Type_Newline"]==true;
-	ss._NE_Instance_Recursive_Behavior = tostring(SessionData["NE_Instance_Recursive_Behavior"] or "_init")::"Ignore"|"_init";
+	ss._NE_Instance_Recursive_Behavior = tostring(SessionData["NE_Instance_Recursive_Behavior"] or "_init");
 	--ss._NE_Instance_Recursive_Behavior_FN_NAME = tostring(SessionData["NE_Instance_Recursive_Behavior_FN_NAME"] or "HierarchyRecursive");
 	--ss._NE_Instance_Recursive_Behavior_IndexMethod = tostring(SessionData["NE_Instance_Recursive_Behavior_IndexMethod"] or "CallFunction")::"Index"|"WaitForChild"|"CallFunction";
 	--ss._NE_Instance_Recursive_Behavior_IncludeFunction = SessionData["NE_Instance_Recursive_Behavior_IncludeFunction"]==true;
 	ss._NE_HierrarchyName = tostring(SessionData["NE_HierrarchyName"] or "Hierarchy");
-	ss._NE_Hierrarchy_TagsAndAttributes = tostring(SessionData["_NE_Hierrarchy_TagsAndAttributes"] or "_exec")::"Ignore"|"_exec"|"_init";
+	ss._NE_Hierrarchy_TagsAndAttributes = tostring(SessionData["_NE_Hierrarchy_TagsAndAttributes"] or "_exec")
 	ss._ReplacementInstance = tostring(SessionData["ReplacementInstance"] or "Configuration");
 	ss._Separator = tostring(SessionData["Separator"] or ";");
-	ss.OutsideHierarchyInstances = tostring(SessionData["OutsideHierarchyInstances"] or "Index")::"Index"|"WaitForChild"|"SafeIndex";
+	ss.OutsideHierarchyInstances = tostring(SessionData["OutsideHierarchyInstances"] or "Index")
 	ss.Use_Base_Imports = SessionData["Use_Base_Imports"]==true;
 	ss.Use_Base_Properties_MatchPersentage = tonumber(SessionData["Use_Base_Properties_MatchPersentage"] or 100) or 100;
 	ss._SaveMeshes = SessionData["SaveMeshes"]==true;
