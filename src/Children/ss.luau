@@ -59,6 +59,7 @@ local function Update():()
 	ss.MeshPartCreationMode = SessionData["MeshPartCreationMode"] or "Compute";
 	ss.Instance_PropGrab = SessionData["Instance_PropGrab"]==true;
 	
+	ss.ClosureSeparator = string.gsub(string.gsub(SessionData["ClosureSeparator"]::string,"\\n","\n"),"\\t","\t")
 	ss.StartRegisterCount = math.clamp(tonumber(SessionData["StartRegisterCount"]) or 0,0,4294967295)
 	ss.RL_WrapSafeIndexDoEnd = SessionData["RL_WrapSafeIndexDoEnd"]==true;
 	ss.NE_New_exec_AttributeBrackets = SessionData["NE_New_exec_AttributeBrackets"]==true;
