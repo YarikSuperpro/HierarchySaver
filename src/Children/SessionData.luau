@@ -113,7 +113,9 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["NE_New_exec_AttributeBrackets"] = true;
 	["RL_WrapSafeIndexDoEnd"] = true;
 	["StartRegisterCount"] = 0;
-	["ClosureSeparator"] = "\\n;";
+	["ClosureSeparator"] = ";";
+	["PreJMPClosureSeparator"] = "\\n";
+	["ClosureJMP"] = true;
 	
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
