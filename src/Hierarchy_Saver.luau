@@ -4617,8 +4617,8 @@ end
 
 		--Registers and closures
 		if Registers>=ss.RegisterLimit::number then	
-			code..=`\n{string.rep(ss.t,Layer)}(function(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}({WriteRichText("function",ScriptFunction)}(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			code..=`\n{string.rep(ss.t,Layer)}{ss.ClosureSeparator}(function(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{ss.ClosureSeparator}({WriteRichText("function",ScriptFunction)}(){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
 			Registers=0
 			Layer+=1	
 		end
