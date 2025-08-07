@@ -2250,7 +2250,7 @@ end
 		end;
 		number = function(data:number,Bypass:true?):(string,string)
 			--constants
-			if ss.NanConstant==true and data~=data then
+			if ss.NanConstant==true and data~=data and Bypass~=true then
 				return ss.NanConstant_Name,ss.NanConstant_Name
 			elseif data==math.pi or data==-math.pi then
 				return `{(data<0 and "-")or""}math{(ss.IndexingBy=="Dots" and ".pi") or `[{ConstructorTostring("string","pi",Bypass)}]`}`,`{(data<0 and "-")or""}{WriteRichText("math",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("pi",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","pi",Bypass))}]`}`
@@ -2265,7 +2265,7 @@ end
 				data = math.round(data*Precision)/Precision
 			end
 			local data_str:string = tostring(data)
-			if ss.HexNumbers==true and data%1==0 then
+			if ss.HexNumbers==true and data%1==0 and Bypass~=true then
 				if data == 0 then
 					data_str = "0x0"
 				else
