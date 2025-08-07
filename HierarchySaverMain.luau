@@ -2474,7 +2474,9 @@ end
 		end;
 		Faces = function(data:Faces,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			for i,v in Enum.NormalId:GetEnumItems() do
+			local Enums = Enum.NormalId:GetEnumItems()
+			table.sort(Enums)
+			for i,v in Enums do
 				if (data :: any)[v.Name] then
 					if txt~="" then
 						txt..=ss.FuncSeparator
@@ -2534,7 +2536,9 @@ end
 		end;
 		PhysicalProperties = function(data:PhysicalProperties,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			for i,v in Enum.Material:GetEnumItems() do
+			local Enums = Enum.Material:GetEnumItems()
+			table.sort(Enums)
+			for i,v in Enums do
 				if data==PhysicalProperties.new(v) then
 					txt = `{ConstructorTostring("EnumItem",v,Bypass)}`
 					rich = `{select(2,ConstructorTostring("EnumItem",v,Bypass))}`
@@ -2606,7 +2610,9 @@ end
 		end;
 		SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			for i,v in Enum.SecurityCapability:GetEnumItems() do
+			local Enums = Enum.SecurityCapability:GetEnumItems()
+			table.sort(Enums)
+			for i,v in Enums do
 				if data:Contains(v) then
 					if txt~="" then
 						txt..=ss.FuncSeparator
@@ -4290,16 +4296,22 @@ end
 		txt..=`{ss._local}function {ss._SaveMeshes_FN_Name}(Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss["fbend"]}`
 		rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText(ss._SaveMeshes_FN_Name,ScriptFunctionName)}(Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss["fbend"]}`
 	end
+	local __Write__HashTable_Enum_CollisionFidelity = Enum.CollisionFidelity:GetEnumItems()
+	local __Write__HashTable_Enums_RenderFidelity = Enum.RenderFidelity:GetEnumItems()
+	local __Write__HashTable_Enums_FluidFidelity = Enum.FluidFidelity:GetEnumItems()
+	table.sort(__Write__HashTable_Enum_CollisionFidelity)
+	table.sort(__Write__HashTable_Enums_RenderFidelity)
+	table.sort(__Write__HashTable_Enums_FluidFidelity)
 	local function __Write__HashTable(txt:CreateStr.class|any,rich:CreateStr.class|any):()
 		txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}` 				
 		rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}` 				
 		if ss.CMPAsyncService=="InsertService" then
 			txt..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}`) or ""}{ss._Equal}\{`
 			rich..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}`) or ""}{ss._Equal}\{`
-			for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+			for i,v in __Write__HashTable_Enum_CollisionFidelity do
 				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
 				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
-				for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+				for ii,vv in __Write__HashTable_Enums_RenderFidelity do
 					txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{\}{ss._Separator}`
 					rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{\}{ss._Separator}`
 				end
@@ -4309,13 +4321,13 @@ end
 		else
 			txt..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[Enum.CollisionFidelity]{ss.TC_Type}\{[Enum.RenderFidelity]{ss.TC_Type}\{[Enum.FluidFidelity]{ss.TC_Type}\{[string]{ss.TC_Type}MeshPart\}\}\}\}`) or ""}{ss._Equal}\{`
 			rich..=`{(ss.Typechecking==true and `{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}]{ss.TC_Type}\{[{WriteRichText("string",Color3.new(0,1,1))}]{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}\}\}\}\}`) or ""}{ss._Equal}\{`
-			for i,v in spairs(Enum.CollisionFidelity:GetEnumItems()) do
+			for i,v in __Write__HashTable_Enum_CollisionFidelity do
 				txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{ConstructorTostring("EnumItem",v::Enum.CollisionFidelity)}]{ss._Equal}\{`
 				rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",v::Enum.CollisionFidelity))}]{ss._Equal}\{`
-				for ii,vv in spairs(Enum.RenderFidelity:GetEnumItems()) do
+				for ii,vv in __Write__HashTable_Enums_RenderFidelity do
 					txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vv::Enum.RenderFidelity)}]{ss._Equal}\{`
 					rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vv::Enum.RenderFidelity))}]{ss._Equal}\{`
-					for iii,vvv in spairs(Enum.FluidFidelity:GetEnumItems()) do
+					for iii,vvv in __Write__HashTable_Enums_FluidFidelity do
 						txt..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity)}]{ss._Equal}\{\}{ss._Separator}`
 						rich..=`{(ss.CacheHashTableSpacing==true and `\n{ss.t}{ss.t}{ss.t}`) or ""}[{select(2,ConstructorTostring("EnumItem",vvv::Enum.FluidFidelity))}]{ss._Equal}\{\}{ss._Separator}`
 					end
@@ -4488,7 +4500,7 @@ end
 
 		end
 
-		if CurrentConvertType=="Raw Luau" and ss.RL_DFM_Include==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
+		if CurrentConvertType=="Raw Luau" and ss.MeshPartCreationMode=="Defered" and ss.RL_DFM_Include==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
 			--function open
 			txt..=`{ss._local}function __{ss.RL_Deffered_Fn_Mesh}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
 			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText("__"..ss.RL_Deffered_Fn_Mesh,ScriptFunctionName)}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
