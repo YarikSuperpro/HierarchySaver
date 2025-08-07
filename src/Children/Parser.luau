@@ -367,7 +367,6 @@ returns: deserialized Luau datatype
 ]]
 local function Parse(YSFFLUAU_TABLE:string):any
 	local tokens:Tokens = Tokenize(YSFFLUAU_TABLE)
-	print(tokens)
 	local value,index = Parse_Value(tokens,1)
 	return value
 end
