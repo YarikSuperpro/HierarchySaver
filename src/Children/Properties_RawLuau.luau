@@ -38,6 +38,12 @@ return {
 						Description = "Ammount of registers you get on start.";
 						Type = "number";
 					};
+					{
+						Name = "ClosureSeparator";
+						DisplayName = "Closure Separator";
+						Description = "Closure Separator symbol to prevent linting. (supports \\n and \\t parsing)";
+						Type = "string";
+					};
 				};
 			};
 			{
