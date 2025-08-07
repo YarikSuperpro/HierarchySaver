@@ -44,6 +44,18 @@ return {
 						Description = "Closure Separator symbol to prevent linting. (supports \\n and \\t parsing)";
 						Type = "string";
 					};
+					{
+						Name = "ClosureJMP";
+						DisplayName = "Closure Spacing";
+						Description = "Tab symbol for newline";
+						Type = "boolean";
+					};
+					{
+						Name = "PreJMPClosureSeparator";
+						DisplayName = "Current Closure Line";
+						Description = "I have no idea how to document that: Line{ThisSimbol}{ClosureJMP}{ClosureSeparator} if that makes sense. (supports \\n and \\t parsing)";
+						Type = "string";
+					};
 				};
 			};
 			{
