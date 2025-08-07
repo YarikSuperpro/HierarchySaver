@@ -2474,9 +2474,7 @@ end
 		end;
 		Faces = function(data:Faces,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			local Enums = Enum.NormalId:GetEnumItems()
-			table.sort(Enums)
-			for i,v in Enums do
+			for i,v in Enum.NormalId:GetEnumItems() do
 				if (data :: any)[v.Name] then
 					if txt~="" then
 						txt..=ss.FuncSeparator
@@ -2536,9 +2534,7 @@ end
 		end;
 		PhysicalProperties = function(data:PhysicalProperties,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			local Enums = Enum.Material:GetEnumItems()
-			table.sort(Enums)
-			for i,v in Enums do
+			for i,v in Enum.Material:GetEnumItems() do
 				if data==PhysicalProperties.new(v) then
 					txt = `{ConstructorTostring("EnumItem",v,Bypass)}`
 					rich = `{select(2,ConstructorTostring("EnumItem",v,Bypass))}`
@@ -2610,9 +2606,7 @@ end
 		end;
 		SecurityCapabilities = function(data:SecurityCapabilities,Bypass:true?):(string,string)
 			local txt,rich = "",""
-			local Enums = Enum.SecurityCapability:GetEnumItems()
-			table.sort(Enums)
-			for i,v in Enums do
+			for i,v in Enum.SecurityCapability:GetEnumItems() do
 				if data:Contains(v) then
 					if txt~="" then
 						txt..=ss.FuncSeparator
@@ -4299,9 +4293,6 @@ end
 	local __Write__HashTable_Enum_CollisionFidelity = Enum.CollisionFidelity:GetEnumItems()
 	local __Write__HashTable_Enums_RenderFidelity = Enum.RenderFidelity:GetEnumItems()
 	local __Write__HashTable_Enums_FluidFidelity = Enum.FluidFidelity:GetEnumItems()
-	table.sort(__Write__HashTable_Enum_CollisionFidelity)
-	table.sort(__Write__HashTable_Enums_RenderFidelity)
-	table.sort(__Write__HashTable_Enums_FluidFidelity)
 	local function __Write__HashTable(txt:CreateStr.class|any,rich:CreateStr.class|any):()
 		txt..=`{ss._local}{ss._SaveMeshes_CacheTableName}` 				
 		rich..=`{WriteRichText(ss._local,ScriptLocal)}{ss._SaveMeshes_CacheTableName}` 				
