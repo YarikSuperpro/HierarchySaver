@@ -29,7 +29,8 @@ local Patterns:{[string]:string} = {
 	["^false"]="boolean";
 	["^nil"]="nil";
 	["^%s"]="\0";
-	["^%-?%d+%.?%d*"]="number";
+	["^[-+]?0?[xX]?[%da-fA-F_]+%.?[%da-fA-F_]*[eE]?[%d_%.]*"] = "number";
+	--["^%-?%d+%.?%d*"] = "number";
 	[`^["'\`][^"^'^\`]*["'\`]`]="string";
 	["^%.?[%a_][%w_%.:]*"]="Identifier";
 }
@@ -66,6 +67,12 @@ local function Tokenize(YSFFLUAU_TABLE:string):Tokens
 				i += #match
 				found = true
 				break
+			end
+			if value=="Symbol" then
+				if match=="-" and (Tokens[#Tokens]==nil or Tokens[#Tokens].Context=="Symbol") and string.match(YSFFLUAU_TABLE,"^[%-][%.%d_]+",i) then continue end
+			end
+			if value=="number" then
+				if string.match(match,"^[-+]?[%.?%d_]*")=="" then continue end
 			end
 			if value=="string" then
 				if string.find(match,"\\") then--Character escaping
@@ -273,7 +280,7 @@ local function Parse_Value(tokens:Tokens,Index:number,SetTo:boolean?):(any,numbe
 				library=library[v::string]
 			end
 		end
-		local args:{any}
+		local args:{any}?
 		local i:number=Index+1
 		while i<#tokens do
 			local peek,ind,Set = Parse_Value(tokens,i)
@@ -283,7 +290,7 @@ local function Parse_Value(tokens:Tokens,Index:number,SetTo:boolean?):(any,numbe
 				library=library[peek]
 				i=ind
 			elseif type(peek)=="table" then
-				args=peek
+				args=peek::{any}
 				i=ind
 				break
 			else
@@ -295,7 +302,11 @@ local function Parse_Value(tokens:Tokens,Index:number,SetTo:boolean?):(any,numbe
 			error(`Unable to index nil library at: {Index}, Non existen key`)
 		end
 		if type(library)=="function" then
-			local ret:any = library(table.unpack(args or {}))
+			if (args::any)==nil then
+				local vl,ind = Parse_Expression(tokens,i,library)
+				return vl,ind,SetTo
+			end
+			local ret:any = (library::(...any)->(...any))(table.unpack(args or {}))
 			local vl,ind = Parse_Expression(tokens,i,ret)
 			return vl,ind,SetTo
 		end
@@ -356,6 +367,7 @@ returns: deserialized Luau datatype
 ]]
 local function Parse(YSFFLUAU_TABLE:string):any
 	local tokens:Tokens = Tokenize(YSFFLUAU_TABLE)
+	print(tokens)
 	local value,index = Parse_Value(tokens,1)
 	return value
 end
