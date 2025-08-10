@@ -10,6 +10,7 @@ Answer: plugin obviously i just made init script for people who don't understand
 Script is compiled by this plugin itself by the way
 ]]
 
+
 local Main = Instance.new("Frame") do
 	Main.Name = "Main"
 	Main.AnchorPoint = Vector2.new(0.5,0.5)
@@ -325,190 +326,36 @@ local Label_1 = Instance.new("TextLabel") do
 	Label_1.Parent = Hint
 end
 local UIStroke = Instance.new("UIStroke",Hint)
-local IgnoredProperties = Instance.new("Frame") do
-	IgnoredProperties.Name = "IgnoredProperties"
-	IgnoredProperties.AnchorPoint = Vector2.new(0.5,0.5)
-	IgnoredProperties.BackgroundColor3 = Color3.new(0.424,0.424,0.424)
-	IgnoredProperties.BorderColor3 = Color3.new(0,0,0)
-	IgnoredProperties.BorderSizePixel = 0
-	IgnoredProperties.Position = UDim2.new(0.5,0,0.5,0)
-	IgnoredProperties.Size = UDim2.new(1,0,1,0)
-	IgnoredProperties.Visible = false
-	IgnoredProperties.ZIndex = 10
-	IgnoredProperties.Parent = Main
+local Search_1 = Instance.new("TextBox") do
+	Search_1.Name = "Search"
+	Search_1.AnchorPoint = Vector2.new(0.5,0.5)
+	Search_1.BackgroundColor3 = Color3.new(0.153,0.153,0.153)
+	Search_1.BackgroundTransparency = 0.5
+	Search_1.BorderColor3 = Color3.new(0,0,0)
+	Search_1.BorderSizePixel = 0
+	Search_1.ClearTextOnFocus = false
+	Search_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Search_1.PlaceholderText = "Search🔍"
+	Search_1.Position = UDim2.new(0.5,0,0.5,0)
+	Search_1.Size = UDim2.new(0.8,0,0.2,0)
+	Search_1.Text = ""
+	Search_1.TextColor3 = Color3.new(1,1,1)
+	Search_1.TextScaled = true
+	Search_1.TextSize = 14
+	Search_1.TextWrapped = true
+	Search_1.Visible = false
+	Search_1.ZIndex = 100_000
+	Search_1.Parent = Main
 end
-
-local Exit = Instance.new("TextButton") do
-	Exit.Name = "Exit"
-	Exit.AutoButtonColor = false
-	Exit.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Exit.BackgroundTransparency = 1
-	Exit.BorderColor3 = Color3.new(0,0,0)
-	Exit.BorderSizePixel = 0
-	Exit.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Exit.Position = UDim2.new(0.5,0,0,0)
-	Exit.Size = UDim2.new(0.5,0,0.1,0)
-	Exit.Text = "Back"
-	Exit.TextColor3 = Color3.new(1,1,1)
-	Exit.TextScaled = true
-	Exit.TextSize = 14
-	Exit.TextWrapped = true
-	Exit.ZIndex = 15
-	Exit.Parent = IgnoredProperties
-end
-
-local Frame = Instance.new("Frame") do
-	Frame.AnchorPoint = Vector2.new(0.5,0.5)
-	Frame.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame.BorderColor3 = Color3.new(0,0,0)
-	Frame.BorderSizePixel = 0
-	Frame.Position = UDim2.new(0.5,0,0.5,0)
-	Frame.Size = UDim2.new(1,0,1,0)
-	Frame.ZIndex = 12
-	Frame.Parent = Exit
-end
-
-local UICorner_5 = Instance.new("UICorner") do
-	UICorner_5.CornerRadius = UDim.new(0.5,0)
-	UICorner_5.Parent = Frame
-end
-local Frame1_2 = Instance.new("Frame") do
-	Frame1_2.Name = "Frame1"
-	Frame1_2.AnchorPoint = Vector2.xAxis
-	Frame1_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_2.BorderColor3 = Color3.new(0,0,0)
-	Frame1_2.BorderSizePixel = 0
-	Frame1_2.Position = UDim2.new(1,0,0,0)
-	Frame1_2.Size = UDim2.new(1,0,0.5,0)
-	Frame1_2.ZIndex = 13
-	Frame1_2.Parent = Exit
-end
-local Frame2_2 = Instance.new("Frame") do
-	Frame2_2.Name = "Frame2"
-	Frame2_2.AnchorPoint = Vector2.xAxis
-	Frame2_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_2.BorderColor3 = Color3.new(0,0,0)
-	Frame2_2.BorderSizePixel = 0
-	Frame2_2.Position = UDim2.new(1,0,0,0)
-	Frame2_2.Size = UDim2.new(0.5,0,1,0)
-	Frame2_2.ZIndex = 13
-	Frame2_2.Parent = Exit
-end
-local Import = Instance.new("TextButton") do
-	Import.Name = "Import"
-	Import.AnchorPoint = Vector2.xAxis
-	Import.AutoButtonColor = false
-	Import.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Import.BackgroundTransparency = 1
-	Import.BorderColor3 = Color3.new(0,0,0)
-	Import.BorderSizePixel = 0
-	Import.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Import.Position = UDim2.new(0.5,0,0,0)
-	Import.Size = UDim2.new(0.5,0,0.1,0)
-	Import.Text = "Import"
-	Import.TextColor3 = Color3.new(1,1,1)
-	Import.TextScaled = true
-	Import.TextSize = 14
-	Import.TextWrapped = true
-	Import.ZIndex = 15
-	Import.Parent = IgnoredProperties
-end
-
-local Frame_1 = Instance.new("Frame") do
-	Frame_1.AnchorPoint = Vector2.new(0.5,0.5)
-	Frame_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame_1.BorderColor3 = Color3.new(0,0,0)
-	Frame_1.BorderSizePixel = 0
-	Frame_1.Position = UDim2.new(0.5,0,0.5,0)
-	Frame_1.Size = UDim2.new(1,0,1,0)
-	Frame_1.ZIndex = 12
-	Frame_1.Parent = Import
-end
-
-local UICorner_6 = Instance.new("UICorner") do
-	UICorner_6.CornerRadius = UDim.new(0.5,0)
-	UICorner_6.Parent = Frame_1
-end
-local Frame1_3 = Instance.new("Frame") do
-	Frame1_3.Name = "Frame1"
-	Frame1_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_3.BorderColor3 = Color3.new(0,0,0)
-	Frame1_3.BorderSizePixel = 0
-	Frame1_3.Size = UDim2.new(1,0,0.5,0)
-	Frame1_3.ZIndex = 13
-	Frame1_3.Parent = Import
-end
-local Frame2_3 = Instance.new("Frame") do
-	Frame2_3.Name = "Frame2"
-	Frame2_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_3.BorderColor3 = Color3.new(0,0,0)
-	Frame2_3.BorderSizePixel = 0
-	Frame2_3.Size = UDim2.new(0.5,0,1,0)
-	Frame2_3.ZIndex = 13
-	Frame2_3.Parent = Import
-end
-local Content = Instance.new("ScrollingFrame") do
-	Content.Name = "Content"
-	Content.Active = true
-	Content.AnchorPoint = Vector2.new(0.5,0)
-	Content.BackgroundColor3 = Color3.new(1,1,1)
-	Content.BackgroundTransparency = 0.25
-	Content.BorderColor3 = Color3.new(0,0,0)
-	Content.BorderSizePixel = 0
-	Content.Position = UDim2.new(0.5,0,0.1,0)
-	Content.ScrollBarImageColor3 = Color3.new(0,0,0)
-	Content.Size = UDim2.new(1,0,0.8,0)
-	Content.ZIndex = 11
-	Content.Parent = IgnoredProperties
-end
-
-local TextBox = Instance.new("TextBox") do
-	TextBox.BackgroundColor3 = Color3.new(1,1,1)
-	TextBox.BackgroundTransparency = 1
-	TextBox.BorderColor3 = Color3.new(0,0,0)
-	TextBox.BorderSizePixel = 0
-	TextBox.ClearTextOnFocus = false
-	TextBox.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	TextBox.MultiLine = true
-	TextBox.Size = UDim2.new(1,0,1,0)
-	TextBox.Text = ""
-	TextBox.TextColor3 = Color3.new(0,0,0)
-	TextBox.TextSize = 14
-	TextBox.TextTransparency = 0.99
-	TextBox.TextXAlignment = Enum.TextXAlignment.Left
-	TextBox.TextYAlignment = Enum.TextYAlignment.Top
-	TextBox.ZIndex = 12
-	TextBox.Parent = Content
-end
-
-local Rich = Instance.new("TextLabel") do
-	Rich.Name = "Rich"
-	Rich.Active = true
-	Rich.BackgroundColor3 = Color3.new(1,1,1)
-	Rich.BackgroundTransparency = 1
-	Rich.BorderColor3 = Color3.new(0,0,0)
-	Rich.BorderSizePixel = 0
-	Rich.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Rich.RichText = true
-	Rich.Selectable = true
-	Rich.Size = UDim2.new(1,0,1,0)
-	Rich.Text = ""
-	Rich.TextColor3 = Color3.new(0,0,0)
-	Rich.TextSize = 14
-	Rich.TextXAlignment = Enum.TextXAlignment.Left
-	Rich.TextYAlignment = Enum.TextYAlignment.Top
-	Rich.ZIndex = 11
-	Rich.Parent = TextBox
-end
-local Import_Base = Instance.new("Frame") do
-	Import_Base.Name = "Import_Base"
-	Import_Base.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
-	Import_Base.BorderColor3 = Color3.new(0,0,0)
-	Import_Base.BorderSizePixel = 0
-	Import_Base.Size = UDim2.new(1,0,1,0)
-	Import_Base.Visible = false
-	Import_Base.ZIndex = 999
-	Import_Base.Parent = Main
+local Import_PathMacro = Instance.new("Frame") do
+	Import_PathMacro.Name = "Import_PathMacro"
+	Import_PathMacro.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
+	Import_PathMacro.BorderColor3 = Color3.new(0,0,0)
+	Import_PathMacro.BorderSizePixel = 0
+	Import_PathMacro.Size = UDim2.new(1,0,1,0)
+	Import_PathMacro.Visible = false
+	Import_PathMacro.ZIndex = 999
+	Import_PathMacro.Parent = Main
 end
 
 local Exit_Frame = Instance.new("Frame") do
@@ -520,53 +367,53 @@ local Exit_Frame = Instance.new("Frame") do
 	Exit_Frame.Position = UDim2.new(1,0,0,0)
 	Exit_Frame.Size = UDim2.new(0.1,0,0.1,0)
 	Exit_Frame.ZIndex = 1_005
-	Exit_Frame.Parent = Import_Base
+	Exit_Frame.Parent = Import_PathMacro
 end
 
-local UICorner_7 = Instance.new("UICorner") do
-	UICorner_7.CornerRadius = UDim.new(0.25,0)
-	UICorner_7.Parent = Exit_Frame
+local UICorner_5 = Instance.new("UICorner") do
+	UICorner_5.CornerRadius = UDim.new(0.25,0)
+	UICorner_5.Parent = Exit_Frame
 end
-local Frame1_4 = Instance.new("Frame") do
-	Frame1_4.Name = "Frame1"
-	Frame1_4.AnchorPoint = Vector2.xAxis
-	Frame1_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_4.BorderColor3 = Color3.new(0,0,0)
-	Frame1_4.BorderSizePixel = 0
-	Frame1_4.Position = UDim2.new(1,0,0,0)
-	Frame1_4.Size = UDim2.new(0.25,0,1,0)
-	Frame1_4.ZIndex = 1_005
-	Frame1_4.Parent = Exit_Frame
+local Frame1_2 = Instance.new("Frame") do
+	Frame1_2.Name = "Frame1"
+	Frame1_2.AnchorPoint = Vector2.xAxis
+	Frame1_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_2.BorderColor3 = Color3.new(0,0,0)
+	Frame1_2.BorderSizePixel = 0
+	Frame1_2.Position = UDim2.new(1,0,0,0)
+	Frame1_2.Size = UDim2.new(0.25,0,1,0)
+	Frame1_2.ZIndex = 1_005
+	Frame1_2.Parent = Exit_Frame
 end
-local Frame2_4 = Instance.new("Frame") do
-	Frame2_4.Name = "Frame2"
-	Frame2_4.AnchorPoint = Vector2.xAxis
-	Frame2_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_4.BorderColor3 = Color3.new(0,0,0)
-	Frame2_4.BorderSizePixel = 0
-	Frame2_4.Position = UDim2.new(1,0,0,0)
-	Frame2_4.Size = UDim2.new(1,0,0.75,0)
-	Frame2_4.ZIndex = 1_005
-	Frame2_4.Parent = Exit_Frame
+local Frame2_2 = Instance.new("Frame") do
+	Frame2_2.Name = "Frame2"
+	Frame2_2.AnchorPoint = Vector2.xAxis
+	Frame2_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_2.BorderColor3 = Color3.new(0,0,0)
+	Frame2_2.BorderSizePixel = 0
+	Frame2_2.Position = UDim2.new(1,0,0,0)
+	Frame2_2.Size = UDim2.new(1,0,0.75,0)
+	Frame2_2.ZIndex = 1_005
+	Frame2_2.Parent = Exit_Frame
 end
-local Exit_1 = Instance.new("TextButton") do
-	Exit_1.Name = "Exit"
-	Exit_1.AnchorPoint = Vector2.new(0.5,0.5)
-	Exit_1.AutoButtonColor = false
-	Exit_1.BackgroundColor3 = Color3.new(1,1,1)
-	Exit_1.BackgroundTransparency = 1
-	Exit_1.BorderColor3 = Color3.new(0,0,0)
-	Exit_1.BorderSizePixel = 0
-	Exit_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Exit_1.Position = UDim2.new(0.5,0,0.5,0)
-	Exit_1.Size = UDim2.new(1,0,1,0)
-	Exit_1.Text = "X"
-	Exit_1.TextColor3 = Color3.new(1,1,1)
-	Exit_1.TextScaled = true
-	Exit_1.TextSize = 14
-	Exit_1.TextWrapped = true
-	Exit_1.ZIndex = 1_006
-	Exit_1.Parent = Exit_Frame
+local Exit = Instance.new("TextButton") do
+	Exit.Name = "Exit"
+	Exit.AnchorPoint = Vector2.new(0.5,0.5)
+	Exit.AutoButtonColor = false
+	Exit.BackgroundColor3 = Color3.new(1,1,1)
+	Exit.BackgroundTransparency = 1
+	Exit.BorderColor3 = Color3.new(0,0,0)
+	Exit.BorderSizePixel = 0
+	Exit.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Exit.Position = UDim2.new(0.5,0,0.5,0)
+	Exit.Size = UDim2.new(1,0,1,0)
+	Exit.Text = "X"
+	Exit.TextColor3 = Color3.new(1,1,1)
+	Exit.TextScaled = true
+	Exit.TextSize = 14
+	Exit.TextWrapped = true
+	Exit.ZIndex = 1_006
+	Exit.Parent = Exit_Frame
 end
 local Exit_Back = Instance.new("Frame") do
 	Exit_Back.Name = "Exit_Back"
@@ -579,36 +426,36 @@ local Exit_Back = Instance.new("Frame") do
 	Exit_Back.Selectable = true
 	Exit_Back.Size = UDim2.new(0.05,0,0.05,0)
 	Exit_Back.ZIndex = 1_001
-	Exit_Back.Parent = Import_Base
+	Exit_Back.Parent = Import_PathMacro
 end
 
-local UICorner_8 = Instance.new("UICorner") do
-	UICorner_8.CornerRadius = UDim.new(0.25,0)
-	UICorner_8.Parent = Exit_Back
+local UICorner_6 = Instance.new("UICorner") do
+	UICorner_6.CornerRadius = UDim.new(0.25,0)
+	UICorner_6.Parent = Exit_Back
 end
-local Frame1_5 = Instance.new("Frame") do
-	Frame1_5.Name = "Frame1"
-	Frame1_5.AnchorPoint = Vector2.yAxis
-	Frame1_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_5.BorderColor3 = Color3.new(0,0,0)
-	Frame1_5.BorderSizePixel = 0
-	Frame1_5.Position = UDim2.new(0,0,1,0)
-	Frame1_5.Size = UDim2.new(0.25,0,1,0)
-	Frame1_5.ZIndex = 1_001
-	Frame1_5.Parent = Exit_Back
+local Frame1_3 = Instance.new("Frame") do
+	Frame1_3.Name = "Frame1"
+	Frame1_3.AnchorPoint = Vector2.yAxis
+	Frame1_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_3.BorderColor3 = Color3.new(0,0,0)
+	Frame1_3.BorderSizePixel = 0
+	Frame1_3.Position = UDim2.new(0,0,1,0)
+	Frame1_3.Size = UDim2.new(0.25,0,1,0)
+	Frame1_3.ZIndex = 1_001
+	Frame1_3.Parent = Exit_Back
 end
-local Frame2_5 = Instance.new("Frame") do
-	Frame2_5.Name = "Frame2"
-	Frame2_5.Active = true
-	Frame2_5.AnchorPoint = Vector2.yAxis
-	Frame2_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_5.BorderColor3 = Color3.new(0,0,0)
-	Frame2_5.BorderSizePixel = 0
-	Frame2_5.Position = UDim2.new(0,0,1,0)
-	Frame2_5.Selectable = true
-	Frame2_5.Size = UDim2.new(1,0,0.75,0)
-	Frame2_5.ZIndex = 1_001
-	Frame2_5.Parent = Exit_Back
+local Frame2_3 = Instance.new("Frame") do
+	Frame2_3.Name = "Frame2"
+	Frame2_3.Active = true
+	Frame2_3.AnchorPoint = Vector2.yAxis
+	Frame2_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_3.BorderColor3 = Color3.new(0,0,0)
+	Frame2_3.BorderSizePixel = 0
+	Frame2_3.Position = UDim2.new(0,0,1,0)
+	Frame2_3.Selectable = true
+	Frame2_3.Size = UDim2.new(1,0,0.75,0)
+	Frame2_3.ZIndex = 1_001
+	Frame2_3.Parent = Exit_Back
 end
 local Button_2 = Instance.new("TextButton") do
 	Button_2.Name = "Button"
@@ -628,17 +475,49 @@ local Button_2 = Instance.new("TextButton") do
 	Button_2.ZIndex = 1_002
 	Button_2.Parent = Exit_Back
 end
-local _base = Instance.new("Frame") do
-	_base.Name = "_base"
-	_base.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
-	_base.BorderColor3 = Color3.new(0,0,0)
-	_base.BorderSizePixel = 0
-	_base.Position = UDim2.new(0.055,0,0.241,0)
-	_base.Size = UDim2.new(0.94,0,0.759,0)
-	_base.ZIndex = 999
-	_base.Parent = Import_Base
+local PathMacro = Instance.new("Frame") do
+	PathMacro.Name = "PathMacro"
+	PathMacro.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
+	PathMacro.BorderColor3 = Color3.new(0,0,0)
+	PathMacro.BorderSizePixel = 0
+	PathMacro.Position = UDim2.new(0.055,0,0.241,0)
+	PathMacro.Size = UDim2.new(0.94,0,0.759,0)
+	PathMacro.ZIndex = 999
+	PathMacro.Parent = Import_PathMacro
 end
 
+local Frame = Instance.new("Frame") do
+	Frame.AnchorPoint = Vector2.yAxis
+	Frame.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
+	Frame.BorderColor3 = Color3.new(0,0,0)
+	Frame.BorderSizePixel = 0
+	Frame.Position = UDim2.new(0,0,1,0)
+	Frame.Size = UDim2.new(1,0,0.025,0)
+	Frame.ZIndex = 999
+	Frame.Parent = PathMacro
+end
+local Title = Instance.new("TextLabel") do
+	Title.Name = "Title"
+	Title.AnchorPoint = Vector2.new(0.5,0)
+	Title.BackgroundColor3 = Color3.new(1,1,1)
+	Title.BackgroundTransparency = 1
+	Title.BorderColor3 = Color3.new(0,0,0)
+	Title.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title.Position = UDim2.new(0.613,0,0,0)
+	Title.Size = UDim2.new(0.725,0,0.175,0)
+	Title.Text = "Path Macro"
+	Title.TextColor3 = Color3.new(1,1,1)
+	Title.TextScaled = true
+	Title.TextSize = 14
+	Title.TextWrapped = true
+	Title.ZIndex = 999
+	Title.Parent = PathMacro
+end
+
+local UICorner_7 = Instance.new("UICorner") do
+	UICorner_7.CornerRadius = UDim.new(0.025,0)
+	UICorner_7.Parent = Title
+end
 local Imported_Scroll = Instance.new("ScrollingFrame") do
 	Imported_Scroll.Name = "Imported_Scroll"
 	Imported_Scroll.AnchorPoint = Vector2.new(1,0.5)
@@ -648,119 +527,54 @@ local Imported_Scroll = Instance.new("ScrollingFrame") do
 	Imported_Scroll.BorderSizePixel = 0
 	Imported_Scroll.Position = UDim2.new(0.975,0,0.55,0)
 	Imported_Scroll.Selectable = false
-	Imported_Scroll.Size = UDim2.new(0.45,0,0.719,0)
+	Imported_Scroll.Size = UDim2.new(0.628,0,0.719,0)
 	Imported_Scroll.ZIndex = 1_001
-	Imported_Scroll.Parent = _base
+	Imported_Scroll.Parent = PathMacro
 end
 
-local Imported = Instance.new("TextBox") do
-	Imported.Name = "Imported"
-	Imported.Active = false
-	Imported.BackgroundColor3 = Color3.new(0,0,0)
-	Imported.BackgroundTransparency = 1
-	Imported.BorderColor3 = Color3.new(0,0,0)
-	Imported.BorderSizePixel = 0
-	Imported.ClearTextOnFocus = false
-	Imported.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Imported.MultiLine = true
-	Imported.Selectable = false
-	Imported.Size = UDim2.new(1,0,1,0)
-	Imported.Text = ""
-	Imported.TextColor3 = Color3.new(1,1,1)
-	Imported.TextEditable = false
-	Imported.TextSize = 14
-	Imported.TextStrokeColor3 = Color3.new(1,1,1)
-	Imported.TextTransparency = 0.99
-	Imported.TextXAlignment = Enum.TextXAlignment.Left
-	Imported.TextYAlignment = Enum.TextYAlignment.Top
-	Imported.ZIndex = 1_001
-	Imported.Parent = Imported_Scroll
-end
-
-local Rich_1 = Instance.new("TextLabel") do
-	Rich_1.Name = "Rich"
-	Rich_1.BackgroundColor3 = Color3.new(0,0,0)
-	Rich_1.BackgroundTransparency = 1
-	Rich_1.BorderColor3 = Color3.new(0,0,0)
-	Rich_1.BorderSizePixel = 0
-	Rich_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Rich_1.RichText = true
-	Rich_1.Size = UDim2.new(1,0,1,0)
-	Rich_1.Text = "0x_deadbeef"
-	Rich_1.TextColor3 = Color3.new(1,1,1)
-	Rich_1.TextSize = 14
-	Rich_1.TextStrokeColor3 = Color3.new(1,1,1)
-	Rich_1.TextXAlignment = Enum.TextXAlignment.Left
-	Rich_1.TextYAlignment = Enum.TextYAlignment.Top
-	Rich_1.ZIndex = 1_000
-	Rich_1.Parent = Imported
-end
-local UICorner_9 = Instance.new("UICorner") do
-	UICorner_9.CornerRadius = UDim.new(0.025,0)
-	UICorner_9.Parent = Imported_Scroll
+local UICorner_8 = Instance.new("UICorner") do
+	UICorner_8.CornerRadius = UDim.new(0.025,0)
+	UICorner_8.Parent = Imported_Scroll
 end
 local UIStroke_1 = Instance.new("UIStroke") do
 	UIStroke_1.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	UIStroke_1.Parent = Imported_Scroll
 end
-local Insert_Scroll = Instance.new("ScrollingFrame") do
-	Insert_Scroll.Name = "Insert_Scroll"
-	Insert_Scroll.Active = true
-	Insert_Scroll.AnchorPoint = Vector2.new(0,0.5)
-	Insert_Scroll.BackgroundColor3 = Color3.new(1,1,1)
-	Insert_Scroll.BorderColor3 = Color3.new(0,0,0)
-	Insert_Scroll.BorderSizePixel = 0
-	Insert_Scroll.Position = UDim2.new(0.025,0,0.55,0)
-	Insert_Scroll.Size = UDim2.new(0.45,0,0.719,0)
-	Insert_Scroll.ZIndex = 1_000
-	Insert_Scroll.Parent = _base
+local Rich = Instance.new("TextLabel") do
+	Rich.Name = "Rich"
+	Rich.BackgroundColor3 = Color3.new(0,0,0)
+	Rich.BackgroundTransparency = 1
+	Rich.BorderColor3 = Color3.new(0,0,0)
+	Rich.BorderSizePixel = 0
+	Rich.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Rich.RichText = true
+	Rich.Size = UDim2.new(1,0,1,0)
+	Rich.Text = "0x_deadbeef"
+	Rich.TextColor3 = Color3.new(1,1,1)
+	Rich.TextSize = 14
+	Rich.TextStrokeColor3 = Color3.new(1,1,1)
+	Rich.TextXAlignment = Enum.TextXAlignment.Left
+	Rich.TextYAlignment = Enum.TextYAlignment.Top
+	Rich.ZIndex = 1_000
+	Rich.Parent = Imported_Scroll
 end
-
-local UICorner_10 = Instance.new("UICorner") do
-	UICorner_10.CornerRadius = UDim.new(0.025,0)
-	UICorner_10.Parent = Insert_Scroll
-end
-local Insert = Instance.new("TextBox") do
-	Insert.Name = "Insert"
-	Insert.BackgroundColor3 = Color3.new(1,1,1)
-	Insert.BackgroundTransparency = 1
-	Insert.BorderColor3 = Color3.new(0,0,0)
-	Insert.BorderSizePixel = 0
-	Insert.ClearTextOnFocus = false
-	Insert.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Insert.MultiLine = true
-	Insert.PlaceholderText = "Insert code here"
-	Insert.Size = UDim2.new(1,0,1,0)
-	Insert.Text = ""
-	Insert.TextColor3 = Color3.new(1,1,1)
-	Insert.TextSize = 14
-	Insert.TextStrokeColor3 = Color3.new(1,1,1)
-	Insert.TextXAlignment = Enum.TextXAlignment.Left
-	Insert.TextYAlignment = Enum.TextYAlignment.Top
-	Insert.ZIndex = 1_000
-	Insert.Parent = Insert_Scroll
-end
-local UIStroke_2 = Instance.new("UIStroke") do
-	UIStroke_2.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	UIStroke_2.Parent = Insert_Scroll
-end
-local Import_1 = Instance.new("TextButton") do
-	Import_1.Name = "Import"
-	Import_1.AnchorPoint = Vector2.new(0.5,0.5)
-	Import_1.AutoButtonColor = false
-	Import_1.BackgroundColor3 = Color3.new(1,1,1)
-	Import_1.BackgroundTransparency = 1
-	Import_1.BorderColor3 = Color3.new(0,0,0)
-	Import_1.BorderSizePixel = 0
-	Import_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Import_1.Position = UDim2.new(0.5,0,0.55,0)
-	Import_1.Size = UDim2.new(0.043,0,0.719,0)
-	Import_1.Text = ""
-	Import_1.TextColor3 = Color3.new(0,0,0)
-	Import_1.TextSize = 14
-	Import_1.TextTransparency = 1
-	Import_1.ZIndex = 1_001
-	Import_1.Parent = _base
+local Import = Instance.new("TextButton") do
+	Import.Name = "Import"
+	Import.AnchorPoint = Vector2.new(0.5,0.5)
+	Import.AutoButtonColor = false
+	Import.BackgroundColor3 = Color3.new(1,1,1)
+	Import.BackgroundTransparency = 1
+	Import.BorderColor3 = Color3.new(0,0,0)
+	Import.BorderSizePixel = 0
+	Import.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Import.Position = UDim2.new(0.16,0,0.55,0)
+	Import.Size = UDim2.new(0.27,0,0.719,0)
+	Import.Text = ""
+	Import.TextColor3 = Color3.new(0,0,0)
+	Import.TextSize = 14
+	Import.TextTransparency = 1
+	Import.ZIndex = 1_001
+	Import.Parent = PathMacro
 end
 
 local Label_2 = Instance.new("ImageLabel") do
@@ -773,12 +587,12 @@ local Label_2 = Instance.new("ImageLabel") do
 	Label_2.Position = UDim2.new(0.5,0,0.5,0)
 	Label_2.Size = UDim2.new(1,0,1,0)
 	Label_2.ZIndex = 1_000
-	Label_2.Parent = Import_1
+	Label_2.Parent = Import
 end
 
-local UICorner_11 = Instance.new("UICorner") do
-	UICorner_11.CornerRadius = UDim.new(0.1,0)
-	UICorner_11.Parent = Label_2
+local UICorner_9 = Instance.new("UICorner") do
+	UICorner_9.CornerRadius = UDim.new(0.1,0)
+	UICorner_9.Parent = Label_2
 end
 local TextLabel = Instance.new("TextLabel") do
 	TextLabel.AnchorPoint = Vector2.yAxis
@@ -798,9 +612,202 @@ local TextLabel = Instance.new("TextLabel") do
 	TextLabel.Parent = Label_2
 end
 local UIAspectRatioConstraint_1 = Instance.new("UIAspectRatioConstraint",Label_2)
+local Edit = Instance.new("TextButton") do
+	Edit.Name = "Edit"
+	Edit.AutoButtonColor = false
+	Edit.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Edit.BackgroundTransparency = 1
+	Edit.BorderColor3 = Color3.new(0,0,0)
+	Edit.BorderSizePixel = 0
+	Edit.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Edit.Size = UDim2.new(0.241,0,0.146,0)
+	Edit.Text = ""
+	Edit.TextColor3 = Color3.new(0,0,0)
+	Edit.TextSize = 14
+	Edit.TextTransparency = 1
+	Edit.ZIndex = 1_005
+	Edit.Parent = PathMacro
+end
+
+local Frame_1 = Instance.new("Frame") do
+	Frame_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_1.BorderColor3 = Color3.new(0,0,0)
+	Frame_1.BorderSizePixel = 0
+	Frame_1.Size = UDim2.new(0.5,0,1,0)
+	Frame_1.ZIndex = 1_001
+	Frame_1.Parent = Edit
+end
+local Frame2_4 = Instance.new("Frame") do
+	Frame2_4.Name = "Frame2"
+	Frame2_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_4.BorderColor3 = Color3.new(0,0,0)
+	Frame2_4.BorderSizePixel = 0
+	Frame2_4.Size = UDim2.new(1,0,0.5,0)
+	Frame2_4.ZIndex = 1_001
+	Frame2_4.Parent = Edit
+end
+local Title_1 = Instance.new("TextLabel") do
+	Title_1.Name = "Title"
+	Title_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Title_1.BorderColor3 = Color3.new(0,0,0)
+	Title_1.BorderSizePixel = 0
+	Title_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title_1.Size = UDim2.new(1,0,1,0)
+	Title_1.Text = "Edit"
+	Title_1.TextColor3 = Color3.new(1,1,1)
+	Title_1.TextScaled = true
+	Title_1.TextSize = 14
+	Title_1.TextWrapped = true
+	Title_1.ZIndex = 1_002
+	Title_1.Parent = Edit
+end
+
+local UICorner_10 = Instance.new("UICorner") do
+	UICorner_10.CornerRadius = UDim.new(0.25,0)
+	UICorner_10.Parent = Title_1
+end
+local Import_Constants = Instance.new("Frame") do
+	Import_Constants.Name = "Import_Constants"
+	Import_Constants.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
+	Import_Constants.BorderColor3 = Color3.new(0,0,0)
+	Import_Constants.BorderSizePixel = 0
+	Import_Constants.Size = UDim2.new(1,0,1,0)
+	Import_Constants.Visible = false
+	Import_Constants.ZIndex = 999
+	Import_Constants.Parent = Main
+end
+
+local Exit_Frame_1 = Instance.new("Frame") do
+	Exit_Frame_1.Name = "Exit_Frame"
+	Exit_Frame_1.AnchorPoint = Vector2.xAxis
+	Exit_Frame_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Exit_Frame_1.BorderColor3 = Color3.new(0,0,0)
+	Exit_Frame_1.BorderSizePixel = 0
+	Exit_Frame_1.Position = UDim2.new(1,0,0,0)
+	Exit_Frame_1.Size = UDim2.new(0.1,0,0.1,0)
+	Exit_Frame_1.ZIndex = 1_005
+	Exit_Frame_1.Parent = Import_Constants
+end
+
+local UICorner_11 = Instance.new("UICorner") do
+	UICorner_11.CornerRadius = UDim.new(0.25,0)
+	UICorner_11.Parent = Exit_Frame_1
+end
+local Frame1_4 = Instance.new("Frame") do
+	Frame1_4.Name = "Frame1"
+	Frame1_4.AnchorPoint = Vector2.xAxis
+	Frame1_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_4.BorderColor3 = Color3.new(0,0,0)
+	Frame1_4.BorderSizePixel = 0
+	Frame1_4.Position = UDim2.new(1,0,0,0)
+	Frame1_4.Size = UDim2.new(0.25,0,1,0)
+	Frame1_4.ZIndex = 1_005
+	Frame1_4.Parent = Exit_Frame_1
+end
+local Frame2_5 = Instance.new("Frame") do
+	Frame2_5.Name = "Frame2"
+	Frame2_5.AnchorPoint = Vector2.xAxis
+	Frame2_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_5.BorderColor3 = Color3.new(0,0,0)
+	Frame2_5.BorderSizePixel = 0
+	Frame2_5.Position = UDim2.new(1,0,0,0)
+	Frame2_5.Size = UDim2.new(1,0,0.75,0)
+	Frame2_5.ZIndex = 1_005
+	Frame2_5.Parent = Exit_Frame_1
+end
+local Exit_1 = Instance.new("TextButton") do
+	Exit_1.Name = "Exit"
+	Exit_1.AnchorPoint = Vector2.new(0.5,0.5)
+	Exit_1.AutoButtonColor = false
+	Exit_1.BackgroundColor3 = Color3.new(1,1,1)
+	Exit_1.BackgroundTransparency = 1
+	Exit_1.BorderColor3 = Color3.new(0,0,0)
+	Exit_1.BorderSizePixel = 0
+	Exit_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Exit_1.Position = UDim2.new(0.5,0,0.5,0)
+	Exit_1.Size = UDim2.new(1,0,1,0)
+	Exit_1.Text = "X"
+	Exit_1.TextColor3 = Color3.new(1,1,1)
+	Exit_1.TextScaled = true
+	Exit_1.TextSize = 14
+	Exit_1.TextWrapped = true
+	Exit_1.ZIndex = 1_006
+	Exit_1.Parent = Exit_Frame_1
+end
+local Exit_Back_1 = Instance.new("Frame") do
+	Exit_Back_1.Name = "Exit_Back"
+	Exit_Back_1.Active = true
+	Exit_Back_1.AnchorPoint = Vector2.yAxis
+	Exit_Back_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Exit_Back_1.BorderColor3 = Color3.new(0,0,0)
+	Exit_Back_1.BorderSizePixel = 0
+	Exit_Back_1.Position = UDim2.new(0,0,1,0)
+	Exit_Back_1.Selectable = true
+	Exit_Back_1.Size = UDim2.new(0.05,0,0.05,0)
+	Exit_Back_1.ZIndex = 1_001
+	Exit_Back_1.Parent = Import_Constants
+end
+
 local UICorner_12 = Instance.new("UICorner") do
-	UICorner_12.CornerRadius = UDim.new(0.025,0)
-	UICorner_12.Parent = _base
+	UICorner_12.CornerRadius = UDim.new(0.25,0)
+	UICorner_12.Parent = Exit_Back_1
+end
+local Frame1_5 = Instance.new("Frame") do
+	Frame1_5.Name = "Frame1"
+	Frame1_5.AnchorPoint = Vector2.yAxis
+	Frame1_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_5.BorderColor3 = Color3.new(0,0,0)
+	Frame1_5.BorderSizePixel = 0
+	Frame1_5.Position = UDim2.new(0,0,1,0)
+	Frame1_5.Size = UDim2.new(0.25,0,1,0)
+	Frame1_5.ZIndex = 1_001
+	Frame1_5.Parent = Exit_Back_1
+end
+local Frame2_6 = Instance.new("Frame") do
+	Frame2_6.Name = "Frame2"
+	Frame2_6.Active = true
+	Frame2_6.AnchorPoint = Vector2.yAxis
+	Frame2_6.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_6.BorderColor3 = Color3.new(0,0,0)
+	Frame2_6.BorderSizePixel = 0
+	Frame2_6.Position = UDim2.new(0,0,1,0)
+	Frame2_6.Selectable = true
+	Frame2_6.Size = UDim2.new(1,0,0.75,0)
+	Frame2_6.ZIndex = 1_001
+	Frame2_6.Parent = Exit_Back_1
+end
+local Button_3 = Instance.new("TextButton") do
+	Button_3.Name = "Button"
+	Button_3.AnchorPoint = Vector2.new(0.5,0.5)
+	Button_3.BackgroundColor3 = Color3.new(1,1,1)
+	Button_3.BackgroundTransparency = 1
+	Button_3.BorderColor3 = Color3.new(0,0,0)
+	Button_3.BorderSizePixel = 0
+	Button_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Button_3.Position = UDim2.new(0.5,0,0.5,0)
+	Button_3.Size = UDim2.new(1,0,1,0)
+	Button_3.Text = "Back"
+	Button_3.TextColor3 = Color3.new(1,1,1)
+	Button_3.TextScaled = true
+	Button_3.TextSize = 14
+	Button_3.TextWrapped = true
+	Button_3.ZIndex = 1_002
+	Button_3.Parent = Exit_Back_1
+end
+local Constants = Instance.new("Frame") do
+	Constants.Name = "Constants"
+	Constants.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
+	Constants.BorderColor3 = Color3.new(0,0,0)
+	Constants.BorderSizePixel = 0
+	Constants.Position = UDim2.new(0.055,0,0.241,0)
+	Constants.Size = UDim2.new(0.94,0,0.759,0)
+	Constants.ZIndex = 999
+	Constants.Parent = Import_Constants
+end
+
+local UICorner_13 = Instance.new("UICorner") do
+	UICorner_13.CornerRadius = UDim.new(0.025,0)
+	UICorner_13.Parent = Constants
 end
 local Frame_2 = Instance.new("Frame") do
 	Frame_2.AnchorPoint = Vector2.yAxis
@@ -810,25 +817,492 @@ local Frame_2 = Instance.new("Frame") do
 	Frame_2.Position = UDim2.new(0,0,1,0)
 	Frame_2.Size = UDim2.new(1,0,0.025,0)
 	Frame_2.ZIndex = 999
-	Frame_2.Parent = _base
+	Frame_2.Parent = Constants
 end
-local Title = Instance.new("TextLabel") do
-	Title.Name = "Title"
-	Title.AnchorPoint = Vector2.new(0.5,0)
-	Title.BackgroundColor3 = Color3.new(1,1,1)
-	Title.BackgroundTransparency = 1
-	Title.BorderColor3 = Color3.new(0,0,0)
-	Title.BorderSizePixel = 0
-	Title.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Title.Position = UDim2.new(0.5,0,0,0)
-	Title.Size = UDim2.new(0.5,0,0.175,0)
-	Title.Text = "_base"
-	Title.TextColor3 = Color3.new(1,1,1)
-	Title.TextScaled = true
-	Title.TextSize = 14
-	Title.TextWrapped = true
-	Title.ZIndex = 999
-	Title.Parent = _base
+local Title_2 = Instance.new("TextLabel") do
+	Title_2.Name = "Title"
+	Title_2.AnchorPoint = Vector2.new(0.5,0)
+	Title_2.BackgroundColor3 = Color3.new(1,1,1)
+	Title_2.BackgroundTransparency = 1
+	Title_2.BorderColor3 = Color3.new(0,0,0)
+	Title_2.BorderSizePixel = 0
+	Title_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title_2.Position = UDim2.new(0.613,0,0,0)
+	Title_2.Size = UDim2.new(0.725,0,0.175,0)
+	Title_2.Text = "Constants"
+	Title_2.TextColor3 = Color3.new(1,1,1)
+	Title_2.TextScaled = true
+	Title_2.TextSize = 14
+	Title_2.TextWrapped = true
+	Title_2.ZIndex = 999
+	Title_2.Parent = Constants
+end
+local Imported_Scroll_1 = Instance.new("ScrollingFrame") do
+	Imported_Scroll_1.Name = "Imported_Scroll"
+	Imported_Scroll_1.AnchorPoint = Vector2.new(1,0.5)
+	Imported_Scroll_1.BackgroundColor3 = Color3.new(0,0,0)
+	Imported_Scroll_1.BackgroundTransparency = 0.9
+	Imported_Scroll_1.BorderColor3 = Color3.new(0,0,0)
+	Imported_Scroll_1.BorderSizePixel = 0
+	Imported_Scroll_1.Position = UDim2.new(0.975,0,0.55,0)
+	Imported_Scroll_1.Selectable = false
+	Imported_Scroll_1.Size = UDim2.new(0.628,0,0.719,0)
+	Imported_Scroll_1.ZIndex = 1_001
+	Imported_Scroll_1.Parent = Constants
+end
+
+local UICorner_14 = Instance.new("UICorner") do
+	UICorner_14.CornerRadius = UDim.new(0.025,0)
+	UICorner_14.Parent = Imported_Scroll_1
+end
+local UIStroke_2 = Instance.new("UIStroke") do
+	UIStroke_2.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	UIStroke_2.Parent = Imported_Scroll_1
+end
+local Rich_1 = Instance.new("TextLabel") do
+	Rich_1.Name = "Rich"
+	Rich_1.BackgroundColor3 = Color3.new(0,0,0)
+	Rich_1.BackgroundTransparency = 1
+	Rich_1.BorderColor3 = Color3.new(0,0,0)
+	Rich_1.BorderSizePixel = 0
+	Rich_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Rich_1.RichText = true
+	Rich_1.Size = UDim2.new(1,0,1,0)
+	Rich_1.Text = "0x_deadbeef"
+	Rich_1.TextColor3 = Color3.new(1,1,1)
+	Rich_1.TextSize = 14
+	Rich_1.TextStrokeColor3 = Color3.new(1,1,1)
+	Rich_1.TextXAlignment = Enum.TextXAlignment.Left
+	Rich_1.TextYAlignment = Enum.TextYAlignment.Top
+	Rich_1.ZIndex = 1_000
+	Rich_1.Parent = Imported_Scroll_1
+end
+local Import_1 = Instance.new("TextButton") do
+	Import_1.Name = "Import"
+	Import_1.AnchorPoint = Vector2.new(0.5,0.5)
+	Import_1.AutoButtonColor = false
+	Import_1.BackgroundColor3 = Color3.new(1,1,1)
+	Import_1.BackgroundTransparency = 1
+	Import_1.BorderColor3 = Color3.new(0,0,0)
+	Import_1.BorderSizePixel = 0
+	Import_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Import_1.Position = UDim2.new(0.16,0,0.55,0)
+	Import_1.Size = UDim2.new(0.27,0,0.719,0)
+	Import_1.Text = ""
+	Import_1.TextColor3 = Color3.new(0,0,0)
+	Import_1.TextSize = 14
+	Import_1.TextTransparency = 1
+	Import_1.ZIndex = 1_001
+	Import_1.Parent = Constants
+end
+
+local Label_3 = Instance.new("ImageLabel") do
+	Label_3.Name = "Label"
+	Label_3.AnchorPoint = Vector2.new(0.5,0.5)
+	Label_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Label_3.BorderColor3 = Color3.new(0,0,0)
+	Label_3.BorderSizePixel = 0
+	Label_3.Image = "rbxassetid://153287088"
+	Label_3.Position = UDim2.new(0.5,0,0.5,0)
+	Label_3.Size = UDim2.new(1,0,1,0)
+	Label_3.ZIndex = 1_000
+	Label_3.Parent = Import_1
+end
+
+local UICorner_15 = Instance.new("UICorner") do
+	UICorner_15.CornerRadius = UDim.new(0.1,0)
+	UICorner_15.Parent = Label_3
+end
+local TextLabel_1 = Instance.new("TextLabel") do
+	TextLabel_1.AnchorPoint = Vector2.yAxis
+	TextLabel_1.BackgroundColor3 = Color3.new(1,1,1)
+	TextLabel_1.BackgroundTransparency = 1
+	TextLabel_1.BorderColor3 = Color3.new(0,0,0)
+	TextLabel_1.BorderSizePixel = 0
+	TextLabel_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.SemiBold,Enum.FontStyle.Normal)
+	TextLabel_1.Position = UDim2.new(0,0,1,0)
+	TextLabel_1.Size = UDim2.new(0.5,0,0.5,0)
+	TextLabel_1.Text = "{}"
+	TextLabel_1.TextColor3 = Color3.new(1,1,1)
+	TextLabel_1.TextScaled = true
+	TextLabel_1.TextSize = 14
+	TextLabel_1.TextWrapped = true
+	TextLabel_1.ZIndex = 1_000
+	TextLabel_1.Parent = Label_3
+end
+local UIAspectRatioConstraint_2 = Instance.new("UIAspectRatioConstraint",Label_3)
+local Edit_1 = Instance.new("TextButton") do
+	Edit_1.Name = "Edit"
+	Edit_1.AutoButtonColor = false
+	Edit_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Edit_1.BackgroundTransparency = 1
+	Edit_1.BorderColor3 = Color3.new(0,0,0)
+	Edit_1.BorderSizePixel = 0
+	Edit_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Edit_1.Size = UDim2.new(0.241,0,0.146,0)
+	Edit_1.Text = ""
+	Edit_1.TextColor3 = Color3.new(0,0,0)
+	Edit_1.TextSize = 14
+	Edit_1.TextTransparency = 1
+	Edit_1.ZIndex = 1_005
+	Edit_1.Parent = Constants
+end
+
+local Frame_3 = Instance.new("Frame") do
+	Frame_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_3.BorderColor3 = Color3.new(0,0,0)
+	Frame_3.BorderSizePixel = 0
+	Frame_3.Size = UDim2.new(0.5,0,1,0)
+	Frame_3.ZIndex = 1_001
+	Frame_3.Parent = Edit_1
+end
+local Frame2_7 = Instance.new("Frame") do
+	Frame2_7.Name = "Frame2"
+	Frame2_7.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_7.BorderColor3 = Color3.new(0,0,0)
+	Frame2_7.BorderSizePixel = 0
+	Frame2_7.Size = UDim2.new(1,0,0.5,0)
+	Frame2_7.ZIndex = 1_001
+	Frame2_7.Parent = Edit_1
+end
+local Title_3 = Instance.new("TextLabel") do
+	Title_3.Name = "Title"
+	Title_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Title_3.BorderColor3 = Color3.new(0,0,0)
+	Title_3.BorderSizePixel = 0
+	Title_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title_3.Size = UDim2.new(1,0,1,0)
+	Title_3.Text = "Edit"
+	Title_3.TextColor3 = Color3.new(1,1,1)
+	Title_3.TextScaled = true
+	Title_3.TextSize = 14
+	Title_3.TextWrapped = true
+	Title_3.ZIndex = 1_002
+	Title_3.Parent = Edit_1
+end
+
+local UICorner_16 = Instance.new("UICorner") do
+	UICorner_16.CornerRadius = UDim.new(0.25,0)
+	UICorner_16.Parent = Title_3
+end
+local Import_Base = Instance.new("Frame") do
+	Import_Base.Name = "Import_Base"
+	Import_Base.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
+	Import_Base.BorderColor3 = Color3.new(0,0,0)
+	Import_Base.BorderSizePixel = 0
+	Import_Base.Size = UDim2.new(1,0,1,0)
+	Import_Base.Visible = false
+	Import_Base.ZIndex = 999
+	Import_Base.Parent = Main
+end
+
+local Exit_Frame_2 = Instance.new("Frame") do
+	Exit_Frame_2.Name = "Exit_Frame"
+	Exit_Frame_2.AnchorPoint = Vector2.xAxis
+	Exit_Frame_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Exit_Frame_2.BorderColor3 = Color3.new(0,0,0)
+	Exit_Frame_2.BorderSizePixel = 0
+	Exit_Frame_2.Position = UDim2.new(1,0,0,0)
+	Exit_Frame_2.Size = UDim2.new(0.1,0,0.1,0)
+	Exit_Frame_2.ZIndex = 1_005
+	Exit_Frame_2.Parent = Import_Base
+end
+
+local UICorner_17 = Instance.new("UICorner") do
+	UICorner_17.CornerRadius = UDim.new(0.25,0)
+	UICorner_17.Parent = Exit_Frame_2
+end
+local Frame1_6 = Instance.new("Frame") do
+	Frame1_6.Name = "Frame1"
+	Frame1_6.AnchorPoint = Vector2.xAxis
+	Frame1_6.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_6.BorderColor3 = Color3.new(0,0,0)
+	Frame1_6.BorderSizePixel = 0
+	Frame1_6.Position = UDim2.new(1,0,0,0)
+	Frame1_6.Size = UDim2.new(0.25,0,1,0)
+	Frame1_6.ZIndex = 1_005
+	Frame1_6.Parent = Exit_Frame_2
+end
+local Frame2_8 = Instance.new("Frame") do
+	Frame2_8.Name = "Frame2"
+	Frame2_8.AnchorPoint = Vector2.xAxis
+	Frame2_8.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_8.BorderColor3 = Color3.new(0,0,0)
+	Frame2_8.BorderSizePixel = 0
+	Frame2_8.Position = UDim2.new(1,0,0,0)
+	Frame2_8.Size = UDim2.new(1,0,0.75,0)
+	Frame2_8.ZIndex = 1_005
+	Frame2_8.Parent = Exit_Frame_2
+end
+local Exit_2 = Instance.new("TextButton") do
+	Exit_2.Name = "Exit"
+	Exit_2.AnchorPoint = Vector2.new(0.5,0.5)
+	Exit_2.AutoButtonColor = false
+	Exit_2.BackgroundColor3 = Color3.new(1,1,1)
+	Exit_2.BackgroundTransparency = 1
+	Exit_2.BorderColor3 = Color3.new(0,0,0)
+	Exit_2.BorderSizePixel = 0
+	Exit_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Exit_2.Position = UDim2.new(0.5,0,0.5,0)
+	Exit_2.Size = UDim2.new(1,0,1,0)
+	Exit_2.Text = "X"
+	Exit_2.TextColor3 = Color3.new(1,1,1)
+	Exit_2.TextScaled = true
+	Exit_2.TextSize = 14
+	Exit_2.TextWrapped = true
+	Exit_2.ZIndex = 1_006
+	Exit_2.Parent = Exit_Frame_2
+end
+local Exit_Back_2 = Instance.new("Frame") do
+	Exit_Back_2.Name = "Exit_Back"
+	Exit_Back_2.Active = true
+	Exit_Back_2.AnchorPoint = Vector2.yAxis
+	Exit_Back_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Exit_Back_2.BorderColor3 = Color3.new(0,0,0)
+	Exit_Back_2.BorderSizePixel = 0
+	Exit_Back_2.Position = UDim2.new(0,0,1,0)
+	Exit_Back_2.Selectable = true
+	Exit_Back_2.Size = UDim2.new(0.05,0,0.05,0)
+	Exit_Back_2.ZIndex = 1_001
+	Exit_Back_2.Parent = Import_Base
+end
+
+local UICorner_18 = Instance.new("UICorner") do
+	UICorner_18.CornerRadius = UDim.new(0.25,0)
+	UICorner_18.Parent = Exit_Back_2
+end
+local Frame1_7 = Instance.new("Frame") do
+	Frame1_7.Name = "Frame1"
+	Frame1_7.AnchorPoint = Vector2.yAxis
+	Frame1_7.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame1_7.BorderColor3 = Color3.new(0,0,0)
+	Frame1_7.BorderSizePixel = 0
+	Frame1_7.Position = UDim2.new(0,0,1,0)
+	Frame1_7.Size = UDim2.new(0.25,0,1,0)
+	Frame1_7.ZIndex = 1_001
+	Frame1_7.Parent = Exit_Back_2
+end
+local Frame2_9 = Instance.new("Frame") do
+	Frame2_9.Name = "Frame2"
+	Frame2_9.Active = true
+	Frame2_9.AnchorPoint = Vector2.yAxis
+	Frame2_9.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_9.BorderColor3 = Color3.new(0,0,0)
+	Frame2_9.BorderSizePixel = 0
+	Frame2_9.Position = UDim2.new(0,0,1,0)
+	Frame2_9.Selectable = true
+	Frame2_9.Size = UDim2.new(1,0,0.75,0)
+	Frame2_9.ZIndex = 1_001
+	Frame2_9.Parent = Exit_Back_2
+end
+local Button_4 = Instance.new("TextButton") do
+	Button_4.Name = "Button"
+	Button_4.AnchorPoint = Vector2.new(0.5,0.5)
+	Button_4.BackgroundColor3 = Color3.new(1,1,1)
+	Button_4.BackgroundTransparency = 1
+	Button_4.BorderColor3 = Color3.new(0,0,0)
+	Button_4.BorderSizePixel = 0
+	Button_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Button_4.Position = UDim2.new(0.5,0,0.5,0)
+	Button_4.Size = UDim2.new(1,0,1,0)
+	Button_4.Text = "Back"
+	Button_4.TextColor3 = Color3.new(1,1,1)
+	Button_4.TextScaled = true
+	Button_4.TextSize = 14
+	Button_4.TextWrapped = true
+	Button_4.ZIndex = 1_002
+	Button_4.Parent = Exit_Back_2
+end
+local _base = Instance.new("Frame") do
+	_base.Name = "_base"
+	_base.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
+	_base.BorderColor3 = Color3.new(0,0,0)
+	_base.BorderSizePixel = 0
+	_base.Position = UDim2.new(0.055,0,0.241,0)
+	_base.Size = UDim2.new(0.94,0,0.759,0)
+	_base.ZIndex = 999
+	_base.Parent = Import_Base
+end
+
+local Imported_Scroll_2 = Instance.new("ScrollingFrame") do
+	Imported_Scroll_2.Name = "Imported_Scroll"
+	Imported_Scroll_2.AnchorPoint = Vector2.new(1,0.5)
+	Imported_Scroll_2.BackgroundColor3 = Color3.new(0,0,0)
+	Imported_Scroll_2.BackgroundTransparency = 0.9
+	Imported_Scroll_2.BorderColor3 = Color3.new(0,0,0)
+	Imported_Scroll_2.BorderSizePixel = 0
+	Imported_Scroll_2.Position = UDim2.new(0.975,0,0.55,0)
+	Imported_Scroll_2.Selectable = false
+	Imported_Scroll_2.Size = UDim2.new(0.628,0,0.719,0)
+	Imported_Scroll_2.ZIndex = 1_001
+	Imported_Scroll_2.Parent = _base
+end
+
+local UICorner_19 = Instance.new("UICorner") do
+	UICorner_19.CornerRadius = UDim.new(0.025,0)
+	UICorner_19.Parent = Imported_Scroll_2
+end
+local UIStroke_3 = Instance.new("UIStroke") do
+	UIStroke_3.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	UIStroke_3.Parent = Imported_Scroll_2
+end
+local Rich_2 = Instance.new("TextLabel") do
+	Rich_2.Name = "Rich"
+	Rich_2.BackgroundColor3 = Color3.new(0,0,0)
+	Rich_2.BackgroundTransparency = 1
+	Rich_2.BorderColor3 = Color3.new(0,0,0)
+	Rich_2.BorderSizePixel = 0
+	Rich_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Rich_2.RichText = true
+	Rich_2.Size = UDim2.new(1,0,1,0)
+	Rich_2.Text = "0x_deadbeef"
+	Rich_2.TextColor3 = Color3.new(1,1,1)
+	Rich_2.TextSize = 14
+	Rich_2.TextStrokeColor3 = Color3.new(1,1,1)
+	Rich_2.TextXAlignment = Enum.TextXAlignment.Left
+	Rich_2.TextYAlignment = Enum.TextYAlignment.Top
+	Rich_2.ZIndex = 1_000
+	Rich_2.Parent = Imported_Scroll_2
+end
+local Import_2 = Instance.new("TextButton") do
+	Import_2.Name = "Import"
+	Import_2.AnchorPoint = Vector2.new(0.5,0.5)
+	Import_2.AutoButtonColor = false
+	Import_2.BackgroundColor3 = Color3.new(1,1,1)
+	Import_2.BackgroundTransparency = 1
+	Import_2.BorderColor3 = Color3.new(0,0,0)
+	Import_2.BorderSizePixel = 0
+	Import_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Import_2.Position = UDim2.new(0.16,0,0.55,0)
+	Import_2.Size = UDim2.new(0.27,0,0.719,0)
+	Import_2.Text = ""
+	Import_2.TextColor3 = Color3.new(0,0,0)
+	Import_2.TextSize = 14
+	Import_2.TextTransparency = 1
+	Import_2.ZIndex = 1_001
+	Import_2.Parent = _base
+end
+
+local Label_4 = Instance.new("ImageLabel") do
+	Label_4.Name = "Label"
+	Label_4.AnchorPoint = Vector2.new(0.5,0.5)
+	Label_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Label_4.BorderColor3 = Color3.new(0,0,0)
+	Label_4.BorderSizePixel = 0
+	Label_4.Image = "rbxassetid://153287088"
+	Label_4.Position = UDim2.new(0.5,0,0.5,0)
+	Label_4.Size = UDim2.new(1,0,1,0)
+	Label_4.ZIndex = 1_000
+	Label_4.Parent = Import_2
+end
+
+local UICorner_20 = Instance.new("UICorner") do
+	UICorner_20.CornerRadius = UDim.new(0.1,0)
+	UICorner_20.Parent = Label_4
+end
+local TextLabel_2 = Instance.new("TextLabel") do
+	TextLabel_2.AnchorPoint = Vector2.yAxis
+	TextLabel_2.BackgroundColor3 = Color3.new(1,1,1)
+	TextLabel_2.BackgroundTransparency = 1
+	TextLabel_2.BorderColor3 = Color3.new(0,0,0)
+	TextLabel_2.BorderSizePixel = 0
+	TextLabel_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.SemiBold,Enum.FontStyle.Normal)
+	TextLabel_2.Position = UDim2.new(0,0,1,0)
+	TextLabel_2.Size = UDim2.new(0.5,0,0.5,0)
+	TextLabel_2.Text = "{}"
+	TextLabel_2.TextColor3 = Color3.new(1,1,1)
+	TextLabel_2.TextScaled = true
+	TextLabel_2.TextSize = 14
+	TextLabel_2.TextWrapped = true
+	TextLabel_2.ZIndex = 1_000
+	TextLabel_2.Parent = Label_4
+end
+local UIAspectRatioConstraint_3 = Instance.new("UIAspectRatioConstraint",Label_4)
+local UICorner_21 = Instance.new("UICorner") do
+	UICorner_21.CornerRadius = UDim.new(0.025,0)
+	UICorner_21.Parent = _base
+end
+local Frame_4 = Instance.new("Frame") do
+	Frame_4.AnchorPoint = Vector2.yAxis
+	Frame_4.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
+	Frame_4.BorderColor3 = Color3.new(0,0,0)
+	Frame_4.BorderSizePixel = 0
+	Frame_4.Position = UDim2.new(0,0,1,0)
+	Frame_4.Size = UDim2.new(1,0,0.025,0)
+	Frame_4.ZIndex = 999
+	Frame_4.Parent = _base
+end
+local Title_4 = Instance.new("TextLabel") do
+	Title_4.Name = "Title"
+	Title_4.AnchorPoint = Vector2.new(0.5,0)
+	Title_4.BackgroundColor3 = Color3.new(1,1,1)
+	Title_4.BackgroundTransparency = 1
+	Title_4.BorderColor3 = Color3.new(0,0,0)
+	Title_4.BorderSizePixel = 0
+	Title_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title_4.Position = UDim2.new(0.613,0,0,0)
+	Title_4.Size = UDim2.new(0.725,0,0.175,0)
+	Title_4.Text = "_base"
+	Title_4.TextColor3 = Color3.new(1,1,1)
+	Title_4.TextScaled = true
+	Title_4.TextSize = 14
+	Title_4.TextWrapped = true
+	Title_4.ZIndex = 999
+	Title_4.Parent = _base
+end
+local Edit_2 = Instance.new("TextButton") do
+	Edit_2.Name = "Edit"
+	Edit_2.AutoButtonColor = false
+	Edit_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Edit_2.BackgroundTransparency = 1
+	Edit_2.BorderColor3 = Color3.new(0,0,0)
+	Edit_2.BorderSizePixel = 0
+	Edit_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Edit_2.Size = UDim2.new(0.241,0,0.146,0)
+	Edit_2.Text = ""
+	Edit_2.TextColor3 = Color3.new(0,0,0)
+	Edit_2.TextSize = 14
+	Edit_2.TextTransparency = 1
+	Edit_2.ZIndex = 1_005
+	Edit_2.Parent = _base
+end
+
+local Frame_5 = Instance.new("Frame") do
+	Frame_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_5.BorderColor3 = Color3.new(0,0,0)
+	Frame_5.BorderSizePixel = 0
+	Frame_5.Size = UDim2.new(0.5,0,1,0)
+	Frame_5.ZIndex = 1_001
+	Frame_5.Parent = Edit_2
+end
+local Frame2_10 = Instance.new("Frame") do
+	Frame2_10.Name = "Frame2"
+	Frame2_10.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_10.BorderColor3 = Color3.new(0,0,0)
+	Frame2_10.BorderSizePixel = 0
+	Frame2_10.Size = UDim2.new(1,0,0.5,0)
+	Frame2_10.ZIndex = 1_001
+	Frame2_10.Parent = Edit_2
+end
+local Title_5 = Instance.new("TextLabel") do
+	Title_5.Name = "Title"
+	Title_5.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Title_5.BorderColor3 = Color3.new(0,0,0)
+	Title_5.BorderSizePixel = 0
+	Title_5.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Title_5.Size = UDim2.new(1,0,1,0)
+	Title_5.Text = "Edit"
+	Title_5.TextColor3 = Color3.new(1,1,1)
+	Title_5.TextScaled = true
+	Title_5.TextSize = 14
+	Title_5.TextWrapped = true
+	Title_5.ZIndex = 1_002
+	Title_5.Parent = Edit_2
+end
+
+local UICorner_22 = Instance.new("UICorner") do
+	UICorner_22.CornerRadius = UDim.new(0.25,0)
+	UICorner_22.Parent = Title_5
 end
 local Buttons = Instance.new("Frame") do
 	Buttons.Name = "Buttons"
@@ -840,26 +1314,26 @@ local Buttons = Instance.new("Frame") do
 	Buttons.Parent = Import_Base
 end
 
-local UICorner_13 = Instance.new("UICorner") do
-	UICorner_13.CornerRadius = UDim.new(0.25,0)
-	UICorner_13.Parent = Buttons
+local UICorner_23 = Instance.new("UICorner") do
+	UICorner_23.CornerRadius = UDim.new(0.25,0)
+	UICorner_23.Parent = Buttons
 end
-local Frame_3 = Instance.new("Frame") do
-	Frame_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame_3.BorderColor3 = Color3.new(0,0,0)
-	Frame_3.BorderSizePixel = 0
-	Frame_3.Size = UDim2.new(0.5,0,1,0)
-	Frame_3.ZIndex = 999
-	Frame_3.Parent = Buttons
+local Frame_6 = Instance.new("Frame") do
+	Frame_6.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_6.BorderColor3 = Color3.new(0,0,0)
+	Frame_6.BorderSizePixel = 0
+	Frame_6.Size = UDim2.new(0.5,0,1,0)
+	Frame_6.ZIndex = 999
+	Frame_6.Parent = Buttons
 end
-local Frame2_6 = Instance.new("Frame") do
-	Frame2_6.Name = "Frame2"
-	Frame2_6.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_6.BorderColor3 = Color3.new(0,0,0)
-	Frame2_6.BorderSizePixel = 0
-	Frame2_6.Size = UDim2.new(1,0,0.25,0)
-	Frame2_6.ZIndex = 999
-	Frame2_6.Parent = Buttons
+local Frame2_11 = Instance.new("Frame") do
+	Frame2_11.Name = "Frame2"
+	Frame2_11.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_11.BorderColor3 = Color3.new(0,0,0)
+	Frame2_11.BorderSizePixel = 0
+	Frame2_11.Size = UDim2.new(1,0,0.25,0)
+	Frame2_11.ZIndex = 999
+	Frame2_11.Parent = Buttons
 end
 local Buttons_1 = Instance.new("Frame") do
 	Buttons_1.Name = "Buttons"
@@ -899,456 +1373,125 @@ local UIFlexItem = Instance.new("UIFlexItem") do
 	UIFlexItem.FlexMode = Enum.UIFlexMode.Fill
 	UIFlexItem.Parent = CachedConsts
 end
-local TextLabel_1 = Instance.new("TextLabel") do
-	TextLabel_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	TextLabel_1.BorderColor3 = Color3.new(0,0,0)
-	TextLabel_1.BorderSizePixel = 0
-	TextLabel_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	TextLabel_1.Size = UDim2.new(1,0,1,0)
-	TextLabel_1.Text = "Constants"
-	TextLabel_1.TextColor3 = Color3.new(1,1,1)
-	TextLabel_1.TextScaled = true
-	TextLabel_1.TextSize = 14
-	TextLabel_1.TextWrapped = true
-	TextLabel_1.ZIndex = 1_001
-	TextLabel_1.Parent = CachedConsts
-end
-local PathMacro = Instance.new("TextButton") do
-	PathMacro.Name = "PathMacro"
-	PathMacro.Active = false
-	PathMacro.AutoButtonColor = false
-	PathMacro.BackgroundColor3 = Color3.new(1,1,1)
-	PathMacro.BackgroundTransparency = 1
-	PathMacro.BorderColor3 = Color3.new(0,0,0)
-	PathMacro.BorderSizePixel = 0
-	PathMacro.LayoutOrder = 1
-	PathMacro.Selectable = false
-	PathMacro.Size = UDim2.new(1,0,1,0)
-	PathMacro.Text = ""
-	PathMacro.TextColor3 = Color3.new(1,1,1)
-	PathMacro.TextTransparency = 1
-	PathMacro.TextWrapped = true
-	PathMacro.ZIndex = 1_002
-	PathMacro.Parent = Buttons_1
-end
-
-local UIFlexItem_1 = Instance.new("UIFlexItem") do
-	UIFlexItem_1.FlexMode = Enum.UIFlexMode.Fill
-	UIFlexItem_1.Parent = PathMacro
-end
-local TextLabel_2 = Instance.new("TextLabel") do
-	TextLabel_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	TextLabel_2.BorderColor3 = Color3.new(0,0,0)
-	TextLabel_2.BorderSizePixel = 0
-	TextLabel_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	TextLabel_2.Size = UDim2.new(1,0,1,0)
-	TextLabel_2.Text = "Path Macro"
-	TextLabel_2.TextColor3 = Color3.new(1,1,1)
-	TextLabel_2.TextScaled = true
-	TextLabel_2.TextSize = 14
-	TextLabel_2.TextWrapped = true
-	TextLabel_2.ZIndex = 1_001
-	TextLabel_2.Parent = PathMacro
-end
-
-local UICorner_14 = Instance.new("UICorner") do
-	UICorner_14.CornerRadius = UDim.new(0.25,0)
-	UICorner_14.Parent = TextLabel_2
-end
-local Frame_4 = Instance.new("Frame") do
-	Frame_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame_4.BorderColor3 = Color3.new(0,0,0)
-	Frame_4.BorderSizePixel = 0
-	Frame_4.Size = UDim2.new(0.5,0,1,0)
-	Frame_4.ZIndex = 1_000
-	Frame_4.Parent = PathMacro
-end
-local Frame2_7 = Instance.new("Frame") do
-	Frame2_7.Name = "Frame2"
-	Frame2_7.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_7.BorderColor3 = Color3.new(0,0,0)
-	Frame2_7.BorderSizePixel = 0
-	Frame2_7.Size = UDim2.new(1,0,0.25,0)
-	Frame2_7.ZIndex = 1_000
-	Frame2_7.Parent = PathMacro
-end
-local Search_1 = Instance.new("TextBox") do
-	Search_1.Name = "Search"
-	Search_1.AnchorPoint = Vector2.new(0.5,0.5)
-	Search_1.BackgroundColor3 = Color3.new(0.153,0.153,0.153)
-	Search_1.BackgroundTransparency = 0.5
-	Search_1.BorderColor3 = Color3.new(0,0,0)
-	Search_1.BorderSizePixel = 0
-	Search_1.ClearTextOnFocus = false
-	Search_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Search_1.PlaceholderText = "Search🔍"
-	Search_1.Position = UDim2.new(0.5,0,0.5,0)
-	Search_1.Size = UDim2.new(0.8,0,0.2,0)
-	Search_1.Text = ""
-	Search_1.TextColor3 = Color3.new(1,1,1)
-	Search_1.TextScaled = true
-	Search_1.TextSize = 14
-	Search_1.TextWrapped = true
-	Search_1.Visible = false
-	Search_1.ZIndex = 100_000
-	Search_1.Parent = Main
-end
-local Import_Constants = Instance.new("Frame") do
-	Import_Constants.Name = "Import_Constants"
-	Import_Constants.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
-	Import_Constants.BorderColor3 = Color3.new(0,0,0)
-	Import_Constants.BorderSizePixel = 0
-	Import_Constants.Size = UDim2.new(1,0,1,0)
-	Import_Constants.Visible = false
-	Import_Constants.ZIndex = 999
-	Import_Constants.Parent = Main
-end
-
-local Exit_Frame_1 = Instance.new("Frame") do
-	Exit_Frame_1.Name = "Exit_Frame"
-	Exit_Frame_1.AnchorPoint = Vector2.xAxis
-	Exit_Frame_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Exit_Frame_1.BorderColor3 = Color3.new(0,0,0)
-	Exit_Frame_1.BorderSizePixel = 0
-	Exit_Frame_1.Position = UDim2.new(1,0,0,0)
-	Exit_Frame_1.Size = UDim2.new(0.1,0,0.1,0)
-	Exit_Frame_1.ZIndex = 1_005
-	Exit_Frame_1.Parent = Import_Constants
-end
-
-local UICorner_15 = Instance.new("UICorner") do
-	UICorner_15.CornerRadius = UDim.new(0.25,0)
-	UICorner_15.Parent = Exit_Frame_1
-end
-local Frame1_6 = Instance.new("Frame") do
-	Frame1_6.Name = "Frame1"
-	Frame1_6.AnchorPoint = Vector2.xAxis
-	Frame1_6.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_6.BorderColor3 = Color3.new(0,0,0)
-	Frame1_6.BorderSizePixel = 0
-	Frame1_6.Position = UDim2.new(1,0,0,0)
-	Frame1_6.Size = UDim2.new(0.25,0,1,0)
-	Frame1_6.ZIndex = 1_005
-	Frame1_6.Parent = Exit_Frame_1
-end
-local Frame2_8 = Instance.new("Frame") do
-	Frame2_8.Name = "Frame2"
-	Frame2_8.AnchorPoint = Vector2.xAxis
-	Frame2_8.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_8.BorderColor3 = Color3.new(0,0,0)
-	Frame2_8.BorderSizePixel = 0
-	Frame2_8.Position = UDim2.new(1,0,0,0)
-	Frame2_8.Size = UDim2.new(1,0,0.75,0)
-	Frame2_8.ZIndex = 1_005
-	Frame2_8.Parent = Exit_Frame_1
-end
-local Exit_2 = Instance.new("TextButton") do
-	Exit_2.Name = "Exit"
-	Exit_2.AnchorPoint = Vector2.new(0.5,0.5)
-	Exit_2.AutoButtonColor = false
-	Exit_2.BackgroundColor3 = Color3.new(1,1,1)
-	Exit_2.BackgroundTransparency = 1
-	Exit_2.BorderColor3 = Color3.new(0,0,0)
-	Exit_2.BorderSizePixel = 0
-	Exit_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Exit_2.Position = UDim2.new(0.5,0,0.5,0)
-	Exit_2.Size = UDim2.new(1,0,1,0)
-	Exit_2.Text = "X"
-	Exit_2.TextColor3 = Color3.new(1,1,1)
-	Exit_2.TextScaled = true
-	Exit_2.TextSize = 14
-	Exit_2.TextWrapped = true
-	Exit_2.ZIndex = 1_006
-	Exit_2.Parent = Exit_Frame_1
-end
-local Exit_Back_1 = Instance.new("Frame") do
-	Exit_Back_1.Name = "Exit_Back"
-	Exit_Back_1.Active = true
-	Exit_Back_1.AnchorPoint = Vector2.yAxis
-	Exit_Back_1.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Exit_Back_1.BorderColor3 = Color3.new(0,0,0)
-	Exit_Back_1.BorderSizePixel = 0
-	Exit_Back_1.Position = UDim2.new(0,0,1,0)
-	Exit_Back_1.Selectable = true
-	Exit_Back_1.Size = UDim2.new(0.05,0,0.05,0)
-	Exit_Back_1.ZIndex = 1_001
-	Exit_Back_1.Parent = Import_Constants
-end
-
-local UICorner_16 = Instance.new("UICorner") do
-	UICorner_16.CornerRadius = UDim.new(0.25,0)
-	UICorner_16.Parent = Exit_Back_1
-end
-local Frame1_7 = Instance.new("Frame") do
-	Frame1_7.Name = "Frame1"
-	Frame1_7.AnchorPoint = Vector2.yAxis
-	Frame1_7.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame1_7.BorderColor3 = Color3.new(0,0,0)
-	Frame1_7.BorderSizePixel = 0
-	Frame1_7.Position = UDim2.new(0,0,1,0)
-	Frame1_7.Size = UDim2.new(0.25,0,1,0)
-	Frame1_7.ZIndex = 1_001
-	Frame1_7.Parent = Exit_Back_1
-end
-local Frame2_9 = Instance.new("Frame") do
-	Frame2_9.Name = "Frame2"
-	Frame2_9.Active = true
-	Frame2_9.AnchorPoint = Vector2.yAxis
-	Frame2_9.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_9.BorderColor3 = Color3.new(0,0,0)
-	Frame2_9.BorderSizePixel = 0
-	Frame2_9.Position = UDim2.new(0,0,1,0)
-	Frame2_9.Selectable = true
-	Frame2_9.Size = UDim2.new(1,0,0.75,0)
-	Frame2_9.ZIndex = 1_001
-	Frame2_9.Parent = Exit_Back_1
-end
-local Button_3 = Instance.new("TextButton") do
-	Button_3.Name = "Button"
-	Button_3.AnchorPoint = Vector2.new(0.5,0.5)
-	Button_3.BackgroundColor3 = Color3.new(1,1,1)
-	Button_3.BackgroundTransparency = 1
-	Button_3.BorderColor3 = Color3.new(0,0,0)
-	Button_3.BorderSizePixel = 0
-	Button_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Button_3.Position = UDim2.new(0.5,0,0.5,0)
-	Button_3.Size = UDim2.new(1,0,1,0)
-	Button_3.Text = "Back"
-	Button_3.TextColor3 = Color3.new(1,1,1)
-	Button_3.TextScaled = true
-	Button_3.TextSize = 14
-	Button_3.TextWrapped = true
-	Button_3.ZIndex = 1_002
-	Button_3.Parent = Exit_Back_1
-end
-local Constants = Instance.new("Frame") do
-	Constants.Name = "Constants"
-	Constants.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
-	Constants.BorderColor3 = Color3.new(0,0,0)
-	Constants.BorderSizePixel = 0
-	Constants.Position = UDim2.new(0.055,0,0.241,0)
-	Constants.Size = UDim2.new(0.94,0,0.759,0)
-	Constants.ZIndex = 999
-	Constants.Parent = Import_Constants
-end
-
-local Imported_Scroll_1 = Instance.new("ScrollingFrame") do
-	Imported_Scroll_1.Name = "Imported_Scroll"
-	Imported_Scroll_1.AnchorPoint = Vector2.new(1,0.5)
-	Imported_Scroll_1.BackgroundColor3 = Color3.new(0,0,0)
-	Imported_Scroll_1.BackgroundTransparency = 0.9
-	Imported_Scroll_1.BorderColor3 = Color3.new(0,0,0)
-	Imported_Scroll_1.BorderSizePixel = 0
-	Imported_Scroll_1.Position = UDim2.new(0.975,0,0.55,0)
-	Imported_Scroll_1.Selectable = false
-	Imported_Scroll_1.Size = UDim2.new(0.45,0,0.719,0)
-	Imported_Scroll_1.ZIndex = 1_001
-	Imported_Scroll_1.Parent = Constants
-end
-
-local Imported_1 = Instance.new("TextBox") do
-	Imported_1.Name = "Imported"
-	Imported_1.Active = false
-	Imported_1.BackgroundColor3 = Color3.new(0,0,0)
-	Imported_1.BackgroundTransparency = 1
-	Imported_1.BorderColor3 = Color3.new(0,0,0)
-	Imported_1.BorderSizePixel = 0
-	Imported_1.ClearTextOnFocus = false
-	Imported_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Imported_1.MultiLine = true
-	Imported_1.Selectable = false
-	Imported_1.Size = UDim2.new(1,0,1,0)
-	Imported_1.Text = ""
-	Imported_1.TextColor3 = Color3.new(1,1,1)
-	Imported_1.TextEditable = false
-	Imported_1.TextSize = 14
-	Imported_1.TextStrokeColor3 = Color3.new(1,1,1)
-	Imported_1.TextTransparency = 0.99
-	Imported_1.TextXAlignment = Enum.TextXAlignment.Left
-	Imported_1.TextYAlignment = Enum.TextYAlignment.Top
-	Imported_1.ZIndex = 1_001
-	Imported_1.Parent = Imported_Scroll_1
-end
-
-local Rich_2 = Instance.new("TextLabel") do
-	Rich_2.Name = "Rich"
-	Rich_2.BackgroundColor3 = Color3.new(0,0,0)
-	Rich_2.BackgroundTransparency = 1
-	Rich_2.BorderColor3 = Color3.new(0,0,0)
-	Rich_2.BorderSizePixel = 0
-	Rich_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Rich_2.RichText = true
-	Rich_2.Size = UDim2.new(1,0,1,0)
-	Rich_2.Text = "0x_deadbeef"
-	Rich_2.TextColor3 = Color3.new(1,1,1)
-	Rich_2.TextSize = 14
-	Rich_2.TextStrokeColor3 = Color3.new(1,1,1)
-	Rich_2.TextXAlignment = Enum.TextXAlignment.Left
-	Rich_2.TextYAlignment = Enum.TextYAlignment.Top
-	Rich_2.ZIndex = 1_000
-	Rich_2.Parent = Imported_1
-end
-local UICorner_17 = Instance.new("UICorner") do
-	UICorner_17.CornerRadius = UDim.new(0.025,0)
-	UICorner_17.Parent = Imported_Scroll_1
-end
-local UIStroke_3 = Instance.new("UIStroke") do
-	UIStroke_3.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	UIStroke_3.Parent = Imported_Scroll_1
-end
-local Insert_Scroll_1 = Instance.new("ScrollingFrame") do
-	Insert_Scroll_1.Name = "Insert_Scroll"
-	Insert_Scroll_1.Active = true
-	Insert_Scroll_1.AnchorPoint = Vector2.new(0,0.5)
-	Insert_Scroll_1.BackgroundColor3 = Color3.new(1,1,1)
-	Insert_Scroll_1.BorderColor3 = Color3.new(0,0,0)
-	Insert_Scroll_1.BorderSizePixel = 0
-	Insert_Scroll_1.Position = UDim2.new(0.025,0,0.55,0)
-	Insert_Scroll_1.Size = UDim2.new(0.45,0,0.719,0)
-	Insert_Scroll_1.ZIndex = 1_000
-	Insert_Scroll_1.Parent = Constants
-end
-
-local UICorner_18 = Instance.new("UICorner") do
-	UICorner_18.CornerRadius = UDim.new(0.025,0)
-	UICorner_18.Parent = Insert_Scroll_1
-end
-local Insert_1 = Instance.new("TextBox") do
-	Insert_1.Name = "Insert"
-	Insert_1.BackgroundColor3 = Color3.new(1,1,1)
-	Insert_1.BackgroundTransparency = 1
-	Insert_1.BorderColor3 = Color3.new(0,0,0)
-	Insert_1.BorderSizePixel = 0
-	Insert_1.ClearTextOnFocus = false
-	Insert_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Insert_1.MultiLine = true
-	Insert_1.PlaceholderText = "Insert code here"
-	Insert_1.Size = UDim2.new(1,0,1,0)
-	Insert_1.Text = ""
-	Insert_1.TextColor3 = Color3.new(1,1,1)
-	Insert_1.TextSize = 14
-	Insert_1.TextStrokeColor3 = Color3.new(1,1,1)
-	Insert_1.TextXAlignment = Enum.TextXAlignment.Left
-	Insert_1.TextYAlignment = Enum.TextYAlignment.Top
-	Insert_1.ZIndex = 1_000
-	Insert_1.Parent = Insert_Scroll_1
-end
-local UIStroke_4 = Instance.new("UIStroke") do
-	UIStroke_4.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	UIStroke_4.Parent = Insert_Scroll_1
-end
-local Import_2 = Instance.new("TextButton") do
-	Import_2.Name = "Import"
-	Import_2.AnchorPoint = Vector2.new(0.5,0.5)
-	Import_2.AutoButtonColor = false
-	Import_2.BackgroundColor3 = Color3.new(1,1,1)
-	Import_2.BackgroundTransparency = 1
-	Import_2.BorderColor3 = Color3.new(0,0,0)
-	Import_2.BorderSizePixel = 0
-	Import_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Import_2.Position = UDim2.new(0.5,0,0.55,0)
-	Import_2.Size = UDim2.new(0.043,0,0.719,0)
-	Import_2.Text = ""
-	Import_2.TextColor3 = Color3.new(0,0,0)
-	Import_2.TextSize = 14
-	Import_2.TextTransparency = 1
-	Import_2.ZIndex = 1_001
-	Import_2.Parent = Constants
-end
-
-local Label_3 = Instance.new("ImageLabel") do
-	Label_3.Name = "Label"
-	Label_3.AnchorPoint = Vector2.new(0.5,0.5)
-	Label_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Label_3.BorderColor3 = Color3.new(0,0,0)
-	Label_3.BorderSizePixel = 0
-	Label_3.Image = "rbxassetid://153287088"
-	Label_3.Position = UDim2.new(0.5,0,0.5,0)
-	Label_3.Size = UDim2.new(1,0,1,0)
-	Label_3.ZIndex = 1_000
-	Label_3.Parent = Import_2
-end
-
-local UICorner_19 = Instance.new("UICorner") do
-	UICorner_19.CornerRadius = UDim.new(0.1,0)
-	UICorner_19.Parent = Label_3
-end
 local TextLabel_3 = Instance.new("TextLabel") do
-	TextLabel_3.AnchorPoint = Vector2.yAxis
-	TextLabel_3.BackgroundColor3 = Color3.new(1,1,1)
-	TextLabel_3.BackgroundTransparency = 1
+	TextLabel_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
 	TextLabel_3.BorderColor3 = Color3.new(0,0,0)
 	TextLabel_3.BorderSizePixel = 0
-	TextLabel_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.SemiBold,Enum.FontStyle.Normal)
-	TextLabel_3.Position = UDim2.new(0,0,1,0)
-	TextLabel_3.Size = UDim2.new(0.5,0,0.5,0)
-	TextLabel_3.Text = "{}"
+	TextLabel_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	TextLabel_3.Size = UDim2.new(1,0,1,0)
+	TextLabel_3.Text = "Constants"
 	TextLabel_3.TextColor3 = Color3.new(1,1,1)
 	TextLabel_3.TextScaled = true
 	TextLabel_3.TextSize = 14
 	TextLabel_3.TextWrapped = true
-	TextLabel_3.ZIndex = 1_000
-	TextLabel_3.Parent = Label_3
+	TextLabel_3.ZIndex = 1_001
+	TextLabel_3.Parent = CachedConsts
 end
-local UIAspectRatioConstraint_2 = Instance.new("UIAspectRatioConstraint",Label_3)
-local UICorner_20 = Instance.new("UICorner") do
-	UICorner_20.CornerRadius = UDim.new(0.025,0)
-	UICorner_20.Parent = Constants
-end
-local Frame_5 = Instance.new("Frame") do
-	Frame_5.AnchorPoint = Vector2.yAxis
-	Frame_5.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
-	Frame_5.BorderColor3 = Color3.new(0,0,0)
-	Frame_5.BorderSizePixel = 0
-	Frame_5.Position = UDim2.new(0,0,1,0)
-	Frame_5.Size = UDim2.new(1,0,0.025,0)
-	Frame_5.ZIndex = 999
-	Frame_5.Parent = Constants
-end
-local Title_1 = Instance.new("TextLabel") do
-	Title_1.Name = "Title"
-	Title_1.AnchorPoint = Vector2.new(0.5,0)
-	Title_1.BackgroundColor3 = Color3.new(1,1,1)
-	Title_1.BackgroundTransparency = 1
-	Title_1.BorderColor3 = Color3.new(0,0,0)
-	Title_1.BorderSizePixel = 0
-	Title_1.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Title_1.Position = UDim2.new(0.5,0,0,0)
-	Title_1.Size = UDim2.new(0.5,0,0.175,0)
-	Title_1.Text = "Constants"
-	Title_1.TextColor3 = Color3.new(1,1,1)
-	Title_1.TextScaled = true
-	Title_1.TextSize = 14
-	Title_1.TextWrapped = true
-	Title_1.ZIndex = 999
-	Title_1.Parent = Constants
-end
-local Import_PathMacro = Instance.new("Frame") do
-	Import_PathMacro.Name = "Import_PathMacro"
-	Import_PathMacro.BackgroundColor3 = Color3.new(0.31,0.31,0.31)
-	Import_PathMacro.BorderColor3 = Color3.new(0,0,0)
-	Import_PathMacro.BorderSizePixel = 0
-	Import_PathMacro.Size = UDim2.new(1,0,1,0)
-	Import_PathMacro.Visible = false
-	Import_PathMacro.ZIndex = 999
-	Import_PathMacro.Parent = Main
+local PathMacro_1 = Instance.new("TextButton") do
+	PathMacro_1.Name = "PathMacro"
+	PathMacro_1.Active = false
+	PathMacro_1.AutoButtonColor = false
+	PathMacro_1.BackgroundColor3 = Color3.new(1,1,1)
+	PathMacro_1.BackgroundTransparency = 1
+	PathMacro_1.BorderColor3 = Color3.new(0,0,0)
+	PathMacro_1.BorderSizePixel = 0
+	PathMacro_1.LayoutOrder = 1
+	PathMacro_1.Selectable = false
+	PathMacro_1.Size = UDim2.new(1,0,1,0)
+	PathMacro_1.Text = ""
+	PathMacro_1.TextColor3 = Color3.new(1,1,1)
+	PathMacro_1.TextTransparency = 1
+	PathMacro_1.TextWrapped = true
+	PathMacro_1.ZIndex = 1_002
+	PathMacro_1.Parent = Buttons_1
 end
 
-local Exit_Frame_2 = Instance.new("Frame") do
-	Exit_Frame_2.Name = "Exit_Frame"
-	Exit_Frame_2.AnchorPoint = Vector2.xAxis
-	Exit_Frame_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Exit_Frame_2.BorderColor3 = Color3.new(0,0,0)
-	Exit_Frame_2.BorderSizePixel = 0
-	Exit_Frame_2.Position = UDim2.new(1,0,0,0)
-	Exit_Frame_2.Size = UDim2.new(0.1,0,0.1,0)
-	Exit_Frame_2.ZIndex = 1_005
-	Exit_Frame_2.Parent = Import_PathMacro
+local UIFlexItem_1 = Instance.new("UIFlexItem") do
+	UIFlexItem_1.FlexMode = Enum.UIFlexMode.Fill
+	UIFlexItem_1.Parent = PathMacro_1
+end
+local TextLabel_4 = Instance.new("TextLabel") do
+	TextLabel_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	TextLabel_4.BorderColor3 = Color3.new(0,0,0)
+	TextLabel_4.BorderSizePixel = 0
+	TextLabel_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	TextLabel_4.Size = UDim2.new(1,0,1,0)
+	TextLabel_4.Text = "Path Macro"
+	TextLabel_4.TextColor3 = Color3.new(1,1,1)
+	TextLabel_4.TextScaled = true
+	TextLabel_4.TextSize = 14
+	TextLabel_4.TextWrapped = true
+	TextLabel_4.ZIndex = 1_001
+	TextLabel_4.Parent = PathMacro_1
 end
 
-local UICorner_21 = Instance.new("UICorner") do
-	UICorner_21.CornerRadius = UDim.new(0.25,0)
-	UICorner_21.Parent = Exit_Frame_2
+local UICorner_24 = Instance.new("UICorner") do
+	UICorner_24.CornerRadius = UDim.new(0.25,0)
+	UICorner_24.Parent = TextLabel_4
+end
+local Frame_7 = Instance.new("Frame") do
+	Frame_7.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_7.BorderColor3 = Color3.new(0,0,0)
+	Frame_7.BorderSizePixel = 0
+	Frame_7.Size = UDim2.new(0.5,0,1,0)
+	Frame_7.ZIndex = 1_000
+	Frame_7.Parent = PathMacro_1
+end
+local Frame2_12 = Instance.new("Frame") do
+	Frame2_12.Name = "Frame2"
+	Frame2_12.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_12.BorderColor3 = Color3.new(0,0,0)
+	Frame2_12.BorderSizePixel = 0
+	Frame2_12.Size = UDim2.new(1,0,0.25,0)
+	Frame2_12.ZIndex = 1_000
+	Frame2_12.Parent = PathMacro_1
+end
+local IgnoredProperties = Instance.new("Frame") do
+	IgnoredProperties.Name = "IgnoredProperties"
+	IgnoredProperties.AnchorPoint = Vector2.new(0.5,0.5)
+	IgnoredProperties.BackgroundColor3 = Color3.new(0.424,0.424,0.424)
+	IgnoredProperties.BorderColor3 = Color3.new(0,0,0)
+	IgnoredProperties.BorderSizePixel = 0
+	IgnoredProperties.Position = UDim2.new(0.5,0,0.5,0)
+	IgnoredProperties.Size = UDim2.new(1,0,1,0)
+	IgnoredProperties.Visible = false
+	IgnoredProperties.ZIndex = 10
+	IgnoredProperties.Parent = Main
+end
+
+local Exit_3 = Instance.new("TextButton") do
+	Exit_3.Name = "Exit"
+	Exit_3.AutoButtonColor = false
+	Exit_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Exit_3.BackgroundTransparency = 1
+	Exit_3.BorderColor3 = Color3.new(0,0,0)
+	Exit_3.BorderSizePixel = 0
+	Exit_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Exit_3.Position = UDim2.new(0.5,0,0,0)
+	Exit_3.Size = UDim2.new(0.5,0,0.1,0)
+	Exit_3.Text = "Back"
+	Exit_3.TextColor3 = Color3.new(1,1,1)
+	Exit_3.TextScaled = true
+	Exit_3.TextSize = 14
+	Exit_3.TextWrapped = true
+	Exit_3.ZIndex = 15
+	Exit_3.Parent = IgnoredProperties
+end
+
+local Frame_8 = Instance.new("Frame") do
+	Frame_8.AnchorPoint = Vector2.new(0.5,0.5)
+	Frame_8.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_8.BorderColor3 = Color3.new(0,0,0)
+	Frame_8.BorderSizePixel = 0
+	Frame_8.Position = UDim2.new(0.5,0,0.5,0)
+	Frame_8.Size = UDim2.new(1,0,1,0)
+	Frame_8.ZIndex = 12
+	Frame_8.Parent = Exit_3
+end
+
+local UICorner_25 = Instance.new("UICorner") do
+	UICorner_25.CornerRadius = UDim.new(0.5,0)
+	UICorner_25.Parent = Frame_8
 end
 local Frame1_8 = Instance.new("Frame") do
 	Frame1_8.Name = "Frame1"
@@ -1357,303 +1500,131 @@ local Frame1_8 = Instance.new("Frame") do
 	Frame1_8.BorderColor3 = Color3.new(0,0,0)
 	Frame1_8.BorderSizePixel = 0
 	Frame1_8.Position = UDim2.new(1,0,0,0)
-	Frame1_8.Size = UDim2.new(0.25,0,1,0)
-	Frame1_8.ZIndex = 1_005
-	Frame1_8.Parent = Exit_Frame_2
+	Frame1_8.Size = UDim2.new(1,0,0.5,0)
+	Frame1_8.ZIndex = 13
+	Frame1_8.Parent = Exit_3
 end
-local Frame2_10 = Instance.new("Frame") do
-	Frame2_10.Name = "Frame2"
-	Frame2_10.AnchorPoint = Vector2.xAxis
-	Frame2_10.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_10.BorderColor3 = Color3.new(0,0,0)
-	Frame2_10.BorderSizePixel = 0
-	Frame2_10.Position = UDim2.new(1,0,0,0)
-	Frame2_10.Size = UDim2.new(1,0,0.75,0)
-	Frame2_10.ZIndex = 1_005
-	Frame2_10.Parent = Exit_Frame_2
+local Frame2_13 = Instance.new("Frame") do
+	Frame2_13.Name = "Frame2"
+	Frame2_13.AnchorPoint = Vector2.xAxis
+	Frame2_13.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_13.BorderColor3 = Color3.new(0,0,0)
+	Frame2_13.BorderSizePixel = 0
+	Frame2_13.Position = UDim2.new(1,0,0,0)
+	Frame2_13.Size = UDim2.new(0.5,0,1,0)
+	Frame2_13.ZIndex = 13
+	Frame2_13.Parent = Exit_3
 end
-local Exit_3 = Instance.new("TextButton") do
-	Exit_3.Name = "Exit"
-	Exit_3.AnchorPoint = Vector2.new(0.5,0.5)
-	Exit_3.AutoButtonColor = false
-	Exit_3.BackgroundColor3 = Color3.new(1,1,1)
-	Exit_3.BackgroundTransparency = 1
-	Exit_3.BorderColor3 = Color3.new(0,0,0)
-	Exit_3.BorderSizePixel = 0
-	Exit_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Exit_3.Position = UDim2.new(0.5,0,0.5,0)
-	Exit_3.Size = UDim2.new(1,0,1,0)
-	Exit_3.Text = "X"
-	Exit_3.TextColor3 = Color3.new(1,1,1)
-	Exit_3.TextScaled = true
-	Exit_3.TextSize = 14
-	Exit_3.TextWrapped = true
-	Exit_3.ZIndex = 1_006
-	Exit_3.Parent = Exit_Frame_2
-end
-local Exit_Back_2 = Instance.new("Frame") do
-	Exit_Back_2.Name = "Exit_Back"
-	Exit_Back_2.Active = true
-	Exit_Back_2.AnchorPoint = Vector2.yAxis
-	Exit_Back_2.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Exit_Back_2.BorderColor3 = Color3.new(0,0,0)
-	Exit_Back_2.BorderSizePixel = 0
-	Exit_Back_2.Position = UDim2.new(0,0,1,0)
-	Exit_Back_2.Selectable = true
-	Exit_Back_2.Size = UDim2.new(0.05,0,0.05,0)
-	Exit_Back_2.ZIndex = 1_001
-	Exit_Back_2.Parent = Import_PathMacro
+local Import_3 = Instance.new("TextButton") do
+	Import_3.Name = "Import"
+	Import_3.AnchorPoint = Vector2.xAxis
+	Import_3.AutoButtonColor = false
+	Import_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Import_3.BackgroundTransparency = 1
+	Import_3.BorderColor3 = Color3.new(0,0,0)
+	Import_3.BorderSizePixel = 0
+	Import_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Import_3.Position = UDim2.new(0.5,0,0,0)
+	Import_3.Size = UDim2.new(0.5,0,0.1,0)
+	Import_3.Text = "Import"
+	Import_3.TextColor3 = Color3.new(1,1,1)
+	Import_3.TextScaled = true
+	Import_3.TextSize = 14
+	Import_3.TextWrapped = true
+	Import_3.ZIndex = 15
+	Import_3.Parent = IgnoredProperties
 end
 
-local UICorner_22 = Instance.new("UICorner") do
-	UICorner_22.CornerRadius = UDim.new(0.25,0)
-	UICorner_22.Parent = Exit_Back_2
+local Frame_9 = Instance.new("Frame") do
+	Frame_9.AnchorPoint = Vector2.new(0.5,0.5)
+	Frame_9.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame_9.BorderColor3 = Color3.new(0,0,0)
+	Frame_9.BorderSizePixel = 0
+	Frame_9.Position = UDim2.new(0.5,0,0.5,0)
+	Frame_9.Size = UDim2.new(1,0,1,0)
+	Frame_9.ZIndex = 12
+	Frame_9.Parent = Import_3
+end
+
+local UICorner_26 = Instance.new("UICorner") do
+	UICorner_26.CornerRadius = UDim.new(0.5,0)
+	UICorner_26.Parent = Frame_9
 end
 local Frame1_9 = Instance.new("Frame") do
 	Frame1_9.Name = "Frame1"
-	Frame1_9.AnchorPoint = Vector2.yAxis
 	Frame1_9.BackgroundColor3 = Color3.new(0.2,0.373,1)
 	Frame1_9.BorderColor3 = Color3.new(0,0,0)
 	Frame1_9.BorderSizePixel = 0
-	Frame1_9.Position = UDim2.new(0,0,1,0)
-	Frame1_9.Size = UDim2.new(0.25,0,1,0)
-	Frame1_9.ZIndex = 1_001
-	Frame1_9.Parent = Exit_Back_2
+	Frame1_9.Size = UDim2.new(1,0,0.5,0)
+	Frame1_9.ZIndex = 13
+	Frame1_9.Parent = Import_3
 end
-local Frame2_11 = Instance.new("Frame") do
-	Frame2_11.Name = "Frame2"
-	Frame2_11.Active = true
-	Frame2_11.AnchorPoint = Vector2.yAxis
-	Frame2_11.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Frame2_11.BorderColor3 = Color3.new(0,0,0)
-	Frame2_11.BorderSizePixel = 0
-	Frame2_11.Position = UDim2.new(0,0,1,0)
-	Frame2_11.Selectable = true
-	Frame2_11.Size = UDim2.new(1,0,0.75,0)
-	Frame2_11.ZIndex = 1_001
-	Frame2_11.Parent = Exit_Back_2
+local Frame2_14 = Instance.new("Frame") do
+	Frame2_14.Name = "Frame2"
+	Frame2_14.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Frame2_14.BorderColor3 = Color3.new(0,0,0)
+	Frame2_14.BorderSizePixel = 0
+	Frame2_14.Size = UDim2.new(0.5,0,1,0)
+	Frame2_14.ZIndex = 13
+	Frame2_14.Parent = Import_3
 end
-local Button_4 = Instance.new("TextButton") do
-	Button_4.Name = "Button"
-	Button_4.AnchorPoint = Vector2.new(0.5,0.5)
-	Button_4.BackgroundColor3 = Color3.new(1,1,1)
-	Button_4.BackgroundTransparency = 1
-	Button_4.BorderColor3 = Color3.new(0,0,0)
-	Button_4.BorderSizePixel = 0
-	Button_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Button_4.Position = UDim2.new(0.5,0,0.5,0)
-	Button_4.Size = UDim2.new(1,0,1,0)
-	Button_4.Text = "Back"
-	Button_4.TextColor3 = Color3.new(1,1,1)
-	Button_4.TextScaled = true
-	Button_4.TextSize = 14
-	Button_4.TextWrapped = true
-	Button_4.ZIndex = 1_002
-	Button_4.Parent = Exit_Back_2
-end
-local PathMacro_1 = Instance.new("Frame") do
-	PathMacro_1.Name = "PathMacro"
-	PathMacro_1.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
-	PathMacro_1.BorderColor3 = Color3.new(0,0,0)
-	PathMacro_1.BorderSizePixel = 0
-	PathMacro_1.Position = UDim2.new(0.055,0,0.241,0)
-	PathMacro_1.Size = UDim2.new(0.94,0,0.759,0)
-	PathMacro_1.ZIndex = 999
-	PathMacro_1.Parent = Import_PathMacro
-end
-
-local Imported_Scroll_2 = Instance.new("ScrollingFrame") do
-	Imported_Scroll_2.Name = "Imported_Scroll"
-	Imported_Scroll_2.AnchorPoint = Vector2.new(1,0.5)
-	Imported_Scroll_2.BackgroundColor3 = Color3.new(0,0,0)
-	Imported_Scroll_2.BackgroundTransparency = 0.9
-	Imported_Scroll_2.BorderColor3 = Color3.new(0,0,0)
-	Imported_Scroll_2.BorderSizePixel = 0
-	Imported_Scroll_2.Position = UDim2.new(0.975,0,0.55,0)
-	Imported_Scroll_2.Selectable = false
-	Imported_Scroll_2.Size = UDim2.new(0.45,0,0.719,0)
-	Imported_Scroll_2.ZIndex = 1_001
-	Imported_Scroll_2.Parent = PathMacro_1
-end
-
-local Imported_2 = Instance.new("TextBox") do
-	Imported_2.Name = "Imported"
-	Imported_2.Active = false
-	Imported_2.BackgroundColor3 = Color3.new(0,0,0)
-	Imported_2.BackgroundTransparency = 1
-	Imported_2.BorderColor3 = Color3.new(0,0,0)
-	Imported_2.BorderSizePixel = 0
-	Imported_2.ClearTextOnFocus = false
-	Imported_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Imported_2.MultiLine = true
-	Imported_2.Selectable = false
-	Imported_2.Size = UDim2.new(1,0,1,0)
-	Imported_2.Text = ""
-	Imported_2.TextColor3 = Color3.new(1,1,1)
-	Imported_2.TextEditable = false
-	Imported_2.TextSize = 14
-	Imported_2.TextStrokeColor3 = Color3.new(1,1,1)
-	Imported_2.TextTransparency = 0.99
-	Imported_2.TextXAlignment = Enum.TextXAlignment.Left
-	Imported_2.TextYAlignment = Enum.TextYAlignment.Top
-	Imported_2.ZIndex = 1_001
-	Imported_2.Parent = Imported_Scroll_2
+local Content = Instance.new("ScrollingFrame") do
+	Content.Name = "Content"
+	Content.Active = true
+	Content.AnchorPoint = Vector2.new(0.5,0)
+	Content.BackgroundColor3 = Color3.new(1,1,1)
+	Content.BackgroundTransparency = 0.25
+	Content.BorderColor3 = Color3.new(0,0,0)
+	Content.BorderSizePixel = 0
+	Content.Position = UDim2.new(0.5,0,0.1,0)
+	Content.ScrollBarImageColor3 = Color3.new(0,0,0)
+	Content.Size = UDim2.new(1,0,0.8,0)
+	Content.ZIndex = 11
+	Content.Parent = IgnoredProperties
 end
 
 local Rich_3 = Instance.new("TextLabel") do
 	Rich_3.Name = "Rich"
-	Rich_3.BackgroundColor3 = Color3.new(0,0,0)
+	Rich_3.Active = true
+	Rich_3.BackgroundColor3 = Color3.new(1,1,1)
 	Rich_3.BackgroundTransparency = 1
 	Rich_3.BorderColor3 = Color3.new(0,0,0)
 	Rich_3.BorderSizePixel = 0
 	Rich_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
 	Rich_3.RichText = true
+	Rich_3.Selectable = true
 	Rich_3.Size = UDim2.new(1,0,1,0)
-	Rich_3.Text = "0x_deadbeef"
-	Rich_3.TextColor3 = Color3.new(1,1,1)
+	Rich_3.Text = ""
+	Rich_3.TextColor3 = Color3.new(0,0,0)
 	Rich_3.TextSize = 14
-	Rich_3.TextStrokeColor3 = Color3.new(1,1,1)
 	Rich_3.TextXAlignment = Enum.TextXAlignment.Left
 	Rich_3.TextYAlignment = Enum.TextYAlignment.Top
-	Rich_3.ZIndex = 1_000
-	Rich_3.Parent = Imported_2
+	Rich_3.ZIndex = 11
+	Rich_3.Parent = Content
 end
-local UICorner_23 = Instance.new("UICorner") do
-	UICorner_23.CornerRadius = UDim.new(0.025,0)
-	UICorner_23.Parent = Imported_Scroll_2
-end
-local UIStroke_5 = Instance.new("UIStroke") do
-	UIStroke_5.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	UIStroke_5.Parent = Imported_Scroll_2
-end
-local Insert_Scroll_2 = Instance.new("ScrollingFrame") do
-	Insert_Scroll_2.Name = "Insert_Scroll"
-	Insert_Scroll_2.Active = true
-	Insert_Scroll_2.AnchorPoint = Vector2.new(0,0.5)
-	Insert_Scroll_2.BackgroundColor3 = Color3.new(1,1,1)
-	Insert_Scroll_2.BorderColor3 = Color3.new(0,0,0)
-	Insert_Scroll_2.BorderSizePixel = 0
-	Insert_Scroll_2.Position = UDim2.new(0.025,0,0.55,0)
-	Insert_Scroll_2.Size = UDim2.new(0.45,0,0.719,0)
-	Insert_Scroll_2.ZIndex = 1_000
-	Insert_Scroll_2.Parent = PathMacro_1
+local Edit_3 = Instance.new("TextButton") do
+	Edit_3.Name = "Edit"
+	Edit_3.AnchorPoint = Vector2.new(0.5,1)
+	Edit_3.AutoButtonColor = false
+	Edit_3.BackgroundColor3 = Color3.new(0.2,0.373,1)
+	Edit_3.BorderColor3 = Color3.new(0,0,0)
+	Edit_3.BorderSizePixel = 0
+	Edit_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+	Edit_3.Position = UDim2.new(0.5,0,1,0)
+	Edit_3.Size = UDim2.new(0.5,0,0.1,0)
+	Edit_3.Text = "Edit"
+	Edit_3.TextColor3 = Color3.new(1,1,1)
+	Edit_3.TextScaled = true
+	Edit_3.TextSize = 14
+	Edit_3.TextWrapped = true
+	Edit_3.ZIndex = 15
+	Edit_3.Parent = IgnoredProperties
 end
 
-local UICorner_24 = Instance.new("UICorner") do
-	UICorner_24.CornerRadius = UDim.new(0.025,0)
-	UICorner_24.Parent = Insert_Scroll_2
+local UICorner_27 = Instance.new("UICorner") do
+	UICorner_27.CornerRadius = UDim.new(0.5,0)
+	UICorner_27.Parent = Edit_3
 end
-local Insert_2 = Instance.new("TextBox") do
-	Insert_2.Name = "Insert"
-	Insert_2.BackgroundColor3 = Color3.new(1,1,1)
-	Insert_2.BackgroundTransparency = 1
-	Insert_2.BorderColor3 = Color3.new(0,0,0)
-	Insert_2.BorderSizePixel = 0
-	Insert_2.ClearTextOnFocus = false
-	Insert_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Insert_2.MultiLine = true
-	Insert_2.PlaceholderText = "Insert code here"
-	Insert_2.Size = UDim2.new(1,0,1,0)
-	Insert_2.Text = ""
-	Insert_2.TextColor3 = Color3.new(1,1,1)
-	Insert_2.TextSize = 14
-	Insert_2.TextStrokeColor3 = Color3.new(1,1,1)
-	Insert_2.TextXAlignment = Enum.TextXAlignment.Left
-	Insert_2.TextYAlignment = Enum.TextYAlignment.Top
-	Insert_2.ZIndex = 1_000
-	Insert_2.Parent = Insert_Scroll_2
-end
-local UIStroke_6 = Instance.new("UIStroke") do
-	UIStroke_6.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	UIStroke_6.Parent = Insert_Scroll_2
-end
-local Import_3 = Instance.new("TextButton") do
-	Import_3.Name = "Import"
-	Import_3.AnchorPoint = Vector2.new(0.5,0.5)
-	Import_3.AutoButtonColor = false
-	Import_3.BackgroundColor3 = Color3.new(1,1,1)
-	Import_3.BackgroundTransparency = 1
-	Import_3.BorderColor3 = Color3.new(0,0,0)
-	Import_3.BorderSizePixel = 0
-	Import_3.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Import_3.Position = UDim2.new(0.5,0,0.55,0)
-	Import_3.Size = UDim2.new(0.043,0,0.719,0)
-	Import_3.Text = ""
-	Import_3.TextColor3 = Color3.new(0,0,0)
-	Import_3.TextSize = 14
-	Import_3.TextTransparency = 1
-	Import_3.ZIndex = 1_001
-	Import_3.Parent = PathMacro_1
-end
-
-local Label_4 = Instance.new("ImageLabel") do
-	Label_4.Name = "Label"
-	Label_4.AnchorPoint = Vector2.new(0.5,0.5)
-	Label_4.BackgroundColor3 = Color3.new(0.2,0.373,1)
-	Label_4.BorderColor3 = Color3.new(0,0,0)
-	Label_4.BorderSizePixel = 0
-	Label_4.Image = "rbxassetid://153287088"
-	Label_4.Position = UDim2.new(0.5,0,0.5,0)
-	Label_4.Size = UDim2.new(1,0,1,0)
-	Label_4.ZIndex = 1_000
-	Label_4.Parent = Import_3
-end
-
-local UICorner_25 = Instance.new("UICorner") do
-	UICorner_25.CornerRadius = UDim.new(0.1,0)
-	UICorner_25.Parent = Label_4
-end
-local TextLabel_4 = Instance.new("TextLabel") do
-	TextLabel_4.AnchorPoint = Vector2.yAxis
-	TextLabel_4.BackgroundColor3 = Color3.new(1,1,1)
-	TextLabel_4.BackgroundTransparency = 1
-	TextLabel_4.BorderColor3 = Color3.new(0,0,0)
-	TextLabel_4.BorderSizePixel = 0
-	TextLabel_4.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.SemiBold,Enum.FontStyle.Normal)
-	TextLabel_4.Position = UDim2.new(0,0,1,0)
-	TextLabel_4.Size = UDim2.new(0.5,0,0.5,0)
-	TextLabel_4.Text = "{}"
-	TextLabel_4.TextColor3 = Color3.new(1,1,1)
-	TextLabel_4.TextScaled = true
-	TextLabel_4.TextSize = 14
-	TextLabel_4.TextWrapped = true
-	TextLabel_4.ZIndex = 1_000
-	TextLabel_4.Parent = Label_4
-end
-local UIAspectRatioConstraint_3 = Instance.new("UIAspectRatioConstraint",Label_4)
-local UICorner_26 = Instance.new("UICorner") do
-	UICorner_26.CornerRadius = UDim.new(0.025,0)
-	UICorner_26.Parent = PathMacro_1
-end
-local Frame_6 = Instance.new("Frame") do
-	Frame_6.AnchorPoint = Vector2.yAxis
-	Frame_6.BackgroundColor3 = Color3.new(0.247,0.247,0.247)
-	Frame_6.BorderColor3 = Color3.new(0,0,0)
-	Frame_6.BorderSizePixel = 0
-	Frame_6.Position = UDim2.new(0,0,1,0)
-	Frame_6.Size = UDim2.new(1,0,0.025,0)
-	Frame_6.ZIndex = 999
-	Frame_6.Parent = PathMacro_1
-end
-local Title_2 = Instance.new("TextLabel") do
-	Title_2.Name = "Title"
-	Title_2.AnchorPoint = Vector2.new(0.5,0)
-	Title_2.BackgroundColor3 = Color3.new(1,1,1)
-	Title_2.BackgroundTransparency = 1
-	Title_2.BorderColor3 = Color3.new(0,0,0)
-	Title_2.BorderSizePixel = 0
-	Title_2.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
-	Title_2.Position = UDim2.new(0.5,0,0,0)
-	Title_2.Size = UDim2.new(0.5,0,0.175,0)
-	Title_2.Text = "Path Macro"
-	Title_2.TextColor3 = Color3.new(1,1,1)
-	Title_2.TextScaled = true
-	Title_2.TextSize = 14
-	Title_2.TextWrapped = true
-	Title_2.ZIndex = 999
-	Title_2.Parent = PathMacro_1
-end
-
 
 local Components = Instance.new("Folder") do
 	Components.Name = "Components"
