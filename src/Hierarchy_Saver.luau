@@ -25,6 +25,16 @@ local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Selection = game:GetService("Selection")
 
+local CurrentThread = coroutine.running()
+local function SetProperty(obj:any,property:string,value:any):()
+	obj[property]=value
+end
+
+
+local _try,get = pcall(game:GetService("Players").GetNameFromUserIdAsync,game:GetService("Players"),game:GetService("StudioService"):GetUserId())
+local LocalUserName:string = (_try==true and get) or "AnonimousUser"..tostring(math.random(1,9999))
+
+
 local SelectedInstance:Instance? = nil
 local Heartbeat = RunService.Heartbeat
 local Types = require(script:WaitForChild("Types"))
@@ -33,6 +43,33 @@ local _ss_module = require(script:WaitForChild("ss"))
 local ss,UpdateSS = _ss_module.ss,_ss_module.Update
 
 local SessionData = require(script:WaitForChild("SessionData"))
+
+local function Parser(txt:string):any
+	local modulescript = Instance.new("ModuleScript")
+	modulescript.Archivable=false
+	modulescript.Source=txt
+	task.defer(game.Destroy,modulescript)
+	return (require::any)(modulescript)
+end
+local CleanUpTable:{Instance} = table.create(4)::{Instance}
+local function AddPluginGC(ins:Instance):()
+	table.insert(CleanUpTable,ins)
+	ins.Destroying:Connect(function():()
+		if table.isfrozen(CleanUpTable) then return end
+		local needle:number? = table.find(CleanUpTable,ins)
+		if needle~=nil then
+			table.remove(CleanUpTable,needle)
+		end
+	end)
+end
+
+
+plugin.Unloading:Once(function():()
+	table.freeze(CleanUpTable)
+	for i,v in CleanUpTable do
+		v:Destroy()
+	end
+end)
 
 
 --[[
@@ -89,6 +126,10 @@ end
 local function MathClampValue(value:number,min:number,max:number,clamp:number):number
 	return math.round(math.clamp((clamp==0 and value) or value-(value%clamp),min,max)*1_000)/1_000
 end
+local sortCallback = function(a:any,b:any):boolean
+	if typeof(a)~=typeof(b) then return false end
+	return a<b
+end
 
 --Sorted dictionary closure iterator
 local function spairs<K,V>(t:{[K]:V}): () -> (K?,V?)
@@ -96,7 +137,7 @@ local function spairs<K,V>(t:{[K]:V}): () -> (K?,V?)
 	for k in t do
 		table.insert(keys, k)
 	end
-	table.sort(keys)
+	pcall(table.sort,keys,sortCallback)
 	local i:number = 0
 	local n:number = #keys
 	-- iterator function (closure)
@@ -145,6 +186,86 @@ Widget:SetAttribute("Manage",false)
 
 
 ;(function():()
+	local TestAccess = function():string
+		return ""
+	end
+	local VerifyAccess = Instance.new("Script")
+	AddPluginGC(VerifyAccess)
+	local try,ret = pcall(ScriptEditorService.UpdateSourceAsync,ScriptEditorService,VerifyAccess,TestAccess)
+	if try==false then
+		--09.08.2025 - 01:05 : 13
+
+		local Frame = Instance.new("Frame") do
+			Frame.BackgroundColor3 = Color3.new(0.561,0.788,1)
+			Frame.BorderColor3 = Color3.new(0,0,0)
+			Frame.BorderSizePixel = 0
+			Frame.Size = UDim2.new(1,0,1,0)
+			Frame.ZIndex = 0
+		end
+
+		local TextButton = Instance.new("TextButton") do
+			TextButton.AnchorPoint = Vector2.new(0.5,0.5)
+			TextButton.BackgroundColor3 = Color3.new(0.196,0.231,0.267)
+			TextButton.BorderColor3 = Color3.new(0,0,0)
+			TextButton.BorderSizePixel = 0
+			TextButton.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+			TextButton.Position = UDim2.new(0.494,0,0.769,0)
+			TextButton.Size = UDim2.new(0.204,0,0.186,0)
+			TextButton.Text = "Try again"
+			TextButton.TextColor3 = Color3.new(1,1,1)
+			TextButton.TextScaled = true
+			TextButton.TextSize = 14
+			TextButton.TextWrapped = true
+			TextButton.ZIndex = 3
+			TextButton.Parent = Frame
+		end
+
+		local UICorner = Instance.new("UICorner") do
+			UICorner.CornerRadius = UDim.new(0.1,0)
+			UICorner.Parent = TextButton
+		end
+		local ImageLabel = Instance.new("ImageLabel") do
+			ImageLabel.AnchorPoint = Vector2.new(0.5,0.5)
+			ImageLabel.BackgroundColor3 = Color3.new(1,1,1)
+			ImageLabel.BackgroundTransparency = 1
+			ImageLabel.BorderColor3 = Color3.new(0,0,0)
+			ImageLabel.BorderSizePixel = 0
+			ImageLabel.Image = "rbxassetid://101266206703626"
+			ImageLabel.Position = UDim2.new(0.494,0,0.277,0)
+			ImageLabel.Size = UDim2.new(0,230,0,223)
+			ImageLabel.Parent = Frame
+		end
+
+		local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint",ImageLabel)
+		local TextLabel = Instance.new("TextLabel") do
+			TextLabel.BackgroundColor3 = Color3.new(1,1,1)
+			TextLabel.BackgroundTransparency = 1
+			TextLabel.BorderColor3 = Color3.new(0,0,0)
+			TextLabel.BorderSizePixel = 0
+			TextLabel.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal)
+			TextLabel.Position = UDim2.new(0,0,0.5,0)
+			TextLabel.Size = UDim2.new(1,0,0.5,0)
+			TextLabel.Text = "No Access"
+			TextLabel.TextColor3 = Color3.new(1,1,1)
+			TextLabel.TextScaled = true
+			TextLabel.TextSize = 14
+			TextLabel.TextWrapped = true
+			TextLabel.ZIndex = 2
+			TextLabel.Parent = ImageLabel
+		end
+		TextButton.MouseButton1Click:Connect(function():()
+			local VerifyAccess = Instance.new("Script")
+			local try,ret = pcall(ScriptEditorService.UpdateSourceAsync,ScriptEditorService,VerifyAccess,TestAccess)
+			if try==false then warn("No Script Edit Access") return end
+			Frame:Destroy()
+			coroutine.resume(CurrentThread)
+		end)
+		Frame.Parent=Widget
+		coroutine.yield()
+	end
+	VerifyAccess:Destroy()
+
+	--Menu
 	local HierarchySaver_Settings_Connection:RBXScriptConnection = plugin.Unloading:Once(function()
 		plugin:SetSetting("HierarchySaver_Settings",HttpService:JSONEncode(SessionData))
 	end)
@@ -354,6 +475,58 @@ Widget:SetAttribute("Manage",false)
 			Line.Parent=CurrentMainDebug_Scroll
 		end
 	end
+	
+	_G.HierarchySaverImport = function(json:string):()
+		local try,ret = pcall(HttpService.JSONDecode,HttpService,json)
+		if not try then warn(ret) return end
+		for i,v in ret::{[string]:string} do
+			plugin:SetSetting(i,v)
+		end
+		if HierarchySaver_Settings_Connection.Connected==true then
+			HierarchySaver_Settings_Connection:Disconnect()
+		end
+		warn("Settings applied ✅. Please restart studio.")
+	end
+	
+	local SaveStr:{string} = {"NE_BaseImports";"NE_pathMacro";"NE_cachedConstants";"NE_IgnoreProperties"}
+	local function __ExportData():()
+		local script = Instance.new("Script")
+		script.Archivable=false
+		script.Name = `Export_{LocalUserName}`
+		script.Enabled=false
+		script.Parent=game
+		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
+		if try == false then script:Destroy() return end
+		Heartbeat:Wait()
+		local ret = ScriptEditorService:FindScriptDocument(script)::ScriptDocument?
+		if ret==nil then warn("Unable to find script document") return end
+		local data = {
+			["HierarchySaver_Settings"] = HttpService:JSONDecode(plugin:GetSetting("HierarchySaver_Settings")::string? or "{}") or {}
+		}
+		for _,v in SaveStr do
+			data[v] = plugin:GetSetting(v)::string? or ""
+		end
+		ret:EditTextAsync(`_G.HierarchySaverImport([[{HttpService:JSONEncode(data)}]])`,1,1,1,-1)
+		Selection:Set({script})
+	end
+	
+	local function ExportData():()
+		local Line = Instance.new("TextButton") do
+			Line.Name = "Line"
+			Line.BackgroundColor3 = Color3.new(1, 1, 0)
+			Line.BorderColor3 = Color3.new(0, 0, 0)
+			Line.BorderSizePixel = 0
+			Line.ClipsDescendants = true
+			Line.Size = UDim2.new(1, -12, 0, 50)
+			Line.ZIndex = 3
+			Line.Text = "Export Data"
+			Line.TextScaled=true
+		end
+		Line.MouseButton1Click:Connect(__ExportData)
+		Line.Parent=CurrentMainDebug_Scroll
+	end
+	
+	
 	local info:local_info_temp = {
 		{
 			PluginData = "HierarchySaver_Settings";
@@ -374,6 +547,7 @@ Widget:SetAttribute("Manage",false)
 	Widget:GetAttributeChangedSignal("Manage"):Connect(function():()
 		if Widget:GetAttribute("Manage") == false then if CurrentMainDebug_Scroll~=nil then CurrentMainDebug_Scroll:Destroy() end return end
 		BuildNewTempWidget()
+		ExportData()
 		BuildPropertiesTemp(info)
 	end)
 end)()
@@ -433,7 +607,6 @@ local Property_NumberRange = Elements:WaitForChild("NumberRange")
 local Property_EnumList = Elements:WaitForChild("EnumList")
 local Property_EnumList_Sample = Elements:WaitForChild("EnumListSample")
 local CodeOutput = Elements:WaitForChild("CodeOutput")
-local Parser =require(script:WaitForChild("Parser"))
 
 --Configs
 local Y_heightPX = UDim2.new(1,0,0,Property_Y_SizePX)
@@ -740,9 +913,7 @@ plugin.Unloading:Once(function()
 end)
 
 --********************* Tab related functions
-local function SetProperty(obj:any,property:string,value:any):()
-	obj[property]=value
-end
+
 --Deletes Tab
 local function DeleteTab(Name:string):()
 	local Upper,Tab = UpperBar:FindFirstChild(Name),ViewTabs:FindFirstChild(Name)
@@ -2070,14 +2241,7 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):(
 	task.defer(Updater.Fire,Updater)
 end
 local CachedConstants:{[any]:string}
-do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_cachedConstants") or [[{[2.718281828459045]="math.exp(1)"}]])
-	if _try and type(ret)=="table" then
-		CachedConstants=ret
-	else
-		CachedConstants = {[2.718281828459045]="math.exp(1)"}
-	end
-end
+
 
 local hexDigits:string = "0123456789abcdef"
 local escape:{[string]:string} = {
@@ -2656,66 +2820,103 @@ end
 	end
 end)()
 local pathMacro:{[Instance]:string}
-do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_pathMacro") or "{}")
-	if _try and type(ret)=="table" then
-		pathMacro=ret
-	else
-		pathMacro = {}
-	end
 
-end
 
-local IgnoredPropertiesList:{[any]:any}
-do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or [[{["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency";"Font"};}]])
+local IgnoredPropertiesList:{[string]:any}
+;(function():()
+	local IgnoreProp_Def_TextSource:string = [[return {
+	BasePart = {
+		"BrickColor";
+		"Position";
+		"Rotation";
+		"Orientation";
+	};
+	LuaSourceContainer = {"Source"};
+	Motor6D = {"Transform"};
+	Tool = {
+		"GripForward";
+		"GripPos";
+		"GripRight";
+		"GripUp";
+	};
+	GuiObject = {"Transparency";"Font"};
+}]]
+	local _try,ret = pcall(Parser,plugin:GetSetting("NE_IgnoreProperties") or IgnoredPropertiesList)
 	if _try and type(ret)=="table" then
 		IgnoredPropertiesList = ret
 	else
 		IgnoredPropertiesList={["BasePart"]={"BrickColor";"Position";"Rotation";"Orientation";};["LuaSourceContainer"]={"Source"};["Motor6D"]={"Transform"};["Tool"]={"GripForward";"GripPos";"GripRight";"GripUp";};["GuiObject"]={"Transparency";"Font"};}
 	end
-end
 
-do
+
+
 	local IgnoredProperties_Button_Frame = LowerBar:WaitForChild("Ignored_Properties")
 	local Frame1 = IgnoredProperties_Button_Frame:WaitForChild("Frame1")
 	local Frame2 = IgnoredProperties_Button_Frame:WaitForChild("Frame2")
 	local Button = IgnoredProperties_Button_Frame:WaitForChild("Button")
 	local Exit = Ignored_Properies:WaitForChild("Exit")
+	local __Edit = Ignored_Properies:WaitForChild("Edit")
 	local EFrame,EFrame1,EFrame2 = Exit:WaitForChild("Frame"),Exit:WaitForChild("Frame1"),Exit:WaitForChild("Frame2")
 	local Import = Ignored_Properies:WaitForChild("Import")
 	local IFrame,IFrame1,IFrame2 = Import:WaitForChild("Frame"),Import:WaitForChild("Frame1"),Import:WaitForChild("Frame2")
 	local ContentScroll = Ignored_Properies:WaitForChild("Content")
-	local Input_txt = ContentScroll:WaitForChild("TextBox")
-	local Input_Rich = Input_txt:WaitForChild("Rich")
+	local Input_Rich = ContentScroll:WaitForChild("Rich")
 
-	Input_txt:GetPropertyChangedSignal("TextBounds"):Connect(function():()
-		ContentScroll.CanvasSize=UDim2.new(0,math.max(Input_txt.TextBounds.X,Input_Rich.TextBounds.X),0,math.max(Input_txt.TextBounds.Y,Input_Rich.TextBounds.Y))
+	Input_Rich:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+		ContentScroll.CanvasSize=UDim2.new(0,Input_Rich.TextBounds.X,0,Input_Rich.TextBounds.Y)
 	end)
 	local function AdjustTextSize():()
-		Input_txt.TextSize=ss.CodeOutputTextSize
 		Input_Rich.TextSize=ss.CodeOutputTextSize
 	end
-	Input_txt.Focused:Connect(function()
-		Input_Rich.Visible = false
-		Input_txt.TextTransparency=0
-	end)
-	Input_txt.FocusLost:Connect(function()
-		Input_Rich.Visible = true
-		Input_txt.TextTransparency=0.99
-	end)
+	local __IgnoreProperties__ModuleCurrent = Instance.new("ModuleScript")
+	__IgnoreProperties__ModuleCurrent.Archivable=false
+	__IgnoreProperties__ModuleCurrent.Name = `IgnoredProperties_{LocalUserName}`
+	AddPluginGC(__IgnoreProperties__ModuleCurrent)
+	pcall(SetProperty,__IgnoreProperties__ModuleCurrent,"Source",plugin:GetSetting("NE_IgnoreProperties") or IgnoreProp_Def_TextSource)
+
 	OnConvert.Event:Connect(AdjustTextSize)
 	task.defer(AdjustTextSize)
 	table.insert(BrightestText_Theme,Import)
 	table.insert(BrightestText_Theme,Exit)
 	table.insert(BrightestText_Theme,Button)
-	table.insert(ScriptTextColor_List,Input_txt)
+	table.insert(BrightestText_Theme,__Edit)
 	table.insert(ScriptTextColor_List,Input_Rich)
 	table.insert(LightThemeColor_List,Ignored_Properies)
 	ContentScroll:SetAttribute("Enabled",true)
 	table.insert(Properties_ItemColor,ContentScroll)
 	local Import_IsHower:boolean = false
 	local Exit_IsHower:boolean = false
+	local __Edit_IsHower:boolean = false
+	__Edit.MouseEnter:Connect(function():()
+		__Edit.BackgroundColor3=LowerBar_Convert_Color_Enter
+		__Edit_IsHower=true
+	end)
+	__Edit.MouseLeave:Connect(function():()
+		__Edit.BackgroundColor3=LowerBar_Convert_Color_Leave
+		__Edit_IsHower=false
+	end)
+	__Edit.MouseButton1Down:Connect(function():()
+		__Edit.BackgroundColor3=LowerBar_Convert_Color_Click
+	end)
+	__Edit.MouseButton1Up:Connect(function():()
+		if __Edit_IsHower then __Edit.BackgroundColor3=LowerBar_Convert_Color_Enter return end
+		__Edit.BackgroundColor3=LowerBar_Convert_Color_Leave
+	end)
+
+	__Edit.MouseButton1Click:Connect(function():()
+		__IgnoreProperties__ModuleCurrent.Parent = game
+		local try,err = ScriptEditorService:OpenScriptDocumentAsync(__IgnoreProperties__ModuleCurrent)
+		if try==false then
+			task.spawn(game.Destroy,__IgnoreProperties__ModuleCurrent)
+			local n = Instance.new("ModuleScript")
+			n.Archivable=false
+			__IgnoreProperties__ModuleCurrent = n
+			n.Name = `IgnoredProperties_{LocalUserName}`
+			AddPluginGC(n)
+			pcall(SetProperty,n,"Source",plugin:GetSetting("NE_IgnoreProperties") or IgnoreProp_Def_TextSource)
+		end
+	end)
+
 	Button.MouseEnter:Connect(function():()
 		IgnoredProperties_Button_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
 		Button.BackgroundColor3=LowerBar_Convert_Color_Enter
@@ -2801,9 +3002,7 @@ do
 		LowerBar.Visible=true
 	end)
 	local function ApplyTable(tbl:{[any]:any},str:string?):()
-		local tab,tab_rich = ConstructorTostring("table",tbl,true)
-		Input_txt.Text=tab
-		Input_Rich.Text=tab_rich
+		Input_Rich.Text=select(2,ConstructorTostring("table",tbl,true))
 		if str~=nil then
 			IgnoredPropertiesList=tbl
 			plugin:SetSetting("NE_IgnoreProperties",str)
@@ -2813,7 +3012,15 @@ do
 	ApplyTable(IgnoredPropertiesList)
 	Import.MouseButton1Click:Connect(function():()
 		--Parse table
-		local txt:string = Input_txt.Text
+		local txt:string = __IgnoreProperties__ModuleCurrent.Source
+		task.spawn(game.Destroy,__IgnoreProperties__ModuleCurrent)
+		local n = Instance.new("ModuleScript")
+		n.Archivable=false
+		__IgnoreProperties__ModuleCurrent = n
+		n.Name = `IgnoredProperties_{LocalUserName}`
+		AddPluginGC(n)
+		pcall(SetProperty,n,"Source",txt)
+		
 		local try,res = pcall(Parser,txt)
 		if try and type(res)=="table" then
 			for i,v in res::{[any]:any} do
@@ -2834,20 +3041,19 @@ do
 		else
 			warn(res)
 		end
+		local n = Instance.new("ModuleScript")
+		n.Archivable=false
+		__IgnoreProperties__ModuleCurrent = n
+		n.Name = `IgnoredProperties_{LocalUserName}`
+		AddPluginGC(n)
+		pcall(SetProperty,n,"Source",plugin:GetSetting("NE_IgnoreProperties") or IgnoreProp_Def_TextSource)
 	end)
-end
+end)()
 
 type _baseImports = {[string]:{[string]:any}}
 
 local _baseImports:_baseImports
-do
-	local _try,ret = pcall(Parser,plugin:GetSetting("NE_BaseImports") or "{}")
-	if _try and type(ret)=="table" then
-		_baseImports=ret
-	else
-		_baseImports = {}
-	end
-end
+
 
 (function()-- Import_Base (register limit)
 	local Import_Base = Main:WaitForChild("Import_Base")
@@ -2926,7 +3132,29 @@ end
 		end)	
 	end
 	do--Constants
+		local def_Constants_Source:string = [[return {[2.718281828459045]="math.exp(1)"}]]
+		do
+			local _try,ret = pcall(Parser,plugin:GetSetting("NE_cachedConstants") or def_Constants_Source)
+			if _try and type(ret)=="table" then
+				CachedConstants=ret
+			else
+				CachedConstants = {[2.718281828459045]="math.exp(1)"}
+			end
+		end
 		local _constants = Import_Constants:WaitForChild("Constants")
+		local __Edit = _constants:WaitForChild("Edit")
+		table.insert(BrightestText_Theme,__Edit:WaitForChild("Title"))
+		local __Edit_Title = __Edit:WaitForChild("Title")
+		local __Edit_Frame = __Edit:WaitForChild("Frame")
+		local __Edit_Frame2 = __Edit:WaitForChild("Frame2")
+
+		local __Constants__ModuleCurrent = Instance.new("ModuleScript")
+		__Constants__ModuleCurrent.Archivable=false
+		__Constants__ModuleCurrent.Name = `Constants_{LocalUserName}`
+		AddPluginGC(__Constants__ModuleCurrent)
+		pcall(SetProperty,__Constants__ModuleCurrent,"Source",plugin:GetSetting("NE_cachedConstants") or def_Constants_Source)
+
+
 		table.insert(Tab_EnumColor_List,_constants)
 		table.insert(Tab_EnumColor_List,_constants:WaitForChild("Frame")::Frame)
 		table.insert(BrightestText_Theme,_constants:WaitForChild("Title")::TextLabel)
@@ -2941,11 +3169,8 @@ end
 		--adding highlights
 		local Import_box = _constants:WaitForChild("Import")
 		local Import_Label = Import_box:WaitForChild("Label")
-		local Insert_Scroll = _constants:WaitForChild("Insert_Scroll")
-		local Insert = Insert_Scroll:WaitForChild("Insert")
 		local Imported_Scroll = _constants:WaitForChild("Imported_Scroll")
-		local Imported = Imported_Scroll:WaitForChild("Imported")
-		local Rich = Imported:WaitForChild("Rich")
+		local Rich = Imported_Scroll:WaitForChild("Rich")
 		local EnterState:boolean = false
 		table.insert(BrightestText_Theme,Import_Label)
 		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
@@ -2969,35 +3194,79 @@ end
 				Import_Label.BackgroundColor3=LowerBar_Convert_Color_Leave
 			end
 		end)
+
+
+		local __Edit_IsHower:boolean = false
+		__Edit.MouseEnter:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_IsHower=true
+		end)
+		__Edit.MouseLeave:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_IsHower=false
+		end)
+		__Edit.MouseButton1Down:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		__Edit.MouseButton1Up:Connect(function():()
+			if __Edit_IsHower then
+				__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter 
+				__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+				__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+				return 
+			end
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+
+		__Edit.MouseButton1Click:Connect(function():()
+			__Constants__ModuleCurrent.Parent = game
+			local try,err = ScriptEditorService:OpenScriptDocumentAsync(__Constants__ModuleCurrent)
+			if try==false then
+				task.spawn(game.Destroy,__Constants__ModuleCurrent)
+				local n = Instance.new("ModuleScript")
+				n.Archivable=false
+				__Constants__ModuleCurrent = n
+				n.Name = `Constants_{LocalUserName}`
+				AddPluginGC(n)
+				pcall(SetProperty,n,"Source",plugin:GetSetting("NE_cachedConstants") or def_Constants_Source)
+			end
+		end)
+
 		local function AdjustTextSize():()
-			Imported.TextSize=ss.CodeOutputTextSize
 			Rich.TextSize=ss.CodeOutputTextSize
-			Insert.TextSize=ss.CodeOutputTextSize
 		end
 		OnConvert.Event:Connect(AdjustTextSize)
 		task.defer(AdjustTextSize)
 		--table.insert(ScriptBackground_List,Insert_Scroll)
-		table.insert(ScriptBackground_List,Insert_Scroll)
+		table.insert(ScriptBackground_List,Imported_Scroll)
 		table.insert(ScriptTextColor_List,Rich)
-		table.insert(ScriptTextColor_List,Imported)
-		table.insert(ScriptTextColor_List,Insert)
+		table.insert(ScriptTextColor_List,__Edit)
 		--strokes
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
-		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
-			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
+		Rich:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
 		end)
-		Insert_Scroll.CanvasSize = UDim2_zero
-		local function ScaleImported():()
-			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
-		end
-		Imported:GetPropertyChangedSignal("TextBounds"):Connect(ScaleImported)
-		task.defer(ScaleImported)
+		Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
 
 		Import_box.MouseButton1Click:Connect(function():()
 			--Parse
-			local Insert_txt:string = Insert.Text
+			local Insert_txt:string = __Constants__ModuleCurrent.Source
+			task.spawn(game.Destroy,__Constants__ModuleCurrent)
+			local n = Instance.new("ModuleScript")
+			n.Archivable=false
+			__Constants__ModuleCurrent = n
+			n.Name = `Constants_{LocalUserName}`
+			AddPluginGC(n)
+			pcall(SetProperty,n,"Source",Insert_txt)
 			local try,parsed = pcall(Parser,Insert_txt)
 			if try and type(parsed)=="table" then
 				--Type validation
@@ -3008,9 +3277,7 @@ end
 					end
 				end
 				CachedConstants = parsed
-				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
-				Imported.Text = tbl
-				Rich.Text = rich_tbl
+				Rich.Text = select(2,ConstructorTostring("table",parsed,true))
 				plugin:SetSetting("NE_cachedConstants",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\tValue{ss._Equal}string\n\}`)
@@ -3018,9 +3285,7 @@ end
 				warn(parsed)
 			end
 		end)
-		local tbl,rich_tbl = ConstructorTostring("table",CachedConstants,true)
-		Imported.Text = tbl
-		Rich.Text = rich_tbl
+		Rich.Text = select(2,ConstructorTostring("table",CachedConstants,true))
 
 
 		_backImport_Button.MouseEnter:Connect(function()
@@ -3059,7 +3324,75 @@ end
 		end)
 	end
 	do--PathMacro
+		local def_pathmacro_source:string = "return {}"
+		do
+			local _try,ret = pcall(Parser,plugin:GetSetting("NE_pathMacro") or def_pathmacro_source)
+			if _try and type(ret)=="table" then
+				pathMacro=ret
+			else
+				pathMacro = {}
+			end
+
+		end
+		
 		local _pathMacro = Import_Macro:WaitForChild("PathMacro")
+		local __Edit = _pathMacro:WaitForChild("Edit")
+		table.insert(BrightestText_Theme,__Edit:WaitForChild("Title"))
+		local __Edit_Title = __Edit:WaitForChild("Title")
+		local __Edit_Frame = __Edit:WaitForChild("Frame")
+		local __Edit_Frame2 = __Edit:WaitForChild("Frame2")
+		
+		local __PathMacro__ModuleCurrent = Instance.new("ModuleScript")
+		__PathMacro__ModuleCurrent.Archivable=false
+		__PathMacro__ModuleCurrent.Name = `PathMacro_{LocalUserName}`
+		AddPluginGC(__PathMacro__ModuleCurrent)
+		pcall(SetProperty,__PathMacro__ModuleCurrent,"Source",plugin:GetSetting("NE_pathMacro") or def_pathmacro_source)
+
+		
+		local __Edit_IsHower:boolean = false
+		__Edit.MouseEnter:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_IsHower=true
+		end)
+		__Edit.MouseLeave:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_IsHower=false
+		end)
+		__Edit.MouseButton1Down:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		__Edit.MouseButton1Up:Connect(function():()
+			if __Edit_IsHower then
+				__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter 
+				__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+				__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+				return 
+			end
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+
+		__Edit.MouseButton1Click:Connect(function():()
+			__PathMacro__ModuleCurrent.Parent = game
+			local try,err = ScriptEditorService:OpenScriptDocumentAsync(__PathMacro__ModuleCurrent)
+			if try==false then
+				task.spawn(game.Destroy,__PathMacro__ModuleCurrent)
+				local n = Instance.new("ModuleScript")
+				n.Archivable=false
+				__PathMacro__ModuleCurrent = n
+				n.Name = `PathMacro_{LocalUserName}`
+				AddPluginGC(n)
+				pcall(SetProperty,n,"Source",plugin:GetSetting("NE_pathMacro") or def_pathmacro_source)
+			end
+		end)
+		
 		table.insert(Tab_EnumColor_List,_pathMacro)
 		table.insert(Tab_EnumColor_List,_pathMacro:WaitForChild("Frame")::Frame)
 		table.insert(BrightestText_Theme,_pathMacro:WaitForChild("Title")::TextLabel)
@@ -3074,14 +3407,9 @@ end
 		--adding highlights
 		local Import_box = _pathMacro:WaitForChild("Import")
 		local Import_Label = Import_box:WaitForChild("Label")
-		local Insert_Scroll = _pathMacro:WaitForChild("Insert_Scroll")
-		local Insert = Insert_Scroll:WaitForChild("Insert")
 		local Imported_Scroll = _pathMacro:WaitForChild("Imported_Scroll")
-		local Imported = Imported_Scroll:WaitForChild("Imported")
-		local Rich = Imported:WaitForChild("Rich")
+		local Rich = Imported_Scroll:WaitForChild("Rich")
 		local EnterState:boolean = false
-		table.insert(BrightestText_Theme,Import_Label)
-		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
 		table.insert(BrightestText_Theme,Import_Button)
 		table.insert(BrightestText_Theme,_backImport_Button)
 		----
@@ -3103,34 +3431,33 @@ end
 			end
 		end)
 		local function AdjustTextSize():()
-			Imported.TextSize=ss.CodeOutputTextSize
 			Rich.TextSize=ss.CodeOutputTextSize
-			Insert.TextSize=ss.CodeOutputTextSize
 		end
 		OnConvert.Event:Connect(AdjustTextSize)
 		task.defer(AdjustTextSize)
 		--table.insert(ScriptBackground_List,Insert_Scroll)
-		table.insert(ScriptBackground_List,Insert_Scroll)
 		table.insert(ScriptTextColor_List,Rich)
-		table.insert(ScriptTextColor_List,Imported)
-		table.insert(ScriptTextColor_List,Insert)
+		table.insert(ScriptTextColor_List,__Edit)
 		--strokes
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
-		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
-			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
+		Rich:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
 		end)
-		Insert_Scroll.CanvasSize = UDim2_zero
-		local function ScaleImported():()
-			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
-		end
-		Imported:GetPropertyChangedSignal("TextBounds"):Connect(ScaleImported)
-		task.defer(ScaleImported)
+		Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
+		
 
 		Import_box.MouseButton1Click:Connect(function():()
 			--Parse
-			local Insert_txt:string = Insert.Text
+			local Insert_txt:string = __PathMacro__ModuleCurrent.Source
+			task.spawn(game.Destroy,__PathMacro__ModuleCurrent)
+			local n = Instance.new("ModuleScript")
+			n.Archivable=false
+			__PathMacro__ModuleCurrent = n
+			n.Name = `PathMacro_{LocalUserName}`
+			AddPluginGC(n)
+			pcall(SetProperty,n,"Source",Insert_txt)
+			
 			local try,parsed = pcall(Parser,Insert_txt)
 			if try and type(parsed)=="table" then
 				--Type validation
@@ -3141,9 +3468,7 @@ end
 					end
 				end
 				pathMacro = parsed
-				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
-				Imported.Text = tbl
-				Rich.Text = rich_tbl
+				Rich.Text = select(2,ConstructorTostring("table",parsed,true))
 				plugin:SetSetting("NE_pathMacro",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\tPath.To.Instance{ss._Equal}string\n\}`)
@@ -3151,9 +3476,7 @@ end
 				warn(parsed)
 			end
 		end)
-		local tbl,rich_tbl = ConstructorTostring("table",pathMacro,true)
-		Imported.Text = tbl
-		Rich.Text = rich_tbl
+		Rich.Text = select(2,ConstructorTostring("table",pathMacro,true))
 
 
 		_backImport_Button.MouseEnter:Connect(function()
@@ -3209,13 +3532,79 @@ end
 	table.insert(BrightestText_Theme,_base:WaitForChild("Title"))
 
 	do--_base
+		local def_base_source:string = "return {}"
+		do
+			local _try,ret = pcall(Parser,plugin:GetSetting("NE_BaseImports") or def_base_source)
+			if _try and type(ret)=="table" then
+				_baseImports=ret
+			else
+				_baseImports = {}
+			end
+		end
+		
+		
+		local __Edit = _base:WaitForChild("Edit")
+		table.insert(BrightestText_Theme,__Edit:WaitForChild("Title"))
+		local __Edit_Title = __Edit:WaitForChild("Title")
+		local __Edit_Frame = __Edit:WaitForChild("Frame")
+		local __Edit_Frame2 = __Edit:WaitForChild("Frame2")
+
+	
+		local __Base__ModuleCurrent = Instance.new("ModuleScript")
+		__Base__ModuleCurrent.Archivable=false
+		__Base__ModuleCurrent.Name = `Base_{LocalUserName}`
+		AddPluginGC(__Base__ModuleCurrent)
+		pcall(SetProperty,__Base__ModuleCurrent,"Source",plugin:GetSetting("NE_BaseImports") or def_base_source)
+		
+		local __Edit_IsHower:boolean = false
+		__Edit.MouseEnter:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+			__Edit_IsHower=true
+		end)
+		__Edit.MouseLeave:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_IsHower=false
+		end)
+		__Edit.MouseButton1Down:Connect(function():()
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Click
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Click
+		end)
+		__Edit.MouseButton1Up:Connect(function():()
+			if __Edit_IsHower then
+				__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Enter 
+				__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Enter
+				__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Enter
+				return 
+			end
+			__Edit_Title.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame.BackgroundColor3=LowerBar_Convert_Color_Leave
+			__Edit_Frame2.BackgroundColor3=LowerBar_Convert_Color_Leave
+		end)
+
+		__Edit.MouseButton1Click:Connect(function():()
+			__Base__ModuleCurrent.Parent = game
+			local try,err = ScriptEditorService:OpenScriptDocumentAsync(__Base__ModuleCurrent)
+			if try==false then
+				task.spawn(game.Destroy,__Base__ModuleCurrent)
+				local n = Instance.new("ModuleScript")
+				n.Archivable=false
+				__Base__ModuleCurrent = n
+				n.Name = `Base_{LocalUserName}`
+				AddPluginGC(n)
+				pcall(SetProperty,n,"Source",plugin:GetSetting("NE_BaseImports") or def_base_source)
+			end
+		end)
+		
+		
 		local Import_box = _base:WaitForChild("Import")
 		local Import_Label = Import_box:WaitForChild("Label")
-		local Insert_Scroll = _base:WaitForChild("Insert_Scroll")
-		local Insert = Insert_Scroll:WaitForChild("Insert")
 		local Imported_Scroll = _base:WaitForChild("Imported_Scroll")
-		local Imported = Imported_Scroll:WaitForChild("Imported")
-		local Rich = Imported:WaitForChild("Rich")
+		local Rich = Imported_Scroll:WaitForChild("Rich")
 		local EnterState:boolean = false
 		table.insert(BrightestText_Theme,Import_Label)
 		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
@@ -3239,34 +3628,31 @@ end
 			end
 		end)
 		local function AdjustTextSize():()
-			Imported.TextSize=ss.CodeOutputTextSize
 			Rich.TextSize=ss.CodeOutputTextSize
-			Insert.TextSize=ss.CodeOutputTextSize
 		end
 		OnConvert.Event:Connect(AdjustTextSize)
 		task.defer(AdjustTextSize)
 		--table.insert(ScriptBackground_List,Insert_Scroll)
-		table.insert(ScriptBackground_List,Insert_Scroll)
 		table.insert(ScriptTextColor_List,Rich)
-		table.insert(ScriptTextColor_List,Imported)
-		table.insert(ScriptTextColor_List,Insert)
 		--strokes
 		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Imported_Scroll:WaitForChild("UIStroke")::UIStroke)
-		table.insert(ScriptWhitespaceColorList_FOR_UI_STROKE,Insert_Scroll:WaitForChild("UIStroke")::UIStroke)
 		----||-----------------------------------------------||----
-		Insert:GetPropertyChangedSignal("TextBounds"):Connect(function():()
-			Insert_Scroll.CanvasSize = UDim2.new(0,Insert.TextBounds.X,0,Insert.TextBounds.Y)
+		Rich:GetPropertyChangedSignal("TextBounds"):Connect(function():()
+			Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
 		end)
-		Insert_Scroll.CanvasSize = UDim2_zero
-		local function ScaleImported():()
-			Imported_Scroll.CanvasSize = UDim2.new(0,Imported.TextBounds.X,0,Imported.TextBounds.Y)
-		end
-		Imported:GetPropertyChangedSignal("Text"):Connect(ScaleImported)
-		task.defer(ScaleImported)
+		Imported_Scroll.CanvasSize = UDim2.new(0,Rich.TextBounds.X,0,Rich.TextBounds.Y)
 
 		Import_box.MouseButton1Click:Connect(function():()
 			--Parse
-			local Insert_txt:string = Insert.Text
+			local Insert_txt:string = __Base__ModuleCurrent.Source
+			task.spawn(game.Destroy,__Base__ModuleCurrent)
+			local n = Instance.new("ModuleScript")
+			n.Archivable=false
+			__Base__ModuleCurrent = n
+			n.Name = `Base_{LocalUserName}`
+			AddPluginGC(n)
+			pcall(SetProperty,n,"Source",Insert_txt)
+			
 			local try,parsed = pcall(Parser,Insert_txt)
 			if try and type(parsed)=="table" then
 				--Type validation
@@ -3277,9 +3663,7 @@ end
 					end
 				end
 				_baseImports = parsed
-				local tbl,rich_tbl = ConstructorTostring("table",parsed,true)
-				Imported.Text = tbl
-				Rich.Text = rich_tbl
+				Rich.Text = select(2,ConstructorTostring("table",parsed,true))
 				plugin:SetSetting("NE_BaseImports",Insert_txt)
 			elseif try then
 				warn(`Type has to be table: \{\n\t_BaseName{ss._Equal}\{\}\n\}`)
@@ -3287,9 +3671,7 @@ end
 				warn(parsed)
 			end
 		end)
-		local tbl,rich_tbl = ConstructorTostring("table",_baseImports,true)
-		Imported.Text = tbl
-		Rich.Text = rich_tbl
+		Rich.Text = select(2,ConstructorTostring("table",_baseImports,true))
 
 	end
 	--Base
@@ -3682,6 +4064,7 @@ end
 		local script:Script = Instance.new("Script")
 		local name:string = `{buffTarget} {os.date("%d.%m.%y - %H.%M. %S")}.hs`
 		script.Name = name
+		script.Archivable=false
 		local try = pcall(SetProperty,script,"Parent",game)
 		if try==false then warn("No script access. Please give script injection access.") script:Destroy() return end
 		script.Source = ""
@@ -3956,7 +4339,7 @@ end
 		return nil
 	end
 	local function IsBlocked(ins:Instance,prop:string):boolean
-		for ii,vv in IgnoredPropertiesList do
+		for ii,vv in (IgnoredPropertiesList::{[string]:any}) do
 			if ins:IsA(ii) and table.find(vv,prop)~=nil then
 				return true
 			end
@@ -4499,13 +4882,13 @@ end
 				if ss.FastNamecall==true then
 					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
-					
+
 					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
 					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
 				else
 					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh({ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
-					
+
 					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
@@ -4941,7 +5324,7 @@ end
 	end)
 	Code.Text = "--Code here"
 	Rich.Text = WriteRichText("--Code here",ScriptComment)
-	
+
 	local function __BegginConvert():()
 		--Mutate variables
 		UpdateSS()
