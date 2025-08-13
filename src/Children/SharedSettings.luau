@@ -433,6 +433,30 @@ return {
 				Type="boolean";
 				Tree = {
 					{
+						Name = "FNC_SolidModeling";
+						DisplayName = "FastNamecall Solid Modeling";
+						Description = "Use cached methods with solid modeling?";
+						Type = "boolean";
+					};
+					{
+						Name = "FNC_Mesh";
+						DisplayName = "FastNamecall Mesh";
+						Description = "Use cached methods with mesh creation?";
+						Type = "boolean";
+					};
+					{
+						Name = "FNC_Properties";
+						DisplayName = "FastNamecall Properties";
+						Description = "Dirrectly call propertie's metamethod for Set/Get(Property)?";
+						Type = "boolean";
+					};
+					{
+						Name = "FNC_UserData";
+						DisplayName = "FastNamecall UserData";
+						Description = "Dirrectly call propertie's metamethod for UserData (like cframe mult etc)?";
+						Type = "boolean";
+					};
+					{
 						Name = "NC_InsIndex";
 						DisplayName = "Instance Index";
 						Type = "string";
