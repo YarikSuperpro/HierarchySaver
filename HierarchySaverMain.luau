@@ -4176,8 +4176,8 @@ end
 			dictionary_rich..=`FluidFidelity{ss._Equal}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}{ss._Separator}`
 		end
 		dictionary..="}";dictionary_rich..="}"
-		dictionary = (dictionary=="{}" and "") or ss.FuncSeparator..dictionary
-		dictionary_rich = (dictionary_rich=="{}" and "") or ss.FuncSeparator..dictionary_rich
+		dictionary = (dictionary=="{}" and ""::string) or ss.FuncSeparator..dictionary
+		dictionary_rich = (dictionary_rich=="{}" and ""::string) or ss.FuncSeparator..dictionary_rich
 		return dictionary,dictionary_rich
 	end
 
@@ -4814,6 +4814,19 @@ end
 	local function GetArgsUnionAsyncOperation(ins:UnionOperation|IntersectOperation|NegateOperation):(string,string)
 		return `{(ins.CollisionFidelity~=Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}`) or ""}{(ins.RenderFidelity~=Enum.RenderFidelity.Automatic and `{(ins.CollisionFidelity==Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{ConstructorTostring("nil",nil)}`) or ""}{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.RenderFidelity)}`) or ""}`,`{(ins.CollisionFidelity~=Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}`) or ""}{(ins.RenderFidelity~=Enum.RenderFidelity.Automatic and `{(ins.CollisionFidelity==Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{select(2,ConstructorTostring("nil",nil))}`) or ""}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}`) or ""}`
 	end
+	local function NeedsUnionOperation(obj:Instance):boolean
+		if not obj:IsA("PartOperation") then return false end
+		local ret:boolean = true
+		local self = Instance.fromExisting(obj)
+		local loot = plugin:Separate({self})
+		if #loot==1 and not loot[1]:IsA("PartOperation") then ret=false end
+
+		for i,v in loot do
+			v:Destroy()
+		end
+		self:Destroy()
+		return ret
+	end
 	--Returns variable name of produced union
 	local function __WriteUnionConstructor(obj:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,reg:{[string]:true},reg_ptr:{[Instance]:string},Depth:number):string
 		local varname = reg_ptr[obj] or GetVarName(obj.Name,reg)
@@ -4821,7 +4834,7 @@ end
 
 
 
-		if obj:IsA("UnionOperation") or obj:IsA("IntersectOperation") or obj:IsA("NegateOperation") then
+		if obj:IsA("UnionOperation") or obj:IsA("IntersectOperation") or (obj:IsA("NegateOperation") and NeedsUnionOperation(obj)) then
 			--Unify
 			local self = obj:Clone()
 			local loot = plugin:Separate({self})
@@ -4868,6 +4881,7 @@ end
 
 
 			else
+				if reg_ptr[Union[1]]::string?==nil then return varname end
 				target = reg_ptr[Union[1]]::string
 			end
 			if #Negate~=0 then
@@ -4934,19 +4948,7 @@ end
 		return ret	
 	end
 
-	local function NeedsUnionOperation(obj:Instance):boolean
-		if not obj:IsA("PartOperation") then return false end
-		local ret:boolean = true
-		local self = Instance.fromExisting(obj)
-		local loot = plugin:Separate({self})
-		if #loot==1 and not loot[1]:IsA("PartOperation") then ret=false end
-
-		for i,v in loot do
-			v:Destroy()
-		end
-		self:Destroy()
-		return ret
-	end
+	
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
 		local properties = GetProperties(ins,nil,(ins.ClassName=="NegateOperation" and "Part") or nil)
@@ -4959,7 +4961,10 @@ end
 		local children = ins:GetChildren()
 		if NeedsUnionOperation(ins) then
 			if ss.NE_using_run==true then
-				Type=ss._ReplacementInstance;properties={}::{[string]:any} 
+				Type=ss._ReplacementInstance;
+				properties={}::{[string]:any};
+				Tags = {};
+				Attributes = {};
 			else
 				Type = "Part"
 			end
@@ -5132,10 +5137,14 @@ end
 				local reg_ptr:{[Instance]:string} = {}
 				
 				local var = WriteUnionConstructor(ins,code,riched_code,Layer+1,reg,reg_ptr)
+				local Tags = ins:GetTags()
+				local Attributes = ins:GetAttributes()
+				local Properties = GetProperties(ins)
+				local class = GetTypeOfInstance(ins,nil,(ins.ClassName=="NegateOperation" and "Part") or nil)
+				local baseImport:string? = NE__Base(Attributes,Tags,class,GetProperties(ins,true))
+				Luau_DoEndWrite(ins,code,riched_code,var,__IsPropertieLessDoEnd(ins,baseImport,Attributes,Tags,Properties),Layer+1,Attributes,Tags,Properties,baseImport,nil,{},{})
 				code..=`\n{string.rep(ss.t,Layer+1)}{ss["return"]} {var}`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss["return"],ScriptLuauKeyword)} {var}`
-
-				
 			end
 			--closing function
 			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
