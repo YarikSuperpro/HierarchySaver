@@ -45,6 +45,10 @@ local function Update():()
 	ss.NE_ClassName = SessionData["NE_ClassName"] or "Class";
 	ss.Typechecking = SessionData["Typechecking"]==true;
 	ss.FastNamecall = SessionData["FastNamecall"]==true;
+	ss.FNC_SolidModeling = (SessionData["FastNamecall"]==true and SessionData["FNC_SolidModeling"]==true) or false
+	ss.FNC_Mesh = (SessionData["FastNamecall"]==true and SessionData["FNC_Mesh"]==true) or false
+	ss.FNC_Properties = (SessionData["FastNamecall"]==true and SessionData["FNC_Properties"]==true) or false
+	ss.FNC_UserData = (SessionData["FastNamecall"]==true and SessionData["FNC_UserData"]==true) or false
 	ss.NC_InsIndex = SessionData["NC_InsIndex"] or "instance_index";
 	ss.NC_InsSetProperty = SessionData["NC_InsSetProperty"] or "instance_newindex";
 	ss.NC_CfrMul = SessionData["NC_CfrMul"] or "NC_CfrMul";
