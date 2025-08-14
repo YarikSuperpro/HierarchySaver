@@ -34,6 +34,14 @@ return {
 				DisplayName = "Using _run";
 				Description = "Uses _run (asyncronous function unlike _init) for SafeIndex and Recursive Hierarchies aswell for Compute Mesh method if possible to avoid memory leaks";
 				Type = "boolean";
+				Tree = {
+					{
+						Name = "_runRecursiveHierarchy";
+						DisplayName = "Recursive Hierarchy";
+						Description = "Use for Recursive Hierarchy? (not compatible with every hierarchy so be ware.)";
+						Type = "boolean";
+					};
+				};
 			};
 			{
 				Name = "NE_New_exec";
