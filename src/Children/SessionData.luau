@@ -120,6 +120,8 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["ClosureSeparator"] = ";";
 	["PreJMPClosureSeparator"] = "\\n";
 	["ClosureJMP"] = true;
+	["SaveUnions"] = true;
+	["_runRecursiveHierarchy"] = false;
 	
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
