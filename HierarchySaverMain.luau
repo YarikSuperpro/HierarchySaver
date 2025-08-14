@@ -4952,7 +4952,7 @@ end
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
 		local Type:string = GetTypeOfInstance(ins)
-		if Type=="NegateOperation" or NeedsUnionOperation(ins)==false then
+		if ins:IsA("PartOperation") and NeedsUnionOperation(ins)==false then
 			Type="Part"
 		end
 		local properties = GetProperties(ins,nil,Type)
@@ -5098,8 +5098,8 @@ end
 		if Include__run==true then
 			HasMacros=true
 			--opening function
-			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_run")}]`) or `_run`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_run"))}]`) or `_run`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
+			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_run")}]`) or `_run`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{if NeedsUnionOperation(ins)==true then if ins.ClassName=="IntersectOperation" then "IntersectOperation" else "UnionOperation" else "()"}`) or ""}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_run"))}]`) or `_run`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{if NeedsUnionOperation(ins)==true then if ins.ClassName=="IntersectOperation" then WriteRichText("IntersectOperation",Color3.new(0,1,1)) else WriteRichText("UnionOperation",Color3.new(0,1,1)) else "()"}`) or ""}`
 			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
 			if ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil) then
 				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport)
@@ -5307,7 +5307,7 @@ end
 
 	local function Luau_Recursion(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,b_Layer:buffer,ClaimedVariableNames:{[string]:true},b_Registers:buffer,DirrectAccessToVarAvalible:{[Instance]:string},SameChildren:number?,Parent:string?,RecursiveHierarchyQueue:{[Instance]:{{Prop:string;Var:string}}}):()
 		local Type:string = GetTypeOfInstance(ins)
-		if Type=="NegateOperation" or NeedsUnionOperation(ins)==false then
+		if ins:IsA("PartOperation") and NeedsUnionOperation(ins)==false then
 			Type="Part"
 		end
 		local properties = GetProperties(ins,nil,Type)
