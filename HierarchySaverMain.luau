@@ -4464,8 +4464,8 @@ end
 					end
 					for ii,vv in v do
 						if ii=="_exec" then continue end
-						txt..=`\n{ss.t}ins{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",ii)}]`) or "."..ii}{ss._Equal}{ConstructorTostring(typeof(vv),vv)}`
-						rich..=`\n{ss.t}ins{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",ii))}]`) or "."..WriteRichText(ii,ScriptProperty)}{ss._Equal}{select(2,ConstructorTostring(typeof(vv),vv))}`
+						txt..=`\n{ss.t}ins{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",ii)}]`) or "."..ii}{ss._Equal}{ConstructorTostring(typeof(vv),vv)}`
+						rich..=`\n{ss.t}ins{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",ii))}]`) or "."..WriteRichText(ii,ScriptProperty)}{ss._Equal}{select(2,ConstructorTostring(typeof(vv),vv))}`
 					end
 				end
 				txt..=`\n{ss["end"]}\n`
@@ -4593,8 +4593,8 @@ end
 					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh({ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 
-					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
-					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
+					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
 			elseif ss.UseMeshFunction==true then
 				--Manually apply meshes but through function
@@ -4610,8 +4610,8 @@ end
 					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
 
-					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
-					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
+					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
 			else--Manually apply meshes
 				if ss.FNC_Mesh==true then
@@ -4631,8 +4631,8 @@ end
 					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
 
-					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
-					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
+					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
 			end
 			--function close
@@ -4725,8 +4725,8 @@ end
 				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
 				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{Parent})`
 			else
-				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 			end	
 		end
 		----------
@@ -4754,8 +4754,8 @@ end
 						riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{c_rich})`
 						continue
 					end
-					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 				elseif ((ss.RL_RecursionWrite=="Instant" or ss.RL_RecursionWrite=="Hybrid") and (v==ins or v==SelectedInstance)) or ((ss.RL_RecursionWrite=="Instant" or ss.RL_RecursionWrite=="Hybrid") and ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]~=nil)) then	
 					--Recursive hierarchy instance already exists
 					if ss.FNC_Properties==true then
@@ -4763,8 +4763,8 @@ end
 						riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{DirrectAccessToVarAvalible[v]::string? or varName})`
 						continue
 					end
-					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
+					code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
 				elseif ss.RL_RecursionWrite=="InTheEnd" or ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]::string?==nil) then
 					--Recursive hierarchy write
 					if RecursiveHierarchyQueue[v]==nil then
@@ -4787,8 +4787,8 @@ end
 				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{c_rich})`
 				continue
 			end
-			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
+			code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 		end
 
 
@@ -4799,8 +4799,8 @@ end
 				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
 				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{Parent})`
 			else
-				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{Parent}`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{Parent}`
+				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{Parent}`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{Parent}`
 			end	
 		end
 		--Closing do end
@@ -4815,7 +4815,7 @@ end
 		return `{(ins.CollisionFidelity~=Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}`) or ""}{(ins.RenderFidelity~=Enum.RenderFidelity.Automatic and `{(ins.CollisionFidelity==Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{ConstructorTostring("nil",nil)}`) or ""}{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.RenderFidelity)}`) or ""}`,`{(ins.CollisionFidelity~=Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}`) or ""}{(ins.RenderFidelity~=Enum.RenderFidelity.Automatic and `{(ins.CollisionFidelity==Enum.CollisionFidelity.Default and `{ss.FuncSeparator}{select(2,ConstructorTostring("nil",nil))}`) or ""}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}`) or ""}`
 	end
 	local function NeedsUnionOperation(obj:Instance):boolean
-		if not obj:IsA("PartOperation") then return false end
+		if not obj:IsA("PartOperation") or ss.SaveUnions==false then return false end
 		local ret:boolean = true
 		local self = Instance.fromExisting(obj)
 		local loot = plugin:Separate({self})
@@ -4918,7 +4918,7 @@ end
 
 			local class:string = GetTypeOfInstance(obj)
 			code..=`\n{string.rep(ss.t,Layer)}{ss._local}{varname}{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",class)})`
-			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varname}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",class))})`
+			riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varname}{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",class))})`
 			local baseImport:string? = (CurrentConvertType=="Raw Luau" and NE__Base({},{},class,GetProperties(obj,true))) or nil
 			local Properties = GetProperties(obj)
 			if Depth==0 then Properties.Anchored=true end
@@ -4948,7 +4948,7 @@ end
 		return ret	
 	end
 
-	
+
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
 		local Type:string = GetTypeOfInstance(ins)
@@ -4962,13 +4962,11 @@ end
 		local HasMacros:boolean = false
 		local properties__bool:boolean = false
 		local children = ins:GetChildren()
-		if NeedsUnionOperation(ins) then
-			if ss.NE_using_run==true then
-				Type=ss._ReplacementInstance;
-				properties={}::{[string]:any};
-				Tags = {};
-				Attributes = {};
-			end
+		if NeedsUnionOperation(ins) and ss.NE_using_run==true then
+			Type=ss._ReplacementInstance;
+			properties={}::{[string]:any};
+			Tags = {};
+			Attributes = {};
 		end
 
 		--Brackets
@@ -5090,7 +5088,7 @@ end
 		--_run--
 		--Include__run?
 		local Include__run:boolean = ((ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or NeedsUnionOperation(ins) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true))) and ss.NE_using_run==true
-		if Include__run==false and ss.NE_using_run==true then
+		if Include__run==false and ss._runRecursiveHierarchy==true then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
 			end
@@ -5100,7 +5098,9 @@ end
 			--opening function
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_run")}]`) or `_run`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{if NeedsUnionOperation(ins)==true then if ins.ClassName=="IntersectOperation" then "IntersectOperation" else "UnionOperation" else "()"}`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_run"))}]`) or `_run`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}{if NeedsUnionOperation(ins)==true then if ins.ClassName=="IntersectOperation" then WriteRichText("IntersectOperation",Color3.new(0,1,1)) else WriteRichText("UnionOperation",Color3.new(0,1,1)) else "()"}`) or ""}`
-			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			if ss._runRecursiveHierarchy==true then
+				NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			end
 			if ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil) then
 				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport)
 			end
@@ -5136,7 +5136,7 @@ end
 				end
 				local reg:{[string]:true} = {}
 				local reg_ptr:{[Instance]:string} = {}
-				
+
 				local var = WriteUnionConstructor(ins,code,riched_code,Layer+1,reg,reg_ptr)
 				local Tags = ins:GetTags()
 				local Attributes = ins:GetAttributes()
@@ -5154,7 +5154,7 @@ end
 		--_init--
 		--IncludeInit?
 		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
-		if IncludeInit==false and ss.NE_using_run==false then
+		if IncludeInit==false and ss._runRecursiveHierarchy==false then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
 			end
@@ -5166,7 +5166,9 @@ end
 			HasMacros=true
 			code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{ConstructorTostring("string","_init")}]`) or `_init`}{ss._Equal}function(self{(ss.Typechecking==true and `{ss.TC_Type}{Type}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBrecketsToInit==true and `[{select(2,ConstructorTostring("string","_init"))}]`) or `_init`}{ss._Equal}{WriteRichText("function",ScriptFunction)}({WriteRichText("self",ScriptSelf)}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(Type,Color3.new(0,1,1))}`) or ""}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}`
-			NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			if ss._runRecursiveHierarchy==false then
+				NE____RecursiveHierarchy(ins,properties,code,riched_code,Layer)
+			end
 			if ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil) then
 				--tags
 				NE__TagsAndAttributes(code,riched_code,Layer,Attributes,Tags,baseImport)
@@ -5311,12 +5313,12 @@ end
 			Type="Part"
 		end
 		local properties = GetProperties(ins,nil,Type)
-		
+
 		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
 		local Children = ins:GetChildren()
-		
+
 		local Registers:number = buffer.readu32(b_Registers,0)
 		local Layer:number = buffer.readu32(b_Layer,0)
 
@@ -5398,7 +5400,7 @@ end
 			end
 		else
 			code..=`{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
-			riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{ConstructorTostring("string","new")}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+			riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
 		end
 
 		Luau_DoEndWrite(ins,code,riched_code,varName,IsPropertieLessDoEnd,Layer,Attributes,Tags,properties,baseImport,Parent,RecursiveHierarchyQueue,DirrectAccessToVarAvalible)
@@ -5421,8 +5423,8 @@ end
 			else
 				for i,v in RecursiveHierarchyQueue[ins] do
 					local Var,Prop = v.Var,v.Prop
-					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
+					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
 				end	
 			end
 			RecursiveHierarchyQueue[ins]=nil
@@ -5512,8 +5514,8 @@ end
 			else
 				for i,v in __v do
 					local Var,Prop = v.Var,v.Prop
-					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
-					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == true and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
+					code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",Prop)}]`) or "."..Prop}{ss._Equal}{varName}`
+					riched_code..=`\n{string.rep(ss.t,Layer)}{Var}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",Prop))}]`) or "."..WriteRichText(Prop,ScriptProperty)}{ss._Equal}{varName}`
 				end	
 			end
 		end
