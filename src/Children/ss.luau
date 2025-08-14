@@ -62,6 +62,7 @@ local function Update():()
 	ss.SafeIndexNaming = SessionData["SafeIndexNaming"] or "SubtagPlusInstanceNamePlusNumber";
 	ss.MeshPartCreationMode = SessionData["MeshPartCreationMode"] or "Compute";
 	ss.Instance_PropGrab = SessionData["Instance_PropGrab"]==true;
+	ss.SaveUnions = SessionData["SaveUnions"]==true;
 	
 	ss.ClosureJMP = SessionData["ClosureJMP"]==true;
 	ss.PreJMPClosureSeparator = string.gsub(string.gsub(SessionData["PreJMPClosureSeparator"]::string,"\\n","\n"),"\\t","\t");
@@ -87,6 +88,8 @@ local function Update():()
 	ss.NE_ChildrenTable = SessionData["NE_ChildrenTable"]==true;
 	ss.NE_NewArgConstructor = SessionData["NE_NewArgConstructor"]==true;
 	ss.NE_using_run = SessionData["NE_using_run"]==true;
+	ss._runRecursiveHierarchy = (SessionData["NE_using_run"]==true and SessionData["_runRecursiveHierarchy"]==true) or false;
+
 	ss.FuzzyCFrame = -math.floor(tonumber(SessionData["FuzzyCFrame"]) or 0)
 	ss.CMPAsyncService_PassFuildFidility=SessionData["CMPAsyncService_PassFuildFidility"]==true;
 	ss.CountEnabled = SessionData["CountEnabled"]==true;
