@@ -231,6 +231,12 @@ return {
 				};
 			};
 			{
+				Name = "SaveUnions";
+				DisplayName = "Save Unions";
+				Description = "Should UnionOperation/IntersectionOperation be compiled? (if disabled will be treated as a regular Part by compiler)";
+				Type = "boolean";
+			};
+			{
 				Name="SaveMeshes";
 				DisplayName="Save MeshId";
 				Description="Determines will MeshId for meshparts gets compiled";
