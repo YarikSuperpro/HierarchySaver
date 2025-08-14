@@ -4951,13 +4951,16 @@ end
 	
 
 	local function NE_BuildProperties(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Initiator:true?,_count:number?):()
-		local properties = GetProperties(ins,nil,(ins.ClassName=="NegateOperation" and "Part") or nil)
+		local Type:string = GetTypeOfInstance(ins)
+		if Type=="NegateOperation" or NeedsUnionOperation(ins)==false then
+			Type="Part"
+		end
+		local properties = GetProperties(ins,nil,Type)
 		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
 		local HasMacros:boolean = false
 		local properties__bool:boolean = false
-		local Type:string = GetTypeOfInstance(ins)
 		local children = ins:GetChildren()
 		if NeedsUnionOperation(ins) then
 			if ss.NE_using_run==true then
@@ -4965,8 +4968,6 @@ end
 				properties={}::{[string]:any};
 				Tags = {};
 				Attributes = {};
-			else
-				Type = "Part"
 			end
 		end
 
@@ -5305,12 +5306,17 @@ end
 	end
 
 	local function Luau_Recursion(ins:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,b_Layer:buffer,ClaimedVariableNames:{[string]:true},b_Registers:buffer,DirrectAccessToVarAvalible:{[Instance]:string},SameChildren:number?,Parent:string?,RecursiveHierarchyQueue:{[Instance]:{{Prop:string;Var:string}}}):()
-		local properties = GetProperties(ins,nil,(ins.ClassName=="NegateOperation" and "Part") or nil)
+		local Type:string = GetTypeOfInstance(ins)
+		if Type=="NegateOperation" or NeedsUnionOperation(ins)==false then
+			Type="Part"
+		end
+		local properties = GetProperties(ins,nil,Type)
+		
 		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
 		local Children = ins:GetChildren()
-		local Type:string = GetTypeOfInstance(ins)
+		
 		local Registers:number = buffer.readu32(b_Registers,0)
 		local Layer:number = buffer.readu32(b_Layer,0)
 
