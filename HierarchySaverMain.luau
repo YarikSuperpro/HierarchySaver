@@ -3412,6 +3412,9 @@ local _baseImports:_baseImports
 		local EnterState:boolean = false
 		table.insert(BrightestText_Theme,Import_Button)
 		table.insert(BrightestText_Theme,_backImport_Button)
+		table.insert(BrightestText_Theme,Import_Label)
+		table.insert(BrightestText_Theme,Import_Label:WaitForChild("TextLabel"))
+
 		----
 		----||Visuals||----
 		Import_box.MouseEnter:Connect(function()
