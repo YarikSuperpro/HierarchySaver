@@ -439,6 +439,18 @@ return {
 				Type="boolean";
 				Tree = {
 					{
+						Name = "FNC_IN_Instance";
+						DisplayName = "Instance Methods";
+						Description = "Methods of Instance class Like :SetAttribute()";
+						Type = "boolean";
+					};
+					{
+						Name = "FNC_IN_Specific";
+						DisplayName = "Specific Instance Methods";
+						Description = "Methods of Specific Instance class Like :ApplyMesh()";
+						Type = "boolean";
+					};
+					{
 						Name = "FNC_SolidModeling";
 						DisplayName = "FastNamecall Solid Modeling";
 						Description = "Use cached methods with solid modeling?";
