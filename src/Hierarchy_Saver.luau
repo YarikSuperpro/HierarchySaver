@@ -3797,7 +3797,7 @@ local function RecursionFindFirstChildSafeMethod(txt:string,rich:string,Index:nu
 	end
 	--variable
 	local varName:string = `{(ss.SafeIndexSubtag=="" and v.Name=="" and "_") or ss.SafeIndexSubtag}{(ss.SafeIndexNaming=="SubtagPlusInstanceNamePlusNumber" and sanitizedName) or ""}{Index-1}`
-	if ss.FastNamecall == true then
+	if ss.FNC_IN_Instance == true then
 		txt..=`\n{string.rep(ss.t,Layer)}{ss._local}{varName}{ss._Equal}FindFirstChild({PreviousVar}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}?`) or ""}`
 		rich..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss._local,ScriptLocal)}{varName}{ss._Equal}{WriteRichText("FindFirstChild",ScriptMethod)}({PreviousVar_Rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}?`) or ""}`
 	else
@@ -3887,7 +3887,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 			else--Up
 				--If child has a name "Parent" there so having to use FindFirstChild
 				if i~=1 and IsAProperty(Hierarchy[i-1],v.Name) then
-					if ss.FastNamecall==true then
+					if ss.FNC_IN_Instance==true then
 						txt = `{(ss.Typechecking==true and "(")or""}FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
 						rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 					else
@@ -3952,7 +3952,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 			rich = v.ClassName
 		else--Instances
 			if Mode=="SafeIndex" then
-				if ss.FastNamecall==true then
+				if ss.FNC_IN_Instance==true then
 					txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
 					rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
 				else
@@ -3960,7 +3960,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 					rich = `{rich}:{WriteRichText("FindFirstChild",ScriptMethod)}({select(2,ConstructorTostring("string",v.Name))})`
 				end
 			elseif Mode=="WaitForChild" then
-				if ss.FastNamecall==true then
+				if ss.FNC_IN_Instance==true then
 					txt = `WaitForChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)})`
 					rich = `{WriteRichText("WaitForChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))})`
 				else
@@ -3971,7 +3971,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 				--Make sure to check for peoperties
 				if IsAProperty(Hierarchy[i-1],v.Name)==true then
 					--Using FindFirstChild Instead
-					if ss.FastNamecall==true then
+					if ss.FNC_IN_Instance==true then
 						txt = `FindFirstChild({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
 						rich = `{WriteRichText("FindFirstChild",ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
 					else
@@ -4256,7 +4256,7 @@ end
 
 	local function NE__TagsAndAttributes(code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,Attributes:{[string]:any},Tags:{string},baseImport:string?):()
 		if #Tags~=0 then
-			if ss.FastNamecall==true then
+			if ss.FNC_IN_Instance==true then
 				for i,v in Tags do
 					code..=`\n{string.rep(ss.t,Layer+1)}AddTag(self{ss.FuncSeparator}{ConstructorTostring("string",v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("AddTag",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
@@ -4270,7 +4270,7 @@ end
 		end
 		--Attributes
 		if next(Attributes)~=nil then
-			if ss.FastNamecall==true then
+			if ss.FNC_IN_Instance==true then
 				for i,v in spairs(Attributes) do
 					code..=`\n{string.rep(ss.t,Layer+1)}SetAttribute(self{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("SetAttribute",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
@@ -4442,7 +4442,7 @@ end
 				local _exec:{[any]:any} = (type(v._exec)=="table" and v._exec) or {}
 				local Attributes:{[any]:any} = (type(_exec.SetAttribute)=="table" and _exec.SetAttribute) or {}
 				local Tags:{[any]:any} = (type(_exec.AddTag)=="table" and _exec.AddTag) or {}
-				if ss.FastNamecall==true then
+				if ss.FNC_IN_Instance==true then
 					for ii,vv in Attributes do
 						txt..=`\n{ss.t}SetAttribute(ins{ss.FuncSeparator}{ConstructorTostring("string",tostring(ii))}{ss.FuncSeparator}{ConstructorTostring(typeof(vv),vv)})`
 						rich..=`\n{ss.t}{WriteRichText("SetAttribute",ScriptMethod)}(ins{ss.FuncSeparator}{select(2,ConstructorTostring("string",tostring(ii)))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(vv),vv))})`
@@ -4586,16 +4586,17 @@ end
 			txt..=`{ss._local}function __{ss.RL_Deffered_Fn_Mesh}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}string`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}Enum.CollisionFidelity`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}Enum.RenderFidelity`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}Enum.CollisionFidelity?{ss._Separator}RenderFidelity{ss.TC_Type}Enum.RenderFidelity?{ss._Separator}FluidFidelity{ss.TC_Type}Enum.FluidFidelity?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
 			rich..=`{WriteRichText(ss._local,ScriptLocal)}{WriteRichText("function",ScriptFunction)} {WriteRichText("__"..ss.RL_Deffered_Fn_Mesh,ScriptFunctionName)}({ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}tx{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}Id{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("string",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}`) or ""}{ss.FuncSeparator}r{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}`) or ""}`) or `t{(ss.Typechecking==true and `{ss.TC_Type}\{CollisionFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("CollisionFidelity",Color3.new(0,1,1))}?{ss._Separator}RenderFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("RenderFidelity",Color3.new(0,1,1))}?{ss._Separator}FluidFidelity{ss.TC_Type}{WriteRichText("Enum",Color3.new(0,1,1))}.{WriteRichText("FluidFidelity",Color3.new(0,1,1))}?\}?`) or ""}`}){(ss.Typechecking==true and `{ss.TC_Type}()`) or ""}{ss["fbend"]}`
 			if ss._SaveMeshes_Cache==true then
-				if ss.FNC_Mesh==true then
+				if ss.FNC_IN_Specific==true then
 					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
-
-					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
-					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
 				else
 					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh({ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}))`
-
+				end
+				if ss.FNC_Properties==true then
+					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
+					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
+				else
 					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
@@ -4603,16 +4604,24 @@ end
 				--Manually apply meshes but through function
 				txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss._SaveMeshes_FN_Name}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 				rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-				if ss.FNC_Mesh==true then
-					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}Destroy(_{ss.localMeshVariableName})`
-					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
-
+				if ss.FNC_IN_Specific==true then
+					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})`
+				else
+					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})`
+				end
+				if ss.FNC_IN_Instance==true then
+					txt..=`\n{ss.t}Destroy(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
+				else
+					txt..=`\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
+					rich..=`\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+				end
+				if ss.FNC_Properties==true then
 					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
 					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
 				else
-					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
-					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
-
 					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
@@ -4620,20 +4629,28 @@ end
 				if ss.FNC_Mesh==true then
 					txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-
-					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}Destroy(_{ss.localMeshVariableName})`
-					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
-
-					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
-					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
 				else
 					txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}(Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
-
-
-					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
-					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
-
+				end
+				if ss.FNC_IN_Specific==true then
+					txt..=`\n{ss.t}ApplyMesh({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}_{ss.localMeshVariableName})`
+				else
+					txt..=`\n{ss.t}{ss.localMeshVariableName}:ApplyMesh(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{ss.localMeshVariableName}:{WriteRichText("ApplyMesh",ScriptMethod)}(_{ss.localMeshVariableName})`
+				end
+				if ss.FNC_IN_Instance==true then
+					txt..=`\n{ss.t}Destroy(_{ss.localMeshVariableName})`
+					rich..=`\n{ss.t}{WriteRichText("Destroy",ScriptMethod)}(_{ss.localMeshVariableName})`
+				else
+					txt..=`\n{ss.t}_{ss.localMeshVariableName}:Destroy()`
+					rich..=`\n{ss.t}_{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+				end
+				if ss.FNC_Properties==true then
+					txt..=`\n{ss.t}{ss.NC_InsSetProperty}({ss.localMeshVariableName}{ss.FuncSeparator}{ConstructorTostring("string","TextureID")}{ss.FuncSeparator}tx)`
+					rich..=`\n{ss.t}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({ss.localMeshVariableName}{ss.FuncSeparator}{select(2,ConstructorTostring("string","TextureID"))}{ss.FuncSeparator}tx)`
+				else
 					txt..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string","TextureID")}]`) or ".".."TextureID"}{ss._Equal}tx`
 					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
@@ -4690,7 +4707,7 @@ end
 		--Tags and Attributes
 		if ss.RL_AttributesTags==true then
 			--Attributes
-			if ss.FastNamecall==true then
+			if ss.FNC_IN_Instance==true then
 				for i,v in Attributes do
 					code..=`\n{string.rep(ss.t,Layer)}SetAttribute({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{ConstructorTostring(typeof(v),v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("SetAttribute",ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{select(2,ConstructorTostring(typeof(v),v))})`
@@ -4702,7 +4719,7 @@ end
 				end
 			end
 			--Tags
-			if ss.FastNamecall==true then
+			if ss.FNC_IN_Instance==true then
 				for i,v in Tags do
 					code..=`\n{string.rep(ss.t,Layer)}AddTag({varName}{ss.FuncSeparator}{ConstructorTostring("string",v)})`
 					riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText("AddTag",ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v))})`
@@ -4725,8 +4742,8 @@ end
 			local i:string = "Name"
 			local c_code,c_rich = ConstructorTostring("string",properties.Name::string)
 			if ss.FNC_Properties==true then
-				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
-				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{Parent})`
+				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{c_code})`
+				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss.NC_InsSetProperty,ScriptMethod)}({varName}{ss.FuncSeparator}{select(2,ConstructorTostring("string",i))}{ss.FuncSeparator}{c_rich})`
 			else
 				code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{ConstructorTostring("string",i)}]`) or "."..i}{ss._Equal}{c_code}`
 				riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
@@ -4935,7 +4952,7 @@ end
 	local function WriteUnionConstructor(obj:Instance,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,reg:{[string]:true},reg_ptr:{[Instance]:string}):string
 		local selfVar = (next::any)(reg)::string?
 		local ret:string = __WriteUnionConstructor(obj,code,riched_code,Layer,reg,reg_ptr,1)
-		if ss.FastNamecall==true then
+		if ss.FNC_IN_Instance==true then
 			for i in reg do
 				if i==ret or i==selfVar then continue end
 				code..=`\n{string.rep(ss.t,Layer)}Destroy({i})`
@@ -5111,11 +5128,25 @@ end
 			if ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true then
 				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
 				if ss.FNC_Mesh==true then
-					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}Destroy({ss.localMeshVariableName})`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 				else
-					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:Destroy()`
-					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
+					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
+				end
+				if ss.FNC_IN_Specific==true then
+					code..=`\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss.localMeshVariableName})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{ss.localMeshVariableName})`
+				else
+					code..=`\n{string.rep(ss.t,Layer+1)}self:ApplyMesh({ss.localMeshVariableName})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}:{WriteRichText("ApplyMesh",ScriptMethod)}({ss.localMeshVariableName})`
+				end
+				if ss.FNC_IN_Instance==true then
+					code..=`\n{string.rep(ss.t,Layer+1)}Destroy({ss.localMeshVariableName})`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({ss.localMeshVariableName})`
+				else
+					code..=`\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:Destroy()`
+					riched_code..=`\n{string.rep(ss.t,Layer+1)}{ss.localMeshVariableName}:{WriteRichText("Destroy",ScriptMethod)}()`
 				end
 				--TextureID
 				if properties.TextureID~=nil then
@@ -5130,7 +5161,7 @@ end
 				end
 			elseif NeedsUnionOperation(ins) then
 				--Build Unions
-				if ss.FastNamecall==true then
+				if ss.FNC_IN_Instance==true then
 					code..=`\n{string.rep(ss.t,Layer+1)}Destroy(self)`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("Destroy",ScriptMethod)}({WriteRichText("self",ScriptSelf)})`
 				else
@@ -5180,7 +5211,7 @@ end
 			if (ins.ClassName=="MeshPart" and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered") then
 				--MeshID
 				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-				if ss.FNC_Mesh==true then
+				if ss.FNC_IN_Specific==true then
 					if ss.UseMeshFunction==true then
 						code..=`\n{string.rep(ss.t,Layer+1)}ApplyMesh(self{ss.FuncSeparator}{ss._SaveMeshes_FN_Name}({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}))`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("ApplyMesh",ScriptMethod)}({WriteRichText("self",ScriptSelf)}{ss.FuncSeparator}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}))`
