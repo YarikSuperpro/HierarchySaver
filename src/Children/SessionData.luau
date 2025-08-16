@@ -122,6 +122,8 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["ClosureJMP"] = true;
 	["SaveUnions"] = true;
 	["_runRecursiveHierarchy"] = false;
+	["FNC_IN_Specific"] = true;
+	["FNC_IN_Instance"] = true;
 	
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
