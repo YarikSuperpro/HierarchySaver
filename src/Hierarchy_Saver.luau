@@ -16,7 +16,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		limitations under the License.
 ]]
 
+local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
+local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
+Button.ClickableWhenViewportHidden=true
+local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID",DockWidgetPluginGuiInfo.new(
+	Enum.InitialDockState.Float,
+	false,
+	false,
+	400,800,100,200
+	))
+Widget.Name="Hierarchy Saver"
+Widget.Title="Hierarchy Saver"
+Widget:SetAttribute("Manage",false)
 plugin.Name="Hierarchy Saver (plugin)"
+
+
 local TestService = game:GetService("TestService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -171,18 +185,7 @@ local Classes:Types.FormattedClasses = {}
 
 
 --*********************Assembling widget
-local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
-local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
-Button.ClickableWhenViewportHidden=true
-local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID",DockWidgetPluginGuiInfo.new(
-	Enum.InitialDockState.Float,
-	false,
-	false,
-	400,800,100,200
-	))
-Widget.Name="Hierarchy Saver"
-Widget.Title="Hierarchy Saver"
-Widget:SetAttribute("Manage",false)
+
 
 
 ;(function():()
@@ -1386,7 +1389,7 @@ end
 local __classesData
 local LatestCache:number = tonumber(plugin:GetSetting("Classes_LatestCache_Valid")) or 0
 
-local GET_SAVE:string? = nil and plugin:GetSetting("HierarchySaver_CLASSES")
+local GET_SAVE:string? = plugin:GetSetting("HierarchySaver_CLASSES")
 
 local WidgetToggle__DB:boolean = false
 
@@ -1403,9 +1406,8 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 		;((__classesData::any)._event::BindableEvent):Fire()
 		;((__classesData::any)._event::BindableEvent):Destroy()
 	else
-		-- No perms but has a backup
-
 		--No perms and no backup
+		
 		local ErrorTab = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477");
 		(ErrorTab:WaitForChild("Scroll")::ScrollingFrame):Destroy();
 		((UpperBar::any)[ErrorTab.Name]::Frame):SetAttribute("Enabled",true)
@@ -1431,10 +1433,10 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 			Button_Try.BackgroundColor3 = ButtonIdleColor
 			Leave:Play()
 		end)
-		EventHandler.MouseButton1Down:Connect(function()
+		EventHandler.MouseButton1Down:Connect(function():()
 			Button_Try.BackgroundColor3 = ButtonClickColor
 		end)
-		EventHandler.MouseButton1Up:Connect(function()
+		EventHandler.MouseButton1Up:Connect(function():()
 			if __db_Hovering then Button_Try.BackgroundColor3 = ButtonHoverColor return end
 			Button_Try.BackgroundColor3 = ButtonIdleColor
 		end)
