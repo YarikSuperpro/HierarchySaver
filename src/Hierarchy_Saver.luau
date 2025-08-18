@@ -1407,7 +1407,7 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 		;((__classesData::any)._event::BindableEvent):Destroy()
 	else
 		--No perms and no backup
-		
+
 		local ErrorTab = CreateTab("Can't Access HTTP request","http://www.roblox.com/asset/?id=77195333607477");
 		(ErrorTab:WaitForChild("Scroll")::ScrollingFrame):Destroy();
 		((UpperBar::any)[ErrorTab.Name]::Frame):SetAttribute("Enabled",true)
@@ -4186,14 +4186,26 @@ end
 		return dictionary,dictionary_rich
 	end
 
+	local function GetChildren(ins:Instance):{Instance}
+		local t = ins:GetChildren()
+		if ss.RespectArchivable==true then
+			for i,v in t do
+				if v.Archivable==false then
+					table.remove(t,i)
+				end
+			end
+		end
+		return t
+	end
+
 	local function get__count(v:Instance,children:{Instance},_CountWrapped:{Instance},Attributes:{[string]:any},Tags:{string},DirrectAccessToVarAvalible:{[Instance]:string}?,varName:string?):number?
 		if ss.CountEnabled==true then
-			if #v:GetChildren()~=0 then return nil end
+			if #GetChildren(v)~=0 then return nil end
 			local ClassName:string = v.ClassName
 			local counter:number = 0
 			local properties = GetProperties(v)
 			for ii,vv in children::{Instance} do
-				if vv==v or vv.ClassName~=ClassName or table.find(_CountWrapped,vv)~=nil or #(vv::any):GetChildren()~=0 then continue end
+				if vv==v or vv.ClassName~=ClassName or table.find(_CountWrapped,vv)~=nil or #GetChildren(vv::any)~=0 then continue end
 				local vv_prop = GetProperties(vv)
 				local Equal:boolean = true
 				--tags
@@ -4983,7 +4995,7 @@ end
 		local Attributes = ins:GetAttributes()
 		local HasMacros:boolean = false
 		local properties__bool:boolean = false
-		local children = ins:GetChildren()
+		local children = GetChildren(ins)
 		if NeedsUnionOperation(ins) and ss.NE_using_run==true then
 			Type=ss._ReplacementInstance;
 			properties={}::{[string]:any};
@@ -5353,7 +5365,7 @@ end
 		local bypass__properties = GetProperties(ins,true)
 		local Tags = ins:GetTags()
 		local Attributes = ins:GetAttributes()
-		local Children = ins:GetChildren()
+		local Children = GetChildren(ins)
 
 		local Registers:number = buffer.readu32(b_Registers,0)
 		local Layer:number = buffer.readu32(b_Layer,0)
@@ -5501,7 +5513,7 @@ end
 				end
 			end
 			for i,v in Children do
-				if (ss.RespectArchivable==true and v.Archivable==false) or table.find(_CountWrapped,v)~=nil then continue end
+				if table.find(_CountWrapped,v)~=nil then continue end
 				Luau_Recursion(v,code,riched_code,b_Layer,ClaimedVariableNames,b_Registers,DirrectAccessToVarAvalible,_CountWinners[v]::number?,varName,RecursiveHierarchyQueue)
 			end
 			code..=string.rep(ss.t,Layer)..string.gsub(string.gsub(string.gsub(ss.SeparatePost_Advanced,"\\\\","\\"),"\\t","\t"),"\\n","\n")
