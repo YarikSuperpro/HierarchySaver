@@ -2425,12 +2425,24 @@ end
 			elseif data~=data then
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
+			local data_str:string = tostring(data)
+			
+			if ss.FriendlyFraction==true and data%1~=0 and (#data_str-string.find(data_str,"%.")::number)>=ss.FractionThreshold::number then
+				if math.abs(data)<ss.FractionMaxInt::number then
+					local num, den = decimalToFraction(data)
+					local approx = num / den
+					local err:number = math.abs(data - approx) / math.abs(data)
+					if err < 0.5 * 10^((-math.floor(ss.FractionThreshold::number)-1)) then
+						return `{ConstructorTostring("number",num)}{ss.Div}{ConstructorTostring("number",den)}`,`{select(2,ConstructorTostring("number",num))}{ss.Div}{select(2,ConstructorTostring("number",den))}`
+					end
+				end
+			end
 			--Numbers
 			if ss.Rounding==true then
 				local Precision:number = 10^math.floor(ss.All_NumbersRound)
 				data = math.round(data*Precision)/Precision
 			end
-			local data_str:string = tostring(data)
+			data_str = tostring(data)
 			if ss.HexNumbers==true and data%1==0 and Bypass~=true then
 				if data == 0 then
 					data_str = "0x0"
@@ -2453,16 +2465,7 @@ end
 					return num,WriteRichText(num,ScriptNumber)
 				end
 			end
-			if ss.FriendlyFraction==true and data%1~=0 and (#data_str-string.find(data_str,"%.")::number)>=ss.FractionThreshold::number then
-				if math.abs(data)<ss.FractionMaxInt::number then
-					local num, den = decimalToFraction(data)
-					local approx = num / den
-					local err:number = math.abs(data - approx) / math.abs(data)
-					if err < 0.5 * 10^((-math.floor(ss.FractionThreshold::number)-1)) then
-						return `{ConstructorTostring("number",num)}{ss.Div}{ConstructorTostring("number",den)}`,`{select(2,ConstructorTostring("number",num))}{ss.Div}{select(2,ConstructorTostring("number",den))}`
-					end
-				end
-			end
+			
 			if ss.UnderscoreNumbers==true then
 				local len:number = #data_str
 				local Index:number = 0
