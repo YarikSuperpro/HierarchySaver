@@ -48,7 +48,7 @@ local function Update():()
 	ss.FNC_IN_Instance = (SessionData["FastNamecall"]==true and SessionData["FNC_IN_Instance"]==true) or false;
 	ss.FNC_IN_Specific = (SessionData["FastNamecall"]==true and SessionData["FNC_IN_Specific"]==true) or false;
 	ss.FNC_SolidModeling = (SessionData["FastNamecall"]==true and SessionData["FNC_SolidModeling"]==true) or false
-	ss.FNC_Mesh = (SessionData["FastNamecall"]==true and SessionData["FNC_Mesh"]==true) or false
+	ss.FNC_SRVS = (SessionData["FastNamecall"]==true and SessionData["FNC_SRVS"]==true) or false
 	ss.FNC_Properties = (SessionData["FastNamecall"]==true and SessionData["FNC_Properties"]==true) or false
 	ss.FNC_UserData = (SessionData["FastNamecall"]==true and SessionData["FNC_UserData"]==true) or false
 	ss.NC_InsIndex = SessionData["NC_InsIndex"] or "instance_index";
@@ -136,6 +136,11 @@ local function Update():()
 	ss.All_NumbersRound = SessionData["All_NumbersRound"] or 3;
 	ss.UDIM2_MoreConstructors = SessionData["UDIM2_MoreConstructors"]==true;
 	ss.RL_WrapPropDoEnd = SessionData["RL_WrapPropDoEnd"]==true;
+	ss.SaveSurfaceAppearance = SessionData["SaveSurfaceAppearance"]==true;
+	ss.SaveSurfApr_FuncName = SessionData["SaveSurfApr_FuncName"] or "SaveSurfApr_FuncName";
+	ss.SaveSurfApr_CallFunction = SessionData["SaveSurfApr_CallFunction"]==true;
+	ss.SurfApr_VarArgs = SessionData["SurfApr_VarArgs"]==true;
+	ss.SurfApr_Str = SessionData["SurfApr_Str"]==true;
 end
 Update()
 
