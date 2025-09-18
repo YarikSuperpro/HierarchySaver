@@ -36,7 +36,7 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["Typechecking"] = true;
 	["FastNamecall"] = false;
 	["FNC_SolidModeling"] = true;
-	["FNC_Mesh"] = true;
+	["FNC_SRVS"] = true;
 	["FNC_Properties"] = true;
 	["FNC_UserData"] = true;
 	["NC_InsIndex"] = "instance_index";
@@ -124,6 +124,11 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["_runRecursiveHierarchy"] = false;
 	["FNC_IN_Specific"] = true;
 	["FNC_IN_Instance"] = true;
+	["SaveSurfaceAppearance"] = true;
+	["SaveSurfApr_CallFunction"] = false;
+	["SaveSurfApr_FuncName"] = "Compute_SurfaceAppearance";
+	["SurfApr_VarArgs"] = false;
+	["SurfApr_Str"] = false;
 	
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
