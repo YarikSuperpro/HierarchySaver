@@ -206,7 +206,7 @@ return {
 							};
 						};
 					};
-					
+
 				};
 			};
 			{
@@ -235,6 +235,40 @@ return {
 				DisplayName = "Save Unions";
 				Description = "Should UnionOperation/IntersectionOperation be compiled? (if disabled will be treated as a regular Part by compiler)";
 				Type = "boolean";
+			};
+			{
+				Name = "SaveSurfaceAppearance";
+				DisplayName = "Save Surface Appearance";
+				Description = "Determines will map components for SurfaceAppearance gets compiled";
+				Type = "boolean";
+				Tree = {
+					{
+						Name = "SurfApr_Str";
+						DisplayName = "String?";
+						Description = "String instead of Content";
+						Type = "boolean";
+					};
+					{
+						Name = "SaveSurfApr_CallFunction";
+						DisplayName = "Call Function?";
+						Description = "Call Function instead of raw compution? Perhabs you could implement caching idk that up to you.";
+						Type = "boolean";
+						Tree = {
+							{
+								Name = "SaveSurfApr_FuncName";
+								DisplayName = "Function Name";
+								Description = "Name of function you call";
+								Type = "string";
+							};
+							{
+								Name = "SurfApr_VarArgs";
+								DisplayName = "Tuple for function?";
+								Description = "Pass tuple instead of dictionary.";
+								Type = "boolean";
+							};
+						};
+					};
+				};
 			};
 			{
 				Name="SaveMeshes";
@@ -324,7 +358,7 @@ return {
 									};
 								};
 							};
-							
+
 						};
 					};	
 				};
@@ -345,7 +379,7 @@ return {
 						DisplayName = "Type Casting";
 						Type = "string";
 					};
-					
+
 				};
 			};
 			{
@@ -457,9 +491,9 @@ return {
 						Type = "boolean";
 					};
 					{
-						Name = "FNC_Mesh";
-						DisplayName = "FastNamecall Mesh";
-						Description = "Use cached methods with mesh creation?";
+						Name = "FNC_SRVS";
+						DisplayName = "FastNamecall Service";
+						Description = "Use cached methods with services?";
 						Type = "boolean";
 					};
 					{
