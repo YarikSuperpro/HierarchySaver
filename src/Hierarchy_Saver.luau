@@ -2426,7 +2426,7 @@ end
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
 			local data_str:string = tostring(data)
-			
+
 			if ss.FriendlyFraction==true and data%1~=0 and (#data_str-string.find(data_str,"%.")::number)>=ss.FractionThreshold::number then
 				if math.abs(data)<ss.FractionMaxInt::number then
 					local num, den = decimalToFraction(data)
@@ -2465,7 +2465,7 @@ end
 					return num,WriteRichText(num,ScriptNumber)
 				end
 			end
-			
+
 			if ss.UnderscoreNumbers==true then
 				local len:number = #data_str
 				local Index:number = 0
@@ -4164,12 +4164,146 @@ end
 		ApplyText()
 	end
 
+	local function Table_Equal(tbl1:{[any]:any}&{any},tbl2:{[any]:any}&{any}):boolean
+		if #tbl1~=#tbl2 or next(tbl1)~=next(tbl2) then return false end
+		for ii,vv in tbl1 do
+			if tbl2[ii]~=vv then return false end
+		end
+		for ii,vv in tbl2 do
+			if tbl1[ii]~=vv then return false end
+		end
+		return true
+	end
 
+	local function GetContentURL(str:string):(string,string)
+		local obj = Content.fromUri(str)
+		for i,v in CachedConstants do
+			if i==obj then return v,v end
+		end
+		return `Content{ss.IndexingBy=="Dots" and ".fromUri" or `[{ConstructorTostring("string","fromUri")}]`}({ConstructorTostring("string",str)})`,`{WriteRichText("Content",ScriptBuiltInFunction)}{ss.IndexingBy=="Dots" and `.{WriteRichText("fromUri",ScriptBuiltInFunction)}` or `[{select(2,ConstructorTostring("string","fromUri"))}]`}({select(2,ConstructorTostring("string",str))})`
+	end
+
+	local function GetSurfaceAppearanceConfigs(ins:SurfaceAppearance):(string,string)
+		if ss.SurfApr_Str==true then
+			local ColorMap:string? = (ins.ColorMap~="" and ins.ColorMap) or nil;
+			local MetalnessMap:string? = (ins.MetalnessMap~="" and ins.MetalnessMap) or nil;
+			local NormalMap:string? = (ins.NormalMap ~="" and ins.NormalMap) or nil;
+			local RoughnessMap:string? = (ins.RoughnessMap ~="" and ins.RoughnessMap) or nil;
+			if ss.SurfApr_VarArgs==true then
+				if ColorMap==nil and MetalnessMap==nil and NormalMap==nil and RoughnessMap==nil then return "","" end
+				local c_t,c_r = ConstructorTostring(type(ColorMap),ColorMap)
+				local txt,rich:string=c_t,c_r
+				if RoughnessMap==nil and NormalMap==nil and MetalnessMap==nil then return txt,rich end
+				local m_t,m_r = ConstructorTostring(type(MetalnessMap),MetalnessMap)
+				txt..=ss.FuncSeparator..m_t
+				rich..=ss.FuncSeparator..m_r
+				if RoughnessMap==nil and NormalMap==nil then return txt,rich end
+				local n_t,n_r = ConstructorTostring(type(NormalMap),NormalMap)
+				txt..=ss.FuncSeparator..n_t
+				rich..=ss.FuncSeparator..n_r
+				if RoughnessMap==nil then return txt,rich end
+				local r_t,r_r = ConstructorTostring(type(RoughnessMap),RoughnessMap)
+				txt..=ss.FuncSeparator..r_t
+				rich..=ss.FuncSeparator..r_r
+				return txt,rich
+			end
+			local tbl:{[string]:string?} = {ColorMap=ColorMap;MetalnessMap=MetalnessMap;NormalMap=NormalMap;RoughnessMap=RoughnessMap}
+			for i,v in CachedConstants do
+				if type(i)=="table" and Table_Equal(i::{[any]:any}&{any},tbl::{[any]:any}&{any}) then
+					return v,v
+				end
+			end
+			local txt,rich:string="{","{"
+			if ColorMap then
+				local _t,_r = ConstructorTostring("string",ColorMap)
+				txt..=`ColorMap{ss._Equal}{_t}{ss._Separator}`
+				rich..=`ColorMap{ss._Equal}{_r}{ss._Separator}`
+			end
+			if MetalnessMap then
+				local _t,_r = ConstructorTostring("string",MetalnessMap)
+				txt..=`MetalnessMap{ss._Equal}{_t}{ss._Separator}`
+				rich..=`MetalnessMap{ss._Equal}{_r}{ss._Separator}`
+			end
+			if NormalMap then
+				local _t,_r = ConstructorTostring("string",NormalMap)
+				txt..=`NormalMap{ss._Equal}{_t}{ss._Separator}`
+				rich..=`NormalMap{ss._Equal}{_r}{ss._Separator}`
+			end
+			if RoughnessMap then
+				local _t,_r = ConstructorTostring("string",RoughnessMap)
+				txt..=`RoughnessMap{ss._Equal}{_t}{ss._Separator}`
+				rich..=`RoughnessMap{ss._Equal}{_r}{ss._Separator}`
+			end
+			return txt.."}",rich.."}"
+		end
+		local ColorMap:Content? = (ins.ColorMap~="" and Content.fromUri(ins.ColorMap)) or nil;
+		local MetalnessMap:Content? = (ins.MetalnessMap~="" and Content.fromUri(ins.MetalnessMap)) or nil;
+		local NormalMap:Content? = (ins.NormalMap ~="" and Content.fromUri(ins.NormalMap)) or nil;
+		local RoughnessMap:Content? = (ins.RoughnessMap ~="" and Content.fromUri(ins.RoughnessMap)) or nil;
+		if ss.SurfApr_VarArgs==true then
+			if ColorMap==nil and MetalnessMap==nil and NormalMap==nil and RoughnessMap==nil then return "","" end
+			local c_t,c_r = GetContentURL(ins.ColorMap)
+			local txt,rich:string=c_t,c_r
+			if RoughnessMap==nil and NormalMap==nil and MetalnessMap==nil then return txt,rich end
+			local m_t,m_r = GetContentURL(ins.MetalnessMap)
+			txt..=ss.FuncSeparator..m_t
+			rich..=ss.FuncSeparator..m_r
+			if RoughnessMap==nil and NormalMap==nil then return txt,rich end
+			local n_t,n_r = GetContentURL(ins.NormalMap)
+			txt..=ss.FuncSeparator..n_t
+			rich..=ss.FuncSeparator..n_r
+			if RoughnessMap==nil then return txt,rich end
+			local r_t,r_r = GetContentURL(ins.RoughnessMap)
+			txt..=ss.FuncSeparator..r_t
+			rich..=ss.FuncSeparator..r_r
+			return txt,rich
+		end
+		local tbl:{[string]:Content?} = {ColorMap=ColorMap;MetalnessMap=MetalnessMap;NormalMap=NormalMap;RoughnessMap=RoughnessMap}
+		for i,v in CachedConstants do
+			if type(i)=="table" and Table_Equal(i::{[any]:any}&{any},tbl) then
+				return v,v
+			end
+		end
+		local txt,rich:string="{","{"
+		if ColorMap then
+			local _t,_r = GetContentURL(ins.ColorMap)
+			txt..=`ColorMap{ss._Equal}{_t}{ss._Separator}`
+			rich..=`ColorMap{ss._Equal}{_r}{ss._Separator}`
+		end
+		if MetalnessMap then
+			local _t,_r = GetContentURL(ins.MetalnessMap)
+			txt..=`MetalnessMap{ss._Equal}{_t}{ss._Separator}`
+			rich..=`MetalnessMap{ss._Equal}{_r}{ss._Separator}`
+		end
+		if NormalMap then
+			local _t,_r = GetContentURL(ins.NormalMap)
+			txt..=`NormalMap{ss._Equal}{_t}{ss._Separator}`
+			rich..=`NormalMap{ss._Equal}{_r}{ss._Separator}`
+		end
+		if RoughnessMap then
+			local _t,_r = GetContentURL(ins.RoughnessMap)
+			txt..=`RoughnessMap{ss._Equal}{_t}{ss._Separator}`
+			rich..=`RoughnessMap{ss._Equal}{_r}{ss._Separator}`
+		end
+		return txt.."}",rich.."}"
+	end
 
 	local function GetMeshPropertiesConfigs(ins:MeshPart):(string,string)
 		if ss.CMPAsyncService=="InsertService" then
 			return `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.RenderFidelity)}{(ss.CMPAsyncService_PassFuildFidility==true and `{ss.FuncSeparator}{ConstructorTostring("EnumItem",ins.FluidFidelity)}`) or ""}`,`{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.CollisionFidelity))}{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.RenderFidelity))}{(ss.CMPAsyncService_PassFuildFidility==true and `{ss.FuncSeparator}{select(2,ConstructorTostring("EnumItem",ins.FluidFidelity))}`) or ""}`
 		end
+		local build_table = {
+			CollisionFidelity = (ins.CollisionFidelity~=Enum.CollisionFidelity.Default and ins.CollisionFidelity) or nil;
+			RenderFidelity = (ins.RenderFidelity~=Enum.RenderFidelity.Automatic and ins.RenderFidelity) or nil;
+			FluidFidelity = (ins.FluidFidelity~=Enum.FluidFidelity.Automatic and ins.FluidFidelity) or nil;
+		}
+		for i,v in CachedConstants do
+			if type(i)=="table" and Table_Equal(i::{[any]:any}&{any},build_table) then
+				local v = ss.FuncSeparator..v
+				return v,v
+			end
+		end
+
 		local dictionary,dictionary_rich:string = "{","{"
 		if ins.CollisionFidelity~=Enum.CollisionFidelity.Default then
 			dictionary..=`CollisionFidelity{ss._Equal}{ConstructorTostring("EnumItem",ins.CollisionFidelity)}{ss._Separator}`
@@ -4492,8 +4626,12 @@ end
 				rich..=`\n{WriteRichText(ss["end"],ScriptLuauKeyword)}\n`
 			end
 		end
-
-		if ss._SaveMeshes_IncludeFN==true and ((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true)) then
+		local __mesh_find:boolean=((SelectedInstance::Instance).ClassName=="MeshPart" or (SelectedInstance::Instance):FindFirstChildWhichIsA("MeshPart",true))~=nil
+		if ss.SaveSurfaceAppearance==true and (((SelectedInstance::Instance).ClassName=="SurfaceAppearance" or (SelectedInstance::Instance):FindFirstChildWhichIsA("SurfaceAppearance",true))) and (__mesh_find==false or ss.CMPAsyncService~="AssetService" or ss._SaveMeshes_IncludeFN==false) then
+			txt..=`\n{ss._local}AssetService{ss._Equal}game:GetService({ConstructorTostring("string","AssetService")})\n`
+			rich..=`\n{WriteRichText(ss._local,ScriptLocal)}AssetService{ss._Equal}{WriteRichText("game",ScriptBuiltInFunction)}:{WriteRichText("GetService",ScriptMethod)}({select(2,ConstructorTostring("string","AssetService"))})\n`
+		end
+		if ss._SaveMeshes_IncludeFN==true and __mesh_find then
 			--services
 			txt..=`\n{ss._local}{ss.CMPAsyncService}{ss._Equal}game:GetService({ConstructorTostring("string",ss.CMPAsyncService)})\n`
 			rich..=`\n{WriteRichText(ss._local,ScriptLocal)}{ss.CMPAsyncService}{ss._Equal}{WriteRichText("game",ScriptBuiltInFunction)}:{WriteRichText("GetService",ScriptMethod)}({select(2,ConstructorTostring("string",ss.CMPAsyncService))})\n`
@@ -4520,7 +4658,7 @@ end
 					txt..=`{ss["then"]}{ss.s}{ss["return"]} v{(ss.IndexingBy=="Dots" and `.M`) or `[{ConstructorTostring("string","M")}]`}{ss.s}{ss["end"]}\n{ss.t}{ss["end"]}`
 					rich..=`{WriteRichText(ss["then"],ScriptLuauKeyword)}{ss.s}{WriteRichText(ss["return"],ScriptLuauKeyword)} v{(ss.IndexingBy=="Dots" and `.{WriteRichText("M",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","M"))}]`}{ss.s}{WriteRichText(ss["end"],ScriptLuauKeyword)}\n{ss.t}{WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
-					if ss.FNC_Mesh==true then
+					if ss.FNC_SRVS==true then
 						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					else
@@ -4560,7 +4698,7 @@ end
 					txt..=`\n{ss.t}{ss["if"]}M{ss["then"]} {ss["return"]} M{(ss.Typechecking==true and `{ss.TC_Casting}MeshPart`) or ""} {ss["end"]}`
 					rich..=`\n{ss.t}{WriteRichText(ss["if"],ScriptLuauKeyword)}M{WriteRichText(ss["then"],ScriptLuauKeyword)} {WriteRichText(ss["return"],ScriptLuauKeyword)} M{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""} {WriteRichText(ss["end"],ScriptLuauKeyword)}`
 					--Create cache
-					if ss.FNC_Mesh then
+					if ss.FNC_SRVS then
 						txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 						rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					else
@@ -4584,7 +4722,7 @@ end
 				--function open
 				__IncludeTopCode__WriteTopFunctionHeader(txt,rich)
 				--Create object
-				if ss.FNC_Mesh then
+				if ss.FNC_SRVS then
 					txt..=`\n{ss.t}{ss._local}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}task{(ss.IndexingBy=="Dots" and `.defer`) or `[{ConstructorTostring("string","defer")}]`}(Destroy{ss.FuncSeparator}{ss.localMeshVariableName})`) or ""}\n{ss.t}{ss["return"]} {ss.localMeshVariableName}`
 					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText(`MeshPart`,Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"}){(CurrentConvertType=="Nestify" and `\n{ss.t}{WriteRichText("task",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("defer",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","defer"))}]`}(Destroy{ss.FuncSeparator}{ss.localMeshVariableName})`) or ""}\n{ss.t}{WriteRichText(ss["return"],ScriptLuauKeyword)} {ss.localMeshVariableName}`
 				else
@@ -4643,7 +4781,7 @@ end
 					rich..=`\n{ss.t}{ss.localMeshVariableName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string","TextureID"))}]`) or "."..WriteRichText("TextureID",ScriptProperty)}{ss._Equal}tx`
 				end
 			else--Manually apply meshes
-				if ss.FNC_Mesh==true then
+				if ss.FNC_SRVS==true then
 					txt..=`\n{ss.t}{ss._local}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}MeshPart`) or ""}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 					rich..=`\n{ss.t}{WriteRichText(ss._local,ScriptLocal)}_{ss.localMeshVariableName}{(ss.Typechecking==true and `{ss.TC_Type}{WriteRichText("MeshPart",Color3.new(0,1,1))}`) or ""}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}Id{ss.FuncSeparator}{(ss.CMPAsyncService=="InsertService" and `c{ss.FuncSeparator}r`) or "t"})`
 				else
@@ -4690,6 +4828,8 @@ end
 
 		return txt,rich
 	end
+
+
 
 
 	-- true = no any properties nor children, nil = no properties but have children,false = has properties and maybe children
@@ -4804,10 +4944,10 @@ end
 					riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{DirrectAccessToVarAvalible[v]::string? or varName}`
 				elseif ss.RL_RecursionWrite=="InTheEnd" or ((v::Instance):IsDescendantOf(SelectedInstance::Instance) and DirrectAccessToVarAvalible[v]::string?==nil) then
 					--Recursive hierarchy write
-					if RecursiveHierarchyQueue[v]==nil then
-						RecursiveHierarchyQueue[v]={{Var=varName;Prop=i;}}
+					if RecursiveHierarchyQueue[v::Instance]==nil then
+						RecursiveHierarchyQueue[v::Instance]={{Var=varName;Prop=i;}}
 					else
-						table.insert(RecursiveHierarchyQueue[v],{Var=varName;Prop=i;})
+						table.insert(RecursiveHierarchyQueue[v::Instance],{Var=varName;Prop=i;})
 					end
 				elseif ss.OutsideHierarchyInstances=="SafeIndex" and type=="Instance" then
 					--Safe index
@@ -5039,12 +5179,24 @@ end
 					elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
 						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
 						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-					elseif ss.FNC_Mesh==true then
+					elseif ss.FNC_SRVS==true then
 						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 					else
 						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					end
+				elseif ins.ClassName=="SurfaceAppearance" and ss.SaveSurfaceAppearance==true and ((ins::SurfaceAppearance).ColorMap~="" or (ins::SurfaceAppearance).MetalnessMap~="" or (ins::SurfaceAppearance).NormalMap~="" or (ins::SurfaceAppearance).RoughnessMap~="") then
+					local dictionary,dictionary_rich = GetSurfaceAppearanceConfigs(ins::SurfaceAppearance)
+					if ss.SaveSurfApr_CallFunction==true then
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.SaveSurfApr_FuncName}({dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss.SaveSurfApr_FuncName,ScriptMethod)}({dictionary_rich}){ss._Separator}`
+					elseif ss.FNC_SRVS==true then
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateSurfaceAppearanceAsync(AssetService{ss.FuncSeparator}{dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{dictionary_rich}){ss._Separator}`
+					else
+						code..=`{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}AssetService:CreateSurfaceAppearanceAsync({dictionary}){ss._Separator}`
+						riched_code..=`{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}({dictionary_rich}){ss._Separator}`
 					end
 				else
 					--Type
@@ -5066,12 +5218,24 @@ end
 					elseif ss.UseMeshFunction==false and ss.NE_using_run==true then
 						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
 						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{select(2,ConstructorTostring("string",Type))}{ss._Separator}`
-					elseif ss.FNC_Mesh==true then
+					elseif ss.FNC_SRVS==true then
 						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
 					else
 						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary}){ss._Separator}`
 						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich}){ss._Separator}`
+					end
+				elseif ins.ClassName=="SurfaceAppearance" and ss.SaveSurfaceAppearance==true and ((ins::SurfaceAppearance).ColorMap~="" or (ins::SurfaceAppearance).MetalnessMap~="" or (ins::SurfaceAppearance).NormalMap~="" or (ins::SurfaceAppearance).RoughnessMap~="") then
+					local dictionary,dictionary_rich = GetSurfaceAppearanceConfigs(ins::SurfaceAppearance)
+					if ss.SaveSurfApr_CallFunction==true then
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ss.SaveSurfApr_FuncName}({dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText(ss.SaveSurfApr_FuncName,ScriptMethod)}({dictionary_rich}){ss._Separator}`
+					elseif ss.FNC_SRVS==true then
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}CreateSurfaceAppearanceAsync(AssetService{ss.FuncSeparator}{dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{dictionary_rich}){ss._Separator}`
+					else
+						code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}AssetService:CreateSurfaceAppearanceAsync({dictionary}){ss._Separator}`
+						riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",ss.NE_ClassName))}]`) or ss.NE_ClassName}{ss._Equal}AssetService:{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}({dictionary_rich}){ss._Separator}`
 					end
 				else
 					code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{ConstructorTostring("string",ss.NE_ClassName)}]`) or ss.NE_ClassName}{ss._Equal}{ConstructorTostring("string",Type)}{ss._Separator}`
@@ -5144,7 +5308,7 @@ end
 			--Mesh
 			if ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and ss.UseMeshFunction==false and ss.NE_using_run==true then
 				local dictionary,dictionary_rich = GetMeshPropertiesConfigs(ins::MeshPart)
-				if ss.FNC_Mesh==true then
+				if ss.FNC_SRVS==true then
 					code..=`\n{string.rep(ss.t,Layer+1)}{ss._local}{ss.localMeshVariableName}{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
 					riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss._local,ScriptLocal)}{ss.localMeshVariableName}{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 				else
@@ -5415,13 +5579,25 @@ end
 					riched_code..=`{ss._Equal}{WriteRichText(ss._SaveMeshes_FN_Name,ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 				end
 			else
-				if ss.FNC_Mesh==true then
+				if ss.FNC_SRVS==true then
 					code..=`{ss._Equal}CreateMeshPartAsync({ss.CMPAsyncService}{ss.FuncSeparator}{ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
 					riched_code..=`{ss._Equal}{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({ss.CMPAsyncService}{ss.FuncSeparator}{select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 				else
 					code..=`{ss._Equal}{ss.CMPAsyncService}:CreateMeshPartAsync({ConstructorTostring("string",(ins::MeshPart).MeshId)}{dictionary})`
 					riched_code..=`{ss._Equal}{ss.CMPAsyncService}:{WriteRichText("CreateMeshPartAsync",ScriptMethod)}({select(2,ConstructorTostring("string",(ins::MeshPart).MeshId))}{dictionary_rich})`
 				end
+			end
+		elseif ins.ClassName=="SurfaceAppearance" and ss.SaveSurfaceAppearance==true and ((ins::SurfaceAppearance).ColorMap~="" or (ins::SurfaceAppearance).MetalnessMap~="" or (ins::SurfaceAppearance).NormalMap~="" or (ins::SurfaceAppearance).RoughnessMap~="") then
+			local dictionary,dictionary_rich = GetSurfaceAppearanceConfigs(ins::SurfaceAppearance)
+			if ss.SaveSurfApr_CallFunction==true then
+				code..=`{ss._Equal}{ss.SaveSurfApr_FuncName}({dictionary})`
+				riched_code..=`{ss._Equal}{WriteRichText(ss.SaveSurfApr_FuncName,ScriptMethod)}({dictionary_rich})`
+			elseif ss.FNC_SRVS==true then
+				code..=`{ss._Equal}CreateSurfaceAppearanceAsync(AssetService{ss.FuncSeparator}{dictionary})`
+				riched_code..=`{ss._Equal}{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}(AssetService{ss.FuncSeparator}{dictionary_rich})`
+			else
+				code..=`{ss._Equal}AssetService:CreateSurfaceAppearanceAsync({dictionary})`
+				riched_code..=`{ss._Equal}AssetService:{WriteRichText("CreateSurfaceAppearanceAsync",ScriptMethod)}({dictionary_rich})`
 			end
 		elseif NeedsUnionOperation(ins) then
 			local reg:{[string]:true} = {[varName]=true}
