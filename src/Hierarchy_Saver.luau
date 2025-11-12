@@ -2425,6 +2425,12 @@ end
 			elseif data~=data then
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
+			
+			--Numbers
+			if ss.Rounding==true then
+				local Precision:number = 10^math.floor(ss.All_NumbersRound)
+				data = math.round(data*Precision)/Precision
+			end
 			local data_str:string = tostring(data)
 
 			if ss.FriendlyFraction==true and data%1~=0 and (#data_str-string.find(data_str,"%.")::number)>=ss.FractionThreshold::number then
@@ -2437,12 +2443,7 @@ end
 					end
 				end
 			end
-			--Numbers
-			if ss.Rounding==true then
-				local Precision:number = 10^math.floor(ss.All_NumbersRound)
-				data = math.round(data*Precision)/Precision
-			end
-			data_str = tostring(data)
+			
 			if ss.HexNumbers==true and data%1==0 and Bypass~=true then
 				if data == 0 then
 					data_str = "0x0"
