@@ -16,6 +16,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		limitations under the License.
 ]]
 
+local RunService = game:GetService("RunService")
+if RunService:IsClient() and RunService:IsRunning() then return end
+
 type GetAsync = (service:HttpService,url: string, nocache: boolean?, headers: any)-> string
 local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
 local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
@@ -33,7 +36,6 @@ plugin.Name="Hierarchy Saver (plugin)"
 
 
 local TestService = game:GetService("TestService")
-local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
 local TweenService = game:GetService("TweenService")
