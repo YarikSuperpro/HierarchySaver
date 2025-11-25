@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		limitations under the License.
 ]]
 
+type GetAsync = (service:HttpService,url: string, nocache: boolean?, headers: any)-> string
 local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
 local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
 Button.ClickableWhenViewportHidden=true
@@ -38,6 +39,7 @@ local ScriptEditorService = game:GetService("ScriptEditorService")
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Selection = game:GetService("Selection")
+
 
 local CurrentThread = coroutine.running()
 local function SetProperty(obj:any,property:string,value:any):()
@@ -666,12 +668,12 @@ local TextLittleGreyColorList:{TextButton} = table.create(15)::{TextButton}
 local CollapserColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ChatOutgoingTextColor)
 local CollapserColor_List:{ImageLabel|ImageButton} = table.create(10)::{ImageLabel|ImageButton}
 local CollapserColor_Lighter:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.AttributeCog)
-local CollapserColor_Lighter_List:{ImageLabel} = table.create(10)::{ImageLabel}
+local CollapserColor_Lighter_List:{ImageLabel|ImageButton} = table.create(10)::{ImageLabel|ImageButton}
 
 local DialogColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogButton)
 local DialogColor_Hover:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogButton,Enum.StudioStyleGuideModifier.Hover)
 local DialogColorList:{TextButton} = table.create(5)::{TextButton}
-local ItemHoverList:{ImageButton} = table.create(10)::{ImageButton}
+local ItemHoverList:{GuiObject} = table.create(10)::{GuiObject}
 local ScriptWhitespaceColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptWhitespace)
 local ScriptWhitespaceColorList:{TextButton} = table.create(5)::{TextButton}
 
@@ -687,7 +689,7 @@ local InputFieldBorder_List:{Frame} = table.create(1)::{Frame}
 local ScriptBackground:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptBackground)
 local ScriptBackground_List:{GuiObject} = table.create(1)::{GuiObject}
 local ScriptTextColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ScriptText)
-local ScriptTextColor_List:{TextLabel|TextBox} = table.create(1)::{TextLabel|TextBox}
+local ScriptTextColor_List:{TextLabel|TextBox|TextButton} = table.create(1)::{TextLabel|TextBox|TextButton}
 local Tab_EnumColor:Color3 = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tab)
 local BorderColorUI_StrokeList:{UIStroke} = table.create(6)::{UIStroke}
 
@@ -1398,7 +1400,7 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 	__classesData = {__loaded=false;_event = Instance.new("BindableEvent");}
 	_G.__classesData = __classesData
 
-	local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
+	local success,ret = (pcall::any)(HttpService.GetAsync::GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
 	if success then
 		__classesData.Classes = HttpService:JSONDecode(ret::string)::Types.API_Dump
 		plugin:SetSetting("Classes_LatestCache_Valid",workspace:GetServerTimeNow()+60*60*24)	
@@ -1444,7 +1446,7 @@ if _G.__classesData==nil and (GET_SAVE==nil or LatestCache<workspace:GetServerTi
 		EventHandler.MouseButton1Click:Connect(function():()
 			if button_DB==true then return end
 			button_DB=true
-			local success,ret = pcall(HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
+			local success,ret = (pcall::any)(HttpService.GetAsync::GetAsync,HttpService,"https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json")
 			if success then
 				Enter:Destroy()
 				Leave:Destroy()
@@ -2195,12 +2197,12 @@ local function BuildPropertiesList(Parent:Instance,Data:Types.BuildProperties):(
 					local ValueProductSize = UDim2.new(0,Box.AbsoluteSize.X-(Box.Content.Size.X.Offset/2),1,0)
 					for i,v in Box_Content:GetDescendants() do
 						if not v:IsA("GuiObject") then continue end
-						if v.Name=="Property" then
-							v.Size=FullScale
+						if ((v::any)::GuiObject).Name=="Property" then
+							((v::any)::GuiObject).Size=FullScale
 						elseif v.Name=="Content" then
-							v.Size=ContentSize
+							((v::any)::GuiObject).Size=ContentSize
 						elseif v.Name=="Value" then
-							v.Size=ValueProductSize
+							((v::any)::GuiObject).Size=ValueProductSize
 						end
 					end
 				end
@@ -4063,12 +4065,9 @@ end
 		if try==false then warn("No script access. Please give script injection access.") script:Destroy() return end
 		script.Source = ""
 		Selection:Set({script})
+		ScriptEditorService:UpdateSourceAsync(script,function():string return buffer.readstring(buffString,0,buffLen) end)
 		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
 		if try==false then warn(err) return end
-		Heartbeat:Wait()
-		local ret = ScriptEditorService:FindScriptDocument(script)::ScriptDocument?
-		if ret==nil then warn("Unable to find script document") return end
-		ret:EditTextAsync(buffer.readstring(buffString,0,buffLen),1,1,1,-1)
 	end)
 	SaveScript.MouseButton1Click:Connect(function():()
 		local script:Script = Instance.new("Script")
@@ -4080,12 +4079,9 @@ end
 		script.Source = ""
 		local OldSelection = Selection:Get()
 		Selection:Set({script})
+		ScriptEditorService:UpdateSourceAsync(script,function():string return buffer.readstring(buffString,0,buffLen) end)
 		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
 		if try==false then warn(err) return end
-		Heartbeat:Wait()
-		local ret = ScriptEditorService:FindScriptDocument(script)::ScriptDocument?
-		if ret==nil then warn("Unable to find script document") return end
-		ret:EditTextAsync(buffer.readstring(buffString,0,buffLen),1,1,1,-1)
 		plugin:PromptSaveSelection(name)
 		script:Destroy()
 		Selection:Set(OldSelection)
@@ -4261,7 +4257,7 @@ end
 		end
 		local tbl:{[string]:Content?} = {ColorMap=ColorMap;MetalnessMap=MetalnessMap;NormalMap=NormalMap;RoughnessMap=RoughnessMap}
 		for i,v in CachedConstants do
-			if type(i)=="table" and Table_Equal(i::{[any]:any}&{any},tbl) then
+			if type(i)=="table" and Table_Equal(i::{[any]:any}&{any},tbl::{[any]:any}) then
 				return v,v
 			end
 		end
@@ -4356,27 +4352,27 @@ end
 				for iii,vvv in _tags do
 					if table.find(Tags,vvv)==nil then Equal = false break end
 				end
-				if Equal==false then continue end
+				if not Equal then continue end
 				--Attributes
 				local _attributes = (vv::any):GetAttributes()::{[string]:any}
 				if (next(Attributes)==nil and next(_attributes)~=nil) or (next(_attributes)==nil and next(Attributes)~=nil) then Equal = false continue end
 				for iii,vvv in Attributes do
 					if _attributes[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(_attributes[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,_attributes[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
-				if Equal==false then continue end
+				if not Equal then continue end
 				for iii,vvv in _attributes do
 					if Attributes[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(Attributes[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,Attributes[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
-				if Equal==false then continue end
+				if not Equal then continue end
 				--prop
 				for iii,vvv in vv_prop do
 					if properties[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(properties[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,properties[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
-				if Equal==false then continue end
+				if not Equal then continue end
 				for iii,vvv in properties do
 					if vv_prop[iii]~=vvv and (typeof(vvv)~="CFrame" or typeof(vv_prop[iii])~="CFrame" or not FuzzyEq(vvv::CFrame,vv_prop[iii]::CFrame,10^ss.FuzzyCFrame)) then Equal = false break end
 				end
-				if Equal==false then continue end
+				if not Equal then continue end
 				if DirrectAccessToVarAvalible~=nil then
 					DirrectAccessToVarAvalible[(vv::any)::Instance] = varName or "RefError_0xbadc0ffee"
 				end
@@ -5025,7 +5021,7 @@ end
 			local _depth:number = 0
 			for i,v in loot do
 				if v:IsA("NegateOperation") then table.insert(Negate,v);__WriteUnionConstructor(v,code,riched_code,Layer,reg,reg_ptr,_depth);continue end
-				table.insert(Union,v)
+				table.insert(Union,v::BasePart)
 				__WriteUnionConstructor(v,code,riched_code,Layer,reg,reg_ptr,_depth)
 				_depth+=1
 			end
@@ -5151,8 +5147,8 @@ end
 		if Initiator~=true then
 			if ss.NE_NewArgConstructor==true then
 				--code..=`{ss._local}{ss._NE_HierrarchyName}{ss._Equal}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
-				code..=`\n{string.rep(ss.t,Layer-1)}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
-				riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{select(2,ConstructorTostring("string",Type))}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(ss.NE_NewArgConstructor==false and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+				code..=`\n{string.rep(ss.t,Layer-1)}{ss._HierarchyBuilderFunctionName}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{ConstructorTostring("string",Type)}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(not ss.NE_NewArgConstructor and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
+				riched_code..=`\n{string.rep(ss.t,Layer-1)}{WriteRichText(ss._HierarchyBuilderFunctionName,ScriptMethod)}{(ss.NE_NewArgConstructor==true and ss.NE_NAC_New_2_Spacing) or ""}{(ss.NE_NewArgConstructor==true and `{(ss._NE_FN_BRACKETS==true and "(") or ""}{select(2,ConstructorTostring("string",Type))}{ss.NE_NAC_Spacing}{(ss._NE_FN_BRACKETS==true and ss.FuncSeparator) or ""}`) or ""}{(not ss.NE_NewArgConstructor and ss._NE_FN_BRACKETS==true and "(") or ""}\{`
 			else
 				code..=`\n{string.rep(ss.t,Layer-1)}\{`
 				riched_code..=`\n{string.rep(ss.t,Layer-1)}\{`
