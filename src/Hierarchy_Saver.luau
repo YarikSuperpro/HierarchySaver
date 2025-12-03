@@ -2429,7 +2429,7 @@ end
 			elseif data~=data then
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
-			
+
 			--Numbers
 			if ss.Rounding==true then
 				local Precision:number = 10^math.floor(ss.All_NumbersRound)
@@ -2447,7 +2447,7 @@ end
 					end
 				end
 			end
-			
+
 			if ss.HexNumbers==true and data%1==0 and Bypass~=true then
 				if data == 0 then
 					data_str = "0x0"
@@ -3911,7 +3911,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 					txt = `{(ss.Typechecking==true and "(")or""}{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
 					rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 					continue
-				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№<>]*$")~=nil then
 					txt = `{(ss.Typechecking==true and "(")or""}{txt}.{v.Name}{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
 					rich = `{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText(v.Name,ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 					continue
@@ -3993,7 +3993,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 				if ss.FNC_Properties==true then
 					txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
 					rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№<>]*$")~=nil then
 					txt = `{txt}.{v.Name}`
 					rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
 				else--Brackets
@@ -4828,11 +4828,130 @@ end
 		return txt,rich
 	end
 
+	local function StyleRuleWriteProperties(ins:StyleRule,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,varName:string,varNameRICH:string):()
+		local properties = ins:GetProperties()
+		if next(properties)==nil then return end
+		local count = 0
+		for i,v in properties do count+=1 end
+		local jmpu1 = string.rep("\t",Layer)
+		if ss.FNC_IN_Specific then
+			--fast namecall
+			if count>ss.Style_Sheet_Bulk_Threshold::number then
+				-- SetProperties()
+				local str,str_rich:string?
+				for ii,vv in CachedConstants do
+					if type(ii::any)=="table" and Table_Equal(ii::any,properties::any) then
+						str=vv
+						str_rich=vv
+						break
+					end
+				end
+				
+				if not str then
+					--generating tbl
+					str="{"
+					str_rich="{"
+					local jmp = jmpu1.."\t"
 
+					if ss.Style_Sheet_ForceBrackets then
+						for ii,vv in properties do
+							local ii_s,ii_r = ConstructorTostring(typeof(ii),ii)
+							local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+							str..=`\n{jmp}[{ii_s}]{ss._Equal}{vv_s}{ss._Separator}`
+							str_rich..=`\n{jmp}[{ii_r}]{ss._Equal}{vv_r}{ss._Separator}`
+						end
+					else
+						for ii,vv in properties do
+							local ii_s,ii_r = ii,ii
+							local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+							if string.find(ii_s,"^[_%a][^%.@#%+%*/=%$!№<>]*$")==nil then
+								local s,r = ConstructorTostring("string",ii)
+								ii_s = "["..s.."]"
+								ii_r = "["..r.."]"
+							end
+							str..=`\n{jmp}{ii_s}{ss._Equal}{vv_s}{ss._Separator}`
+							str_rich..=`\n{jmp}{ii_r}{ss._Equal}{vv_r}{ss._Separator}`
+						end
+					end
+					str_rich..="\n"..jmpu1.."}"
+					str..="\n"..jmpu1.."}"
+				end
+				code..=`\n{jmpu1}SetProperties({varName}{ss.FuncSeparator}{str})`
+				riched_code..=`\n{jmpu1}{WriteRichText("SetProperties",ScriptMethod)}({varNameRICH}{ss.FuncSeparator}{str_rich})`
+
+				return
+			end
+			--SetProperty()
+			local SetProperty_Str = if ss.NC_InsSetProperty=="SetProperty" then "SR_SetProperty" else "SetProperty"
+			for i,v in properties do
+				local i_s,i_r = ConstructorTostring(typeof(i),i)
+				local v_s,v_r = ConstructorTostring(typeof(v),v)
+				code..=`\n{jmpu1}{SetProperty_Str}({varName}{ss.FuncSeparator}{i_s}{ss.FuncSeparator}{v_s})`
+				riched_code..=`\n{jmpu1}{WriteRichText(SetProperty_Str,ScriptMethod)}({varNameRICH}{ss.FuncSeparator}{i_r}{ss.FuncSeparator}{v_r})`
+			end
+			return
+		end
+		if count>ss.Style_Sheet_Bulk_Threshold::number then
+			-- SetProperties()
+			local str,str_rich:string?
+			for ii,vv in CachedConstants do
+				if type(ii::any)=="table" and Table_Equal(ii::any,properties::any) then
+					str=vv
+					str_rich=vv
+					break
+				end
+			end
+
+			if not str then
+				--generating tbl
+				str="{"
+				str_rich="{"
+				local jmp = jmpu1.."\t"
+
+				if ss.Style_Sheet_ForceBrackets then
+					for ii,vv in properties do
+						local ii_s,ii_r = ConstructorTostring(typeof(ii),ii)
+						local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+						str..=`\n{jmp}[{ii_s}]{ss._Equal}{vv_s}{ss._Separator}`
+						str_rich..=`\n{jmp}[{ii_r}]{ss._Equal}{vv_r}{ss._Separator}`
+					end
+				else
+					for ii,vv in properties do
+						local ii_s,ii_r = ii,ii
+						local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+						if string.find(ii_s,"^[_%a][^%.@#%+%*/=%$!№<>]*$")==nil then
+							local s,r = ConstructorTostring("string",ii)
+							ii_s = "["..s.."]"
+							ii_r = "["..r.."]"
+						end
+						str..=`\n{jmp}{ii_s}{ss._Equal}{vv_s}{ss._Separator}`
+						str_rich..=`\n{jmp}{ii_r}{ss._Equal}{vv_r}{ss._Separator}`
+					end
+				end
+				str_rich..="\n"..jmpu1.."}"
+				str..="\n"..jmpu1.."}"
+			end
+			code..=`\n{jmpu1}{varName}:SetProperties({str})`
+			riched_code..=`\n{jmpu1}{varNameRICH}:{WriteRichText("SetProperties",ScriptMethod)}({str_rich})`
+
+
+			return
+		end
+		--SetProperty()
+		for i,v in properties do
+			local i_s,i_r = ConstructorTostring(typeof(i),i)
+			local v_s,v_r = ConstructorTostring(typeof(v),v)
+			code..=`\n{jmpu1}{varName}:SetProperty({i_s}{ss.FuncSeparator}{v_s})`
+			riched_code..=`\n{jmpu1}{varNameRICH}:{WriteRichText("SetProperty",ScriptMethod)}({i_r}{ss.FuncSeparator}{v_r})`
+		end
+	end
 
 
 	-- true = no any properties nor children, nil = no properties but have children,false = has properties and maybe children
 	local function __IsPropertieLessDoEnd(ins:Instance,baseImport:string?,Attributes:{[string]:any},Tags:{string},properties:{[string]:any}):boolean
+		if ss.SaveStyleRule and ins.ClassName=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil then
+			return false
+		end
 		if ss.RL_Referanceless==true and baseImport==nil and next(Attributes)==nil and #Tags==0 then
 			local HasProperties:boolean = false 
 			for i,v in properties do
@@ -4967,7 +5086,9 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 		end
 
-
+		if ss.SaveStyleRule and ins.ClassName=="StyleRule" then
+			StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer,varName,varName)
+		end
 		--Parent
 		if Parent~=nil and IsPropertieLessDoEnd==false then
 			local i:string = "Parent"
@@ -5285,9 +5406,11 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 		end
 
+
+
 		--_run--
 		--Include__run?
-		local Include__run:boolean = ((ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or NeedsUnionOperation(ins) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true))) and ss.NE_using_run==true
+		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and ss.SaveStyleRule and Type=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil) or ((ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or NeedsUnionOperation(ins) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true))) and ss.NE_using_run==true
 		if Include__run==false and ss._runRecursiveHierarchy==true then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
@@ -5360,6 +5483,8 @@ end
 				Luau_DoEndWrite(ins,code,riched_code,var,__IsPropertieLessDoEnd(ins,baseImport,Attributes,Tags,Properties),Layer+1,Attributes,Tags,Properties,baseImport,nil,{},{})
 				code..=`\n{string.rep(ss.t,Layer+1)}{ss["return"]} {var}`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss["return"],ScriptLuauKeyword)} {var}`
+			elseif ss.SaveStyleRule and Type=="StyleRule" then
+				StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer+1,"self",WriteRichText("self",ScriptSelf))
 			end
 			--closing function
 			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
@@ -5367,7 +5492,7 @@ end
 		end
 		--_init--
 		--IncludeInit?
-		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil or (ss.SaveStyleRule and Type=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil))) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
 		if IncludeInit==false and ss._runRecursiveHierarchy==false then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
@@ -5418,7 +5543,9 @@ end
 						code..=`\n{string.rep(ss.t,Layer+1)}self{(ss.Indexing_Instances_By=="Dots" and `.TextureID`) or `[{ConstructorTostring("string","TextureID")}]`}{ss._Equal}{ConstructorTostring("string",properties.TextureID)}`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText("TextureID",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","TextureID"))}]`}{ss._Equal}{select(2,ConstructorTostring("string",properties.TextureID))}`
 					end
-				end
+				end	
+			elseif not Include__run and ss.SaveStyleRule and Type=="StyleRule" then
+				StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer+1,"self",WriteRichText("self",ScriptSelf))
 			end
 			--
 			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
