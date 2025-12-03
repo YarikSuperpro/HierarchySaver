@@ -141,6 +141,9 @@ local function Update():()
 	ss.SaveSurfApr_CallFunction = SessionData["SaveSurfApr_CallFunction"]==true;
 	ss.SurfApr_VarArgs = SessionData["SurfApr_VarArgs"]==true;
 	ss.SurfApr_Str = SessionData["SurfApr_Str"]==true;
+	ss.SaveStyleRule = SessionData["SaveStyleRule"]==true;
+	ss.Style_Sheet_Bulk_Threshold = tonumber(SessionData["Style_Sheet_Bulk_Threshold"]) or 1;
+	ss.Style_Sheet_ForceBrackets = SessionData["Style_Sheet_ForceBrackets"]==true;
 end
 Update()
 
