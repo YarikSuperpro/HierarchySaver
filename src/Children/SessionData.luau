@@ -129,7 +129,9 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["SaveSurfApr_FuncName"] = "Compute_SurfaceAppearance";
 	["SurfApr_VarArgs"] = false;
 	["SurfApr_Str"] = false;
-	
+	["SaveStyleRule"] = true;
+	["Style_Sheet_Bulk_Threshold"] = 1;
+	["Style_Sheet_ForceBrackets"] = false;
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
 
