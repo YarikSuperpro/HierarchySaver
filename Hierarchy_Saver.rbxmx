@@ -2,7 +2,7 @@
 	<Meta name="ExplicitAutoJoints">true</Meta>
 	<External>null</External>
 	<External>nil</External>
-	<Item class="Script" referent="RBXE7E15ABAE4834B49A8EC851B52B966D7">
+	<Item class="Script" referent="RBXD4CE4F4F2785469E98A9F7AA1EB1366F">
 		<Properties>
 			<ProtectedString name="Source"><![CDATA[--!strict
 --!optimize 2
@@ -2435,7 +2435,7 @@ end
 			elseif data~=data then
 				return `0{ss.Div}0`,`{select(2,ConstructorTostring("number",0,Bypass))}{ss.Div}{select(2,ConstructorTostring("number",0,Bypass))}`
 			end
-			
+
 			--Numbers
 			if ss.Rounding==true then
 				local Precision:number = 10^math.floor(ss.All_NumbersRound)
@@ -2453,7 +2453,7 @@ end
 					end
 				end
 			end
-			
+
 			if ss.HexNumbers==true and data%1==0 and Bypass~=true then
 				if data == 0 then
 					data_str = "0x0"
@@ -3917,7 +3917,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 					txt = `{(ss.Typechecking==true and "(")or""}{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
 					rich = `{(ss.Typechecking==true and "(")or""}{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 					continue
-				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№<>]*$")~=nil then
 					txt = `{(ss.Typechecking==true and "(")or""}{txt}.{v.Name}{(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName})`) or ""}`
 					rich = `{(ss.Typechecking==true and "(")or""}{rich}.{WriteRichText(v.Name,ScriptProperty)}{(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))})`) or ""}`
 					continue
@@ -3999,7 +3999,7 @@ local function GoToIndexPath(ins:Instance,Recursive:Instance?,Value:{Text:string
 				if ss.FNC_Properties==true then
 					txt= `{ss.NC_InsIndex}({txt}{ss.FuncSeparator}{ConstructorTostring("string",v.Name)}){(ss.Typechecking==true and `{ss.TC_Casting}{v.ClassName}`) or ""}`
 					rich = `{WriteRichText(ss.NC_InsIndex,ScriptMethod)}({rich}{ss.FuncSeparator}{select(2,ConstructorTostring("string",v.Name))}){(ss.Typechecking==true and `{ss.TC_Casting}{WriteRichText(v.ClassName,Color3.new(0,1,1))}`) or ""}`
-				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№]*$")~=nil then
+				elseif ss.Indexing_Instances_By=="Dots" and string.match(v.Name,"^[_%a][^%.@#%+%*/=%$!№<>]*$")~=nil then
 					txt = `{txt}.{v.Name}`
 					rich = `{rich}.{WriteRichText(v.Name,ScriptProperty)}`
 				else--Brackets
@@ -4834,11 +4834,130 @@ end
 		return txt,rich
 	end
 
+	local function StyleRuleWriteProperties(ins:StyleRule,code:CreateStr.class|any,riched_code:CreateStr.class|any,Layer:number,varName:string,varNameRICH:string):()
+		local properties = ins:GetProperties()
+		if next(properties)==nil then return end
+		local count = 0
+		for i,v in properties do count+=1 end
+		local jmpu1 = string.rep("\t",Layer)
+		if ss.FNC_IN_Specific then
+			--fast namecall
+			if count>ss.Style_Sheet_Bulk_Threshold::number then
+				-- SetProperties()
+				local str,str_rich:string?
+				for ii,vv in CachedConstants do
+					if type(ii::any)=="table" and Table_Equal(ii::any,properties::any) then
+						str=vv
+						str_rich=vv
+						break
+					end
+				end
+				
+				if not str then
+					--generating tbl
+					str="{"
+					str_rich="{"
+					local jmp = jmpu1.."\t"
 
+					if ss.Style_Sheet_ForceBrackets then
+						for ii,vv in properties do
+							local ii_s,ii_r = ConstructorTostring(typeof(ii),ii)
+							local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+							str..=`\n{jmp}[{ii_s}]{ss._Equal}{vv_s}{ss._Separator}`
+							str_rich..=`\n{jmp}[{ii_r}]{ss._Equal}{vv_r}{ss._Separator}`
+						end
+					else
+						for ii,vv in properties do
+							local ii_s,ii_r = ii,ii
+							local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+							if string.find(ii_s,"^[_%a][^%.@#%+%*/=%$!№<>]*$")==nil then
+								local s,r = ConstructorTostring("string",ii)
+								ii_s = "["..s.."]"
+								ii_r = "["..r.."]"
+							end
+							str..=`\n{jmp}{ii_s}{ss._Equal}{vv_s}{ss._Separator}`
+							str_rich..=`\n{jmp}{ii_r}{ss._Equal}{vv_r}{ss._Separator}`
+						end
+					end
+					str_rich..="\n"..jmpu1.."}"
+					str..="\n"..jmpu1.."}"
+				end
+				code..=`\n{jmpu1}SetProperties({varName}{ss.FuncSeparator}{str})`
+				riched_code..=`\n{jmpu1}{WriteRichText("SetProperties",ScriptMethod)}({varNameRICH}{ss.FuncSeparator}{str_rich})`
+
+				return
+			end
+			--SetProperty()
+			local SetProperty_Str = if ss.NC_InsSetProperty=="SetProperty" then "SR_SetProperty" else "SetProperty"
+			for i,v in properties do
+				local i_s,i_r = ConstructorTostring(typeof(i),i)
+				local v_s,v_r = ConstructorTostring(typeof(v),v)
+				code..=`\n{jmpu1}{SetProperty_Str}({varName}{ss.FuncSeparator}{i_s}{ss.FuncSeparator}{v_s})`
+				riched_code..=`\n{jmpu1}{WriteRichText(SetProperty_Str,ScriptMethod)}({varNameRICH}{ss.FuncSeparator}{i_r}{ss.FuncSeparator}{v_r})`
+			end
+			return
+		end
+		if count>ss.Style_Sheet_Bulk_Threshold::number then
+			-- SetProperties()
+			local str,str_rich:string?
+			for ii,vv in CachedConstants do
+				if type(ii::any)=="table" and Table_Equal(ii::any,properties::any) then
+					str=vv
+					str_rich=vv
+					break
+				end
+			end
+
+			if not str then
+				--generating tbl
+				str="{"
+				str_rich="{"
+				local jmp = jmpu1.."\t"
+
+				if ss.Style_Sheet_ForceBrackets then
+					for ii,vv in properties do
+						local ii_s,ii_r = ConstructorTostring(typeof(ii),ii)
+						local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+						str..=`\n{jmp}[{ii_s}]{ss._Equal}{vv_s}{ss._Separator}`
+						str_rich..=`\n{jmp}[{ii_r}]{ss._Equal}{vv_r}{ss._Separator}`
+					end
+				else
+					for ii,vv in properties do
+						local ii_s,ii_r = ii,ii
+						local vv_s,vv_r = ConstructorTostring(typeof(vv),vv)
+						if string.find(ii_s,"^[_%a][^%.@#%+%*/=%$!№<>]*$")==nil then
+							local s,r = ConstructorTostring("string",ii)
+							ii_s = "["..s.."]"
+							ii_r = "["..r.."]"
+						end
+						str..=`\n{jmp}{ii_s}{ss._Equal}{vv_s}{ss._Separator}`
+						str_rich..=`\n{jmp}{ii_r}{ss._Equal}{vv_r}{ss._Separator}`
+					end
+				end
+				str_rich..="\n"..jmpu1.."}"
+				str..="\n"..jmpu1.."}"
+			end
+			code..=`\n{jmpu1}{varName}:SetProperties({str})`
+			riched_code..=`\n{jmpu1}{varNameRICH}:{WriteRichText("SetProperties",ScriptMethod)}({str_rich})`
+
+
+			return
+		end
+		--SetProperty()
+		for i,v in properties do
+			local i_s,i_r = ConstructorTostring(typeof(i),i)
+			local v_s,v_r = ConstructorTostring(typeof(v),v)
+			code..=`\n{jmpu1}{varName}:SetProperty({i_s}{ss.FuncSeparator}{v_s})`
+			riched_code..=`\n{jmpu1}{varNameRICH}:{WriteRichText("SetProperty",ScriptMethod)}({i_r}{ss.FuncSeparator}{v_r})`
+		end
+	end
 
 
 	-- true = no any properties nor children, nil = no properties but have children,false = has properties and maybe children
 	local function __IsPropertieLessDoEnd(ins:Instance,baseImport:string?,Attributes:{[string]:any},Tags:{string},properties:{[string]:any}):boolean
+		if ss.SaveStyleRule and ins.ClassName=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil then
+			return false
+		end
 		if ss.RL_Referanceless==true and baseImport==nil and next(Attributes)==nil and #Tags==0 then
 			local HasProperties:boolean = false 
 			for i,v in properties do
@@ -4973,7 +5092,9 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer)}{varName}{(ss.Indexing_Instances_By == "Brackets" and `[{select(2,ConstructorTostring("string",i))}]`) or "."..WriteRichText(i,ScriptProperty)}{ss._Equal}{c_rich}`
 		end
 
-
+		if ss.SaveStyleRule and ins.ClassName=="StyleRule" then
+			StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer,varName,varName)
+		end
 		--Parent
 		if Parent~=nil and IsPropertieLessDoEnd==false then
 			local i:string = "Parent"
@@ -5291,9 +5412,11 @@ end
 			riched_code..=`\n{string.rep(ss.t,Layer)}{(ss.NE_PropBreckets == true and `[{select(2,ConstructorTostring("string",i))}]`) or i}{ss._Equal}{c_rich}{ss._Separator}`
 		end
 
+
+
 		--_run--
 		--Include__run?
-		local Include__run:boolean = ((ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or NeedsUnionOperation(ins) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true))) and ss.NE_using_run==true
+		local Include__run:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_exec" and ss.SaveStyleRule and Type=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil) or ((ss._NE_Hierrarchy_TagsAndAttributes=="_run" and (#Tags~=0 or next(Attributes)~=nil)) or NeedsUnionOperation(ins) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Compute" and (ss.UseMeshFunction==false or ss.NE_NewArgConstructor==true))) and ss.NE_using_run==true
 		if Include__run==false and ss._runRecursiveHierarchy==true then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then Include__run=true break end
@@ -5366,6 +5489,8 @@ end
 				Luau_DoEndWrite(ins,code,riched_code,var,__IsPropertieLessDoEnd(ins,baseImport,Attributes,Tags,Properties),Layer+1,Attributes,Tags,Properties,baseImport,nil,{},{})
 				code..=`\n{string.rep(ss.t,Layer+1)}{ss["return"]} {var}`
 				riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText(ss["return"],ScriptLuauKeyword)} {var}`
+			elseif ss.SaveStyleRule and Type=="StyleRule" then
+				StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer+1,"self",WriteRichText("self",ScriptSelf))
 			end
 			--closing function
 			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
@@ -5373,7 +5498,7 @@ end
 		end
 		--_init--
 		--IncludeInit?
-		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil)) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
+		local IncludeInit:boolean = (ss._NE_Hierrarchy_TagsAndAttributes=="_init" and (#Tags~=0 or next(Attributes)~=nil or (ss.SaveStyleRule and Type=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil))) or (ins.ClassName=="MeshPart" and ss._SaveMeshes==true and (ins::MeshPart).MeshId~="" and ss.MeshPartCreationMode=="Defered")
 		if IncludeInit==false and ss._runRecursiveHierarchy==false then
 			for i,v in properties do
 				if typeof(v)=="Instance" and (v:IsDescendantOf(SelectedInstance::Instance) or v==ins or v==SelectedInstance or (ss.OutsideHierarchyInstances=="SafeIndex" and ((v.Parent~=game and typeof(select(2,pcall(game.FindService,game,(v.Parent::Instance).ClassName))::any|string)~="Instance")))) then IncludeInit=true break end
@@ -5424,7 +5549,9 @@ end
 						code..=`\n{string.rep(ss.t,Layer+1)}self{(ss.Indexing_Instances_By=="Dots" and `.TextureID`) or `[{ConstructorTostring("string","TextureID")}]`}{ss._Equal}{ConstructorTostring("string",properties.TextureID)}`
 						riched_code..=`\n{string.rep(ss.t,Layer+1)}{WriteRichText("self",ScriptSelf)}{(ss.Indexing_Instances_By=="Dots" and `.{WriteRichText("TextureID",ScriptProperty)}`) or `[{select(2,ConstructorTostring("string","TextureID"))}]`}{ss._Equal}{select(2,ConstructorTostring("string",properties.TextureID))}`
 					end
-				end
+				end	
+			elseif not Include__run and ss.SaveStyleRule and Type=="StyleRule" then
+				StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer+1,"self",WriteRichText("self",ScriptSelf))
 			end
 			--
 			code..=`\n{string.rep(ss.t,Layer)}end{ss._Separator}`
@@ -5854,7 +5981,7 @@ SelectButtonByName(ss.___CurrentTab::string? or "Nestify")
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
 		</Properties>
-		<Item class="ModuleScript" referent="RBX68387368569F4350AFC1D8EB23002484">
+		<Item class="ModuleScript" referent="RBX1B88FE6B73D143E2B45038A2E41431FE">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -5986,7 +6113,7 @@ return {
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBX2BBCFD91A1AC41799BBF486DE1BD0423">
+		<Item class="ModuleScript" referent="RBX3D6A76290CF841C99192BDF8DE28E894">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -6102,7 +6229,7 @@ return {}::{}
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBX0EA95A5AE5EB40F8849CE23338A8F6EC">
+		<Item class="ModuleScript" referent="RBX2300915D103A446F89DA822ED02A8BAA">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -6210,7 +6337,7 @@ return {
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBXACF2A0550B5D4AF8963C30A9E7147CBF">
+		<Item class="ModuleScript" referent="RBX0E1D9A1792F945CD8A3CB7296A427DF1">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -6444,6 +6571,28 @@ return {
 						DataComponent={Min=0;Max=100;};
 					};
 				};
+			};
+			{
+				Name = "SaveStyleRule";
+				DisplayName = "Save StyleRule";
+				Description = "Whether should :GetProperties() data be saved or not?";
+				Type = "boolean";
+				Tree = {
+					{
+						Name = "Style_Sheet_Bulk_Threshold";
+						DisplayName = "SetProperties Threshold";
+						Description = "When more than X property, use SetProperties instead of SetProperty calls";
+						Type="number";
+						Tree = {
+							{
+								Name = "Style_Sheet_ForceBrackets";
+								DisplayName = "Force Brackets [\"\"]";
+								Type = "boolean";
+							};
+						};
+					};
+				};
+				
 			};
 			{
 				Name = "SaveUnions";
@@ -6903,7 +7052,7 @@ return {
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBXA27200BAFF90422DA0759969AC7CBE0E">
+		<Item class="ModuleScript" referent="RBXF3F80717639F4335A973F8B63AB43D77">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -7037,7 +7186,9 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["SaveSurfApr_FuncName"] = "Compute_SurfaceAppearance";
 	["SurfApr_VarArgs"] = false;
 	["SurfApr_Str"] = false;
-	
+	["SaveStyleRule"] = true;
+	["Style_Sheet_Bulk_Threshold"] = 1;
+	["Style_Sheet_ForceBrackets"] = false;
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
 
@@ -7073,7 +7224,7 @@ return SessionData
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBX39D5A546F0B84523B68D5070697FF51D">
+		<Item class="ModuleScript" referent="RBXDD52C57B94FA4FF5A9A80E671A621CD2">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -7219,6 +7370,9 @@ local function Update():()
 	ss.SaveSurfApr_CallFunction = SessionData["SaveSurfApr_CallFunction"]==true;
 	ss.SurfApr_VarArgs = SessionData["SurfApr_VarArgs"]==true;
 	ss.SurfApr_Str = SessionData["SurfApr_Str"]==true;
+	ss.SaveStyleRule = SessionData["SaveStyleRule"]==true;
+	ss.Style_Sheet_Bulk_Threshold = tonumber(SessionData["Style_Sheet_Bulk_Threshold"]) or 1;
+	ss.Style_Sheet_ForceBrackets = SessionData["Style_Sheet_ForceBrackets"]==true;
 end
 Update()
 
@@ -7233,7 +7387,7 @@ return {ss=ss,Update=Update}
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBX45FA4DE5A3E7421AB8C65B746FFE24ED">
+		<Item class="ModuleScript" referent="RBXBF0EC1E5771F44F7A0415180AC64BE03">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[--!strict
@@ -7308,7 +7462,7 @@ end
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
 		</Item>
-		<Item class="Folder" referent="RBX0191570972F644ABA5BBDA7CF01E37D1">
+		<Item class="Folder" referent="RBX0D160FC86811456981F5FC68C830174D">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -7317,7 +7471,7 @@ end
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="Frame" referent="RBX14078CA9883A47BB9AE122F0037B8412">
+			<Item class="Frame" referent="RBXF486D239B6B24D77B6AE1B03357E39B0">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -7380,7 +7534,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBXCDC0A9E97799464BB3D26273BB6CE2BF">
+				<Item class="UIStroke" referent="RBX8CF6D11C0F4B42C9951BF4920A385CB0">
 					<Properties>
 						<token name="ApplyStrokeMode">0</token>
 						<UDim name="BorderOffset">
@@ -7407,7 +7561,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="Frame" referent="RBX5633FF20B7FD42A38E72BF3AFAD5D668">
+				<Item class="Frame" referent="RBX2C87C5C85E5844C3A303C6EED9DC60F0">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -7470,7 +7624,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBX60D45BEA26B74AC088FCAECEF3AE6E56">
+					<Item class="Frame" referent="RBXA80116AC24744B9D8E917BD56A01B8CB">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -7533,7 +7687,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIListLayout" referent="RBX5E6754E760594866AD3942C6110CBBEB">
+						<Item class="UIListLayout" referent="RBX1936D09658CC43DBACBD3BDC6CB48ADD">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -7558,7 +7712,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXA1A0D09B47EA4D4889CA752CAEA3D466">
+			<Item class="Frame" referent="RBX5842BC4620294B299CC601E5852EE804">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -7621,7 +7775,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIFlexItem" referent="RBX6E4FA03C12164A05A59B7D93E9E97B6D">
+				<Item class="UIFlexItem" referent="RBX559578BC6AA04E56AAA9E61F4DF8E27E">
 					<Properties>
 						<token name="FlexMode">3</token>
 						<float name="GrowRatio">0</float>
@@ -7635,7 +7789,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="TextButton" referent="RBXD4847D9ECD354E619E2FBA7B1713F3F2">
+				<Item class="TextButton" referent="RBXC433E6AE6ED240AE9E6791C89433F0B6">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -7735,7 +7889,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIFlexItem" referent="RBXA6BC54EFB1B043519AEA19CC0FF986D1">
+					<Item class="UIFlexItem" referent="RBX17CBE5C8105C4500B046A06FD1C9E379">
 						<Properties>
 							<token name="FlexMode">4</token>
 							<float name="GrowRatio">0</float>
@@ -7750,7 +7904,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="UIListLayout" referent="RBX47A1926F040C45F091E5831B39334B2E">
+				<Item class="UIListLayout" referent="RBXD2F973FC61D54F2982F4BAD17593BA3B">
 					<Properties>
 						<token name="HorizontalFlex">0</token>
 						<token name="ItemLineAlignment">0</token>
@@ -7772,7 +7926,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageButton" referent="RBXD02E6BA2E3C14D58A92F73763933E2BA">
+				<Item class="ImageButton" referent="RBX717DBA5659164D1CA5AB305241572949">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>rbxasset://textures/ui/GuiImagePlaceholder.png</url></Content>
@@ -7876,7 +8030,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIFlexItem" referent="RBXB374F9D338BB4032AE3455EFF53155B0">
+					<Item class="UIFlexItem" referent="RBX01A369B712C24B1882DB86F3325F5CC7">
 						<Properties>
 							<token name="FlexMode">1</token>
 							<float name="GrowRatio">0</float>
@@ -7890,7 +8044,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="UIAspectRatioConstraint" referent="RBX67F514AC588045FC921796A74A3487C9">
+					<Item class="UIAspectRatioConstraint" referent="RBXD1EB8E57CA124834B46CDC00BE45C87C">
 						<Properties>
 							<float name="AspectRatio">1</float>
 							<token name="AspectType">0</token>
@@ -7905,7 +8059,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXA248993F10A443FDAF107BD6F527939B">
+			<Item class="Frame" referent="RBXA65A52A53E4A40A3A3E0F67386C6A4B9">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">true</bool>
@@ -7968,7 +8122,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX71A26FE29F4D421483596244E5B7E12E">
+				<Item class="UIStroke" referent="RBX5249009C73444021B271EAD47093F573">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -7995,7 +8149,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageButton" referent="RBX978D91B74B7347488ECBB3785A58D284">
+				<Item class="ImageButton" referent="RBXDA107F592EFF452C84A7416A470A72D0">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>http://www.roblox.com/asset/?id=80963663462977</url></Content>
@@ -8099,7 +8253,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIAspectRatioConstraint" referent="RBX436D530FDB72491C9180CE6DDF14F142">
+					<Item class="UIAspectRatioConstraint" referent="RBX6088335E1BE94DE29F4BC67BF83B720C">
 						<Properties>
 							<float name="AspectRatio">1</float>
 							<token name="AspectType">0</token>
@@ -8113,7 +8267,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="TextButton" referent="RBXAA5B084081C4469FA03DB6C3D0A2EC70">
+				<Item class="TextButton" referent="RBX53E90ACD84F74B6E938EB7DFEBE8D184">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -8215,7 +8369,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXCE44349577644F2E822486BAFBF66488">
+			<Item class="Frame" referent="RBX7C1277B8C79143C3BC723323809CE202">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">true</bool>
@@ -8278,7 +8432,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX9903036E5F16430CA7DB19B02550572F">
+				<Item class="UIStroke" referent="RBXEC54227A2AF74240B2BA08037B248B1B">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -8305,7 +8459,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="TextBox" referent="RBX01F2A044E69F4B36A1436697C5A075F4">
+				<Item class="TextBox" referent="RBX0E8B3B6B308A41D598DCDBE6D848D349">
 					<Properties>
 						<bool name="ClearTextOnFocus">false</bool>
 						<Font name="FontFace">
@@ -8411,7 +8565,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="TextButton" referent="RBX24466A934D9C42CF8F13F17B4EAE4CD8">
+			<Item class="TextButton" referent="RBXA34AC869DF6A4D749CF35C2D794CFF9D">
 				<Properties>
 					<Font name="FontFace">
 						<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -8511,7 +8665,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX6C905FE91D0B4FBD86A62D9E3BAA83EC">
+				<Item class="UIStroke" referent="RBXCBE8EA5CB1FD4CAB9307A01FF992BDF8">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -8538,7 +8692,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="TextLabel" referent="RBXD94CCF34AE7B40D8891EF140B9240A18">
+				<Item class="TextLabel" referent="RBX49C5C68C0F8841C3A69A81D3F7F34FEA">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/BuilderSans.json</url></Family>
@@ -8632,7 +8786,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageLabel" referent="RBXC12336076E034B5AAA495CB6999B47F2">
+				<Item class="ImageLabel" referent="RBX7A5EB01FFD7E475BBD714FCD083C02C1">
 					<Properties>
 						<Content name="Image"><url>http://www.roblox.com/asset/?id=134054819148055</url></Content>
 						<Color3 name="ImageColor3">
@@ -8730,7 +8884,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="TextButton" referent="RBX86781DCE14764D55AA03DF5A478FEF38">
+			<Item class="TextButton" referent="RBX7DC573586BA5479DA25EF24864CEA080">
 				<Properties>
 					<Font name="FontFace">
 						<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -8830,7 +8984,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX4C6B3AE9B0344FB8B553AFE117604E35">
+				<Item class="UIStroke" referent="RBX92795086C8B24E07B780B23E107764E3">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -8857,7 +9011,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="Frame" referent="RBX763E0F56F2274BB5AA2AD4E0297D70C3">
+				<Item class="Frame" referent="RBX084C1493BC1043618E27CB20186BE263">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -8920,7 +9074,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBX6914DB643ECC4CAC9E9A22D45A54DAEF">
+					<Item class="Frame" referent="RBXCB372028F93B4146BBE72444FBCD9A25">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -8983,7 +9137,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="TextLabel" referent="RBXBB44051D2CB047E6954F77037323052C">
+						<Item class="TextLabel" referent="RBXF256847A0B604834A97F5E2BBCD4D5B0">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/BuilderSans.json</url></Family>
@@ -9077,7 +9231,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIFlexItem" referent="RBX2FFBA2C9487447DE9DC0DF3A28204643">
+							<Item class="UIFlexItem" referent="RBXE868C1EFC96B42CAB34A169C9B6786BD">
 								<Properties>
 									<token name="FlexMode">3</token>
 									<float name="GrowRatio">1.20000005</float>
@@ -9092,7 +9246,7 @@ end
 								</Properties>
 							</Item>
 						</Item>
-						<Item class="Frame" referent="RBX7C0B2A7F9D804A93A4AE5A64277BB502">
+						<Item class="Frame" referent="RBXE45DC497B8024364BCE0350F164820DF">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -9156,7 +9310,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIListLayout" referent="RBX1923FA8C31AF44DB954FFBFAB161CCA9">
+						<Item class="UIListLayout" referent="RBX19A0BB7D583A4A2A9E9406B84CFDC16E">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -9181,7 +9335,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXECAEF40A44174000AC57EC4F31D92EB2">
+			<Item class="Frame" referent="RBX11268D9DEDC345D78C9B390512B7619F">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -9245,7 +9399,7 @@ end
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="ImageButton" referent="RBXAE6A8806127446DC954B505CCB1BAF4B">
+			<Item class="ImageButton" referent="RBXD04036A5663B40BC82F6C9FF2DBD7E5F">
 				<Properties>
 					<Content name="HoverImage"><null></null></Content>
 					<Content name="Image"><url>rbxassetid://75405344316847</url></Content>
@@ -9349,7 +9503,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIAspectRatioConstraint" referent="RBX20DBCF384E574B7591038E6D4581241B">
+				<Item class="UIAspectRatioConstraint" referent="RBXD69C17C4900D440DBAE7EBA2E83AB284">
 					<Properties>
 						<float name="AspectRatio">1</float>
 						<token name="AspectType">0</token>
@@ -9363,7 +9517,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="TextButton" referent="RBXFDB2B28017A24488A14A2ECE4CE369C5">
+			<Item class="TextButton" referent="RBX8B9AAF215E694100AE91D256DB524100">
 				<Properties>
 					<Font name="FontFace">
 						<Family><url>rbxasset://fonts/families/BuilderSans.json</url></Family>
@@ -9464,7 +9618,7 @@ end
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="Frame" referent="RBXE47D49B1E9D34F769E673E80154FD79E">
+			<Item class="Frame" referent="RBX1CA55A4948684E7F8D98F0AE4B700F8B">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">true</bool>
@@ -9527,7 +9681,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX882D9CBF57914993ACB3C0EEAF3AE9B1">
+				<Item class="UIStroke" referent="RBXC92DCB52EB5D436480BE900CD7DCAB63">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -9554,7 +9708,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="TextButton" referent="RBX04EE5EF84EEE41E7B6E342BB260C729E">
+				<Item class="TextButton" referent="RBXC4820AE10B8F4ADB899BCC793D72DFD9">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/BuilderSans.json</url></Family>
@@ -9654,7 +9808,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="ImageLabel" referent="RBXE1607D607E0F4C8F88D8D338CAEC153E">
+					<Item class="ImageLabel" referent="RBXB52FAA85466C4773BABCF6BC67A7DBD4">
 						<Properties>
 							<Content name="Image"><url>http://www.roblox.com/asset/?id=98915295553134</url></Content>
 							<Color3 name="ImageColor3">
@@ -9751,7 +9905,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXCB286C089566448AA3B16097E8A3B965">
+					<Item class="Frame" referent="RBXE93A00DEBD7A4E92AE36F0836FD79A2B">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -9814,7 +9968,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIListLayout" referent="RBXB81FB8EB77EB4E2D8C3BF82E363D9230">
+						<Item class="UIListLayout" referent="RBXAE49426E57974875AB80A3B946CA5D77">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -9836,7 +9990,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIStroke" referent="RBX73AE89D9E1C84A70BFC2974364F19C0B">
+						<Item class="UIStroke" referent="RBX7DE06310BDB241689BD22673C6CA5B2A">
 							<Properties>
 								<token name="ApplyStrokeMode">1</token>
 								<UDim name="BorderOffset">
@@ -9866,7 +10020,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX72CDAAF558524B328A81DED35E332101">
+			<Item class="Frame" referent="RBX9A5C3C6CBE114715BAC40BF37BAA16D5">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">true</bool>
@@ -9929,7 +10083,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIStroke" referent="RBX99041110EE5548DE87E8601E3CFA50D9">
+				<Item class="UIStroke" referent="RBX00388EB04F2448B99C9E3DAFAD133AF7">
 					<Properties>
 						<token name="ApplyStrokeMode">1</token>
 						<UDim name="BorderOffset">
@@ -9956,7 +10110,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="Frame" referent="RBXF7BC89E1A33C4BD1A2823C5438586966">
+				<Item class="Frame" referent="RBX552D003EDE274A66A5702D60E2F5824D">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -10019,7 +10173,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="TextButton" referent="RBX8ED1B069F50C47139F6C9F7B6B24CD85">
+					<Item class="TextButton" referent="RBX7C945AC950B74E868B55322751C001D6">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -10120,7 +10274,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBX6E31985E17F74EF8ACDDD11D73838600">
+					<Item class="TextButton" referent="RBXD74096E836234098B0BF9ECD1C6DC8CF">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -10220,7 +10374,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIStroke" referent="RBX21EDC83E0F0B44C2924ACA67FCD06025">
+						<Item class="UIStroke" referent="RBXF2BB500EAF4C4F06A0D8BB340D367268">
 							<Properties>
 								<token name="ApplyStrokeMode">1</token>
 								<UDim name="BorderOffset">
@@ -10249,7 +10403,7 @@ end
 						</Item>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX179BC6972E7847E8977A5778D8B83D4B">
+				<Item class="Frame" referent="RBXAB0355687E3C4153A0895154A891124B">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -10312,7 +10466,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIStroke" referent="RBX92AD47A5859C41F093A0C62267A82308">
+					<Item class="UIStroke" referent="RBXD09415E8243F4E659FCDAD52A1D07248">
 						<Properties>
 							<token name="ApplyStrokeMode">1</token>
 							<UDim name="BorderOffset">
@@ -10339,7 +10493,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextBox" referent="RBX08A79FDB8D2C4709AD7A9958ABBABA91">
+					<Item class="TextBox" referent="RBXB99AEB4B94C1435F85795B68C3BCA16F">
 						<Properties>
 							<bool name="ClearTextOnFocus">false</bool>
 							<Font name="FontFace">
@@ -10443,7 +10597,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="Frame" referent="RBX9EC63F0E7D3B40D190878839C26D7080">
+						<Item class="Frame" referent="RBX5682F3097912489EBBB94D545C990322">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -10506,7 +10660,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="ImageButton" referent="RBXDFB860F091284230A7CCF02DA395D068">
+							<Item class="ImageButton" referent="RBXA6B26293FE4041D99ADE29FE21847385">
 								<Properties>
 									<Content name="HoverImage"><null></null></Content>
 									<Content name="Image"><url>http://www.roblox.com/asset/?id=87816246791812</url></Content>
@@ -10611,7 +10765,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="ImageButton" referent="RBX78AA68E264D64721BCB943785B8DB907">
+							<Item class="ImageButton" referent="RBX69CA820E197D42598898F49823D021DB">
 								<Properties>
 									<Content name="HoverImage"><null></null></Content>
 									<Content name="Image"><url>http://www.roblox.com/asset/?id=98915295553134</url></Content>
@@ -10720,7 +10874,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX67B640CDDD924629915C9D3FFC773C3C">
+			<Item class="Frame" referent="RBX220810CB6B6545CEAEF7FE214CC2037A">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -10783,7 +10937,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="ScrollingFrame" referent="RBXA09902BCB81E4D8886C67013BB413312">
+				<Item class="ScrollingFrame" referent="RBXBB38D49C5F424B6AB0C9AC9FDB20487A">
 					<Properties>
 						<token name="AutomaticCanvasSize">0</token>
 						<Content name="BottomImage"><null></null></Content>
@@ -10872,7 +11026,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="TextButton" referent="RBX6F03BE50B1744107A42040953168D72E">
+					<Item class="TextButton" referent="RBX7FF5BC0C8CC34B9787F1E49130A1B9DD">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -10972,7 +11126,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIListLayout" referent="RBXB2AAD5E5401C45CE82A5ADBF588A44EE">
+						<Item class="UIListLayout" referent="RBX985002B620C1497D8A12A490118E7BD7">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -10996,7 +11150,7 @@ end
 						</Item>
 					</Item>
 				</Item>
-				<Item class="ImageButton" referent="RBX6BD642C10127407B8BB0FA49F9BF5B90">
+				<Item class="ImageButton" referent="RBX6A31071E97814435821F4BC13D48A0FA">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>rbxassetid://76128775374929</url></Content>
@@ -11101,7 +11255,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageButton" referent="RBX967B3ECB81EF4D0499E65B16902A6B84">
+				<Item class="ImageButton" referent="RBX92751C4E9AF649B794151C3816F3F9DA">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>rbxassetid://107323324017183</url></Content>
@@ -11206,7 +11360,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageButton" referent="RBX49B02E7803EA49A79F4A83179DA29202">
+				<Item class="ImageButton" referent="RBX6FFB0623FD454A37AD2785FB1C144A57">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>rbxassetid://76128775374929</url></Content>
@@ -11311,7 +11465,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ImageButton" referent="RBX8FC6DE63F9B8498E92D043A24D89C42A">
+				<Item class="ImageButton" referent="RBXFC179B502B4249228F693684EC1813FF">
 					<Properties>
 						<Content name="HoverImage"><null></null></Content>
 						<Content name="Image"><url>rbxassetid://107323324017183</url></Content>
@@ -11416,7 +11570,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="Frame" referent="RBX3B425D2BB0234490ACC52A9A9EA55C09">
+				<Item class="Frame" referent="RBX05B93B73632C48BEBE6EF7CCD0E28137">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -11479,7 +11633,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIStroke" referent="RBX6C637FC0F96F4EBF88257A24ACB550C3">
+					<Item class="UIStroke" referent="RBXD70367DC5EBB4DE393774BE30EA593A8">
 						<Properties>
 							<token name="ApplyStrokeMode">0</token>
 							<UDim name="BorderOffset">
@@ -11507,7 +11661,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBXE6036DC4AACD44B398C007F5B2A271E2">
+				<Item class="Frame" referent="RBXEBA0EDCD75784FBCBA14CF136B59DBB1">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -11570,7 +11724,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIStroke" referent="RBXEE7CFEE5411C4D5BBB82E0CBEEB5D757">
+					<Item class="UIStroke" referent="RBXE374DC2C22194FAEA35EFBBED4BAFC19">
 						<Properties>
 							<token name="ApplyStrokeMode">0</token>
 							<UDim name="BorderOffset">
@@ -11599,7 +11753,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX9EAA15A5F4B4481EB9103CAA36417C90">
+			<Item class="Frame" referent="RBX71A4B7B34A084600BB10EAAAAB7CECC2">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -11662,7 +11816,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIListLayout" referent="RBXBFD4F67DB1FC4484905A4EF6640684EE">
+				<Item class="UIListLayout" referent="RBX14F6EC1B2E5F4D989131B6B7DAA8DB26">
 					<Properties>
 						<token name="HorizontalFlex">0</token>
 						<token name="ItemLineAlignment">0</token>
@@ -11684,7 +11838,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="ScrollingFrame" referent="RBXA6C84D66FD5A4C76B3EA765A786C26E6">
+				<Item class="ScrollingFrame" referent="RBXB6CDDA4127C74ADDB962D002FB73188D">
 					<Properties>
 						<token name="AutomaticCanvasSize">0</token>
 						<Content name="BottomImage"><url>rbxasset://textures/ui/Scroll/scroll-bottom.png</url></Content>
@@ -11773,7 +11927,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="TextBox" referent="RBXE840B9C6A84B4894A3BFB931E356CC61">
+					<Item class="TextBox" referent="RBXBAAED5F28CAB4872AE0666E44A0472C6">
 						<Properties>
 							<bool name="ClearTextOnFocus">false</bool>
 							<Font name="FontFace">
@@ -11878,7 +12032,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextLabel" referent="RBX856BE208F54145988B24D31E1C4023FA">
+					<Item class="TextLabel" referent="RBX27FBD30F8B234AD8BC5633A3B03B3C24">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -11974,7 +12128,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX3E209D109E6E4D80AC2DEB2B295E2BDC">
+				<Item class="Frame" referent="RBX621FDA72B7444DBEB7883B4AE748B75E">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -12037,7 +12191,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBX0D7315D8D6BA4C618DB5AFCB3BE4E2A7">
+					<Item class="Frame" referent="RBX2768614EDD37472B9E778BC4F59BE6CC">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -12100,7 +12254,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIListLayout" referent="RBX96D54F139341414ABB080B072DD1050A">
+						<Item class="UIListLayout" referent="RBX9125E465866341D59A5442F2A54B7374">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -12122,7 +12276,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="ImageButton" referent="RBX5C5D8AC300FE45ECBF9744542BCFA36B">
+						<Item class="ImageButton" referent="RBX35F9C85A0DB84DA087C4981A7221B387">
 							<Properties>
 								<Content name="HoverImage"><null></null></Content>
 								<Content name="Image"><url>rbxassetid://116652457497210</url></Content>
@@ -12226,7 +12380,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIAspectRatioConstraint" referent="RBX84622528671241F5AEE3819E700B0946">
+							<Item class="UIAspectRatioConstraint" referent="RBXF3F49637D55F476C91986A7E023B170A">
 								<Properties>
 									<float name="AspectRatio">1</float>
 									<token name="AspectType">0</token>
@@ -12239,7 +12393,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UIFlexItem" referent="RBXA3B000EC9CAA45E4BBDC0D2B26B9FFB0">
+							<Item class="UIFlexItem" referent="RBXD1E19376E8304A609DB13B49667B0DD8">
 								<Properties>
 									<token name="FlexMode">1</token>
 									<float name="GrowRatio">0</float>
@@ -12254,7 +12408,7 @@ end
 								</Properties>
 							</Item>
 						</Item>
-						<Item class="TextLabel" referent="RBX58D58CB28B434FFCBF4EE56ECC295531">
+						<Item class="TextLabel" referent="RBX84CC656711844DE286244EABECBF64C2">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -12348,7 +12502,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIFlexItem" referent="RBXFE1E97CBE04942A2BB42F99A03EA3422">
+							<Item class="UIFlexItem" referent="RBX8410E887C52648D8A26F52AD513928D2">
 								<Properties>
 									<token name="FlexMode">3</token>
 									<float name="GrowRatio">2</float>
@@ -12363,7 +12517,7 @@ end
 								</Properties>
 							</Item>
 						</Item>
-						<Item class="ImageButton" referent="RBX29FD550ACA264D83B45A985901796272">
+						<Item class="ImageButton" referent="RBX3323EA6A68D4442297E1C8037D4E0D54">
 							<Properties>
 								<Content name="HoverImage"><null></null></Content>
 								<Content name="Image"><url>rbxassetid://121804704003360</url></Content>
@@ -12467,7 +12621,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIAspectRatioConstraint" referent="RBX07E2F9AE797D43FEB04BC9AC0FCB7D41">
+							<Item class="UIAspectRatioConstraint" referent="RBX87DCF24299AE4E8582C54AD6B2C90DAC">
 								<Properties>
 									<float name="AspectRatio">1</float>
 									<token name="AspectType">0</token>
@@ -12480,7 +12634,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UIFlexItem" referent="RBX175544770C194579A5EEEE5C6E82617F">
+							<Item class="UIFlexItem" referent="RBXAEF6FB0DBF3445FD9BE7CBA99338B66B">
 								<Properties>
 									<token name="FlexMode">1</token>
 									<float name="GrowRatio">0</float>
@@ -12495,7 +12649,7 @@ end
 								</Properties>
 							</Item>
 						</Item>
-						<Item class="UIFlexItem" referent="RBX44B00AD2251B456189E768DF7F7A4C38">
+						<Item class="UIFlexItem" referent="RBXB28576985E1A48A4B410D919E3E41843">
 							<Properties>
 								<token name="FlexMode">3</token>
 								<float name="GrowRatio">0</float>
@@ -12510,7 +12664,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="TextLabel" referent="RBX91AA6EA1981F4B5592336023F65FC303">
+					<Item class="TextLabel" referent="RBX1D6D7ED24A7D4DBBAD8AF58E12F18494">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -12604,7 +12758,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIFlexItem" referent="RBX4D7B9C6D75024B69A9E21ACA25BDA053">
+						<Item class="UIFlexItem" referent="RBX1DD652843A03458989FA9B9148ED5459">
 							<Properties>
 								<token name="FlexMode">3</token>
 								<float name="GrowRatio">0</float>
@@ -12619,7 +12773,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="UIListLayout" referent="RBX55D892715140423293B8E714635D8996">
+					<Item class="UIListLayout" referent="RBXDECA230DEE804BE3904D62881BDB7877">
 						<Properties>
 							<token name="HorizontalFlex">0</token>
 							<token name="ItemLineAlignment">0</token>
@@ -12641,7 +12795,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="ImageButton" referent="RBXC7067865516F43CABBF118F369E972B6">
+					<Item class="ImageButton" referent="RBX98C33B8B4C334395B73ECE89869891E0">
 						<Properties>
 							<Content name="HoverImage"><null></null></Content>
 							<Content name="Image"><url>rbxassetid://81867126737174</url></Content>
@@ -12745,7 +12899,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIAspectRatioConstraint" referent="RBXB35D711046A2491A886329A085B6B3E6">
+						<Item class="UIAspectRatioConstraint" referent="RBX533D769DFC604A18A87913B40613038A">
 							<Properties>
 								<float name="AspectRatio">1</float>
 								<token name="AspectType">0</token>
@@ -12758,7 +12912,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIFlexItem" referent="RBXF268B0548CFC40A3B4ABE46DF750345A">
+						<Item class="UIFlexItem" referent="RBX6FDC8B9C0B7540A0B83620BF52E02998">
 							<Properties>
 								<token name="FlexMode">1</token>
 								<float name="GrowRatio">0</float>
@@ -12772,7 +12926,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="Frame" referent="RBX7F0FAE688FB8435F9227918962854985">
+						<Item class="Frame" referent="RBX8A90BA696590446F9ABA7506FFECB842">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -12837,7 +12991,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="ImageButton" referent="RBXB89C27A1E45F4C14AF58137AD36F683A">
+					<Item class="ImageButton" referent="RBX8FB605D0603846C89949AE5CA3F37E1C">
 						<Properties>
 							<Content name="HoverImage"><null></null></Content>
 							<Content name="Image"><url>rbxassetid://118179134997415</url></Content>
@@ -12941,7 +13095,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIAspectRatioConstraint" referent="RBX6167A0E21940458EB222F6FADB8D8E64">
+						<Item class="UIAspectRatioConstraint" referent="RBX4496E806A5454223BD4702D585EFDCBB">
 							<Properties>
 								<float name="AspectRatio">1</float>
 								<token name="AspectType">0</token>
@@ -12954,7 +13108,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIFlexItem" referent="RBX8D1C358BF89847439F8D4CA235F9ABA0">
+						<Item class="UIFlexItem" referent="RBX94543399976A4926ACD50907F3FBAD7A">
 							<Properties>
 								<token name="FlexMode">1</token>
 								<float name="GrowRatio">0</float>
@@ -12968,7 +13122,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="Frame" referent="RBX5B2FDB73B2ED4DC7A08AAA7F520D4523">
+						<Item class="Frame" referent="RBX8637DC682954446AAAA1F20BA899C719">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -13035,7 +13189,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXD1B2FBF54CDF4088BC5FDE41B319CA6F">
+			<Item class="Frame" referent="RBX4662E89C432D4FDD89D9BD91B5AB1FF2">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -13098,7 +13252,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="Frame" referent="RBX8784C3E8C4DD4700AA44BD029AEFE1E9">
+				<Item class="Frame" referent="RBX814F93CFEEF64A8CB2EEC72CE1058715">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -13161,7 +13315,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UIAspectRatioConstraint" referent="RBX8D30AD69EE1D484B8B93E8AC3A932B0E">
+					<Item class="UIAspectRatioConstraint" referent="RBXE3DDB90000D94E628DACDDC598A0C58D">
 						<Properties>
 							<float name="AspectRatio">1</float>
 							<token name="AspectType">0</token>
@@ -13174,7 +13328,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="ImageLabel" referent="RBXA59455CC947044EC9A3F6D838B863106">
+					<Item class="ImageLabel" referent="RBX4DE3A41EECF74E85BDC3091FEAEB98A6">
 						<Properties>
 							<Content name="Image"><url>rbxassetid://77195333607477</url></Content>
 							<Color3 name="ImageColor3">
@@ -13271,7 +13425,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextLabel" referent="RBX2A05C1D99DCD44EBB7B00C363FC847EA">
+					<Item class="TextLabel" referent="RBXD34F0C4665AC46EA87FE0F1294DEC6A0">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -13366,7 +13520,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXE397C788E258491496C8D8F32B481402">
+					<Item class="TextButton" referent="RBX594285E2CFBD4C689A52B2B160BBB0BE">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -13466,7 +13620,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="TextLabel" referent="RBX17198282D2EF43A89AF3187433F515FF">
+						<Item class="TextLabel" referent="RBX92580C6476D14B4DA82A6092B59F1119">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -13560,7 +13714,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIGradient" referent="RBXC4A51210577A494DB063E9EEFA64EE5C">
+							<Item class="UIGradient" referent="RBXBEF233C4381E40E0A8B9A064F8CB79AA">
 								<Properties>
 									<ColorSequence name="Color">0 1 1 1 0 0.5 0.45098 0.45098 0.45098 0 1 1 1 1 0 </ColorSequence>
 									<bool name="Enabled">true</bool>
@@ -13578,7 +13732,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UICorner" referent="RBXF09F1626468E4BB7A2782F8FC59669D2">
+							<Item class="UICorner" referent="RBX0437220967C74F9CB19783955B40EAE8">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.200000003</S>
@@ -13592,7 +13746,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBXDFF26D368017489E8B16AFE507D85FC0">
+							<Item class="TextLabel" referent="RBX2CE6185304834D728115D7935F9025BD">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -13686,7 +13840,7 @@ end
 									<int64 name="SourceAssetId">-1</int64>
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
-								<Item class="UICorner" referent="RBX6725A2C38469430BA318CCC30ADB6358">
+								<Item class="UICorner" referent="RBX31366CCF208E43E890521B64C30008B7">
 									<Properties>
 										<UDim name="CornerRadius">
 											<S>0.200000003</S>
@@ -13700,7 +13854,7 @@ end
 										<BinaryString name="Tags"></BinaryString>
 									</Properties>
 								</Item>
-								<Item class="UIGradient" referent="RBXEDFA463CEFF94E3B83E2E28E81AF028C">
+								<Item class="UIGradient" referent="RBX7571F91DF3994E5780EABD6942EA3A77">
 									<Properties>
 										<ColorSequence name="Color">0 1 1 1 0 0.5 0.45098 0.45098 0.45098 0 1 1 1 1 0 </ColorSequence>
 										<bool name="Enabled">true</bool>
@@ -13718,7 +13872,7 @@ end
 										<BinaryString name="Tags"></BinaryString>
 									</Properties>
 								</Item>
-								<Item class="UIStroke" referent="RBXC825E7119BEA41A3B93FFE15D7C3FD34">
+								<Item class="UIStroke" referent="RBXD80C026608DA433E8D12CC79759C5571">
 									<Properties>
 										<token name="ApplyStrokeMode">0</token>
 										<UDim name="BorderOffset">
@@ -13751,7 +13905,7 @@ end
 				</Item>
 			</Item>
 		</Item>
-		<Item class="Frame" referent="RBX9A2A788C2BE74FCAB5EE94919DF9DC0A">
+		<Item class="Frame" referent="RBX2B897423598748108DFF961AEBCF75F9">
 			<Properties>
 				<token name="Style">0</token>
 				<bool name="Active">false</bool>
@@ -13814,7 +13968,7 @@ end
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="Frame" referent="RBXAC40EDA9E0AF432DB1A6F27FBC678CA6">
+			<Item class="Frame" referent="RBX1BB6A8D54B75483FACD0B40CC6991CEF">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -13878,7 +14032,7 @@ end
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="Frame" referent="RBX9AE60C524A0345D7AEBCAECD184E28C9">
+			<Item class="Frame" referent="RBX488690471FCE49BA85D1F613B2889413">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -13941,7 +14095,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="UIListLayout" referent="RBX95AC16F81ADD46F7B7FB26EDB3B30DF2">
+				<Item class="UIListLayout" referent="RBXBAC7E0CE454343A790C11356839B8576">
 					<Properties>
 						<token name="HorizontalFlex">0</token>
 						<token name="ItemLineAlignment">0</token>
@@ -13964,7 +14118,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX48E5D4355FB84732A10762CC2DBC980B">
+			<Item class="Frame" referent="RBX39630B219489461AA814BA1D05EB2280">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -14027,7 +14181,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="TextButton" referent="RBXAE194F46E6F74C458D7398E4BE2DAE10">
+				<Item class="TextButton" referent="RBX4D5264D13FE54680B79F2F2A99A91D65">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -14127,7 +14281,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="TextLabel" referent="RBXBFCD2487BECD4CF3BA3CB7DD1A707C71">
+					<Item class="TextLabel" referent="RBX4AC8EDB876DB46429B0A2971141B785A">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -14221,7 +14375,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX38E8BCDC29F6432F9CA397F3163D41E1">
+						<Item class="UICorner" referent="RBX09CB3803334340FE857ADFC44A0AA7D7">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.200000003</S>
@@ -14235,7 +14389,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIGradient" referent="RBX5B68658959E84BF7A01392241E3E8BEB">
+						<Item class="UIGradient" referent="RBX8E47D342A540485A9A24A6AEFC7C313C">
 							<Properties>
 								<ColorSequence name="Color">0 1 1 1 0 0.140138 0.509804 0.509804 0.509804 0 0.698962 0.690196 0.690196 0.690196 0 1 0.6 0.6 0.6 0 </ColorSequence>
 								<bool name="Enabled">false</bool>
@@ -14255,7 +14409,7 @@ end
 						</Item>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX50055584A257431A852963DDDAEB6DB5">
+				<Item class="Frame" referent="RBX409CD7E68C2D44258ABD5DA003769572">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -14318,7 +14472,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXFFF83365E5E64DEF939CBE122C29E003">
+					<Item class="UICorner" referent="RBX449E80DCE3ED4B368973B306083C4654">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -14332,7 +14486,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX503C6793D0E149C8A3CD73C24EAC355B">
+					<Item class="Frame" referent="RBX239272DEC5CA4939933C6F64EDD7FF12">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -14396,7 +14550,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXBF0387FEE1F24A88938C498A88954725">
+					<Item class="Frame" referent="RBX9DA38883A3184364B55C1B405C05B0EA">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">true</bool>
@@ -14460,7 +14614,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXF9144DF29BB64AAF9E46B7C17C01F390">
+					<Item class="TextButton" referent="RBXE599694E000147E28BA5C022EAB42BD9">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -14562,7 +14716,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="TextLabel" referent="RBX6C64E04F1B7941CEB2F1025A9E2917A3">
+				<Item class="TextLabel" referent="RBX88C0A5BB24884D55BFB2F53B7C8261F0">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -14657,7 +14811,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="Frame" referent="RBXD13F575F2533473D87CB0CF3591B8F6C">
+				<Item class="Frame" referent="RBXC288793D2A6E41FEAA1BC6E1E6A7786A">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -14720,7 +14874,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX43A898FCE80842E0934EAFF8AE17ABC2">
+					<Item class="UICorner" referent="RBX3488A3917F97462E94AF79A9806BC381">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -14734,7 +14888,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXC9372B35660C4662AAA868E86D3752B3">
+					<Item class="Frame" referent="RBX0E6300D525B4470491535ABE8F0CA3FB">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">true</bool>
@@ -14798,7 +14952,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXD9C332DC29ED4C569662E0634D0ECA75">
+					<Item class="TextButton" referent="RBX61B2C3BD911C440EBA6C6C7E0D5109E6">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -14899,7 +15053,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXDFEB32163287461E852D587B22DA1CD4">
+					<Item class="Frame" referent="RBX080DA45C5F0B4A57A864FFACB93B8E97">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -14964,7 +15118,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="TextButton" referent="RBXA2FE33C3386247B4942D03C0C9E39330">
+				<Item class="TextButton" referent="RBX3257BAA333144CDD9FBF240BB5EF35E4">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -15064,7 +15218,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX592F440668CC42338A8BDF177226A58B">
+					<Item class="UICorner" referent="RBXAA087F4FD394423B97B19038F931B076">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.300000012</S>
@@ -15078,7 +15232,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXE9F9BA3BE57F430AADDCF6BF88D17FFF">
+					<Item class="TextButton" referent="RBX55F777C94C5346EE92E6D32291FAFA52">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -15177,7 +15331,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIAspectRatioConstraint" referent="RBXC4CBC941B7114396BF2C3D5E967435E4">
+						<Item class="UIAspectRatioConstraint" referent="RBX2A2DCCCA3F9349A788D88F2A78F83E8C">
 							<Properties>
 								<float name="AspectRatio">1</float>
 								<token name="AspectType">0</token>
@@ -15190,7 +15344,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UICorner" referent="RBXB990D6C4D37942869E0EC9716C957E36">
+						<Item class="UICorner" referent="RBX96F4B6C246804A3C996FA3B8295C0C75">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.300000012</S>
@@ -15207,7 +15361,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX7BD36170F8574D0F80CF925F0D1C1CC2">
+			<Item class="Frame" referent="RBX1EA1F66CF6EB467C936FFE0B5818DE00">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -15270,7 +15424,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="TextLabel" referent="RBXE4F0AB363F424D9B8A87E0904E55606F">
+				<Item class="TextLabel" referent="RBX6685DFE115B54A36996F2BAADC402693">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -15365,7 +15519,7 @@ end
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
 				</Item>
-				<Item class="UIStroke" referent="RBX0918CEDF0DAB40F9BA9E5A679D32B5DD">
+				<Item class="UIStroke" referent="RBX1B62966F66F44635BB5238F425872CB4">
 					<Properties>
 						<token name="ApplyStrokeMode">0</token>
 						<UDim name="BorderOffset">
@@ -15393,7 +15547,7 @@ end
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="TextBox" referent="RBXA9CC05AAA23F4207ABB365BBE5D3E688">
+			<Item class="TextBox" referent="RBXA29E731E834E42AD8B8459F72F02F8F4">
 				<Properties>
 					<bool name="ClearTextOnFocus">false</bool>
 					<Font name="FontFace">
@@ -15498,7 +15652,7 @@ end
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="Frame" referent="RBX395CC354B3644133A1F238BF6A41456D">
+			<Item class="Frame" referent="RBX8713F98544BA484295389854FC18F6EB">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -15561,7 +15715,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="Frame" referent="RBXD752AABD98394443AE55B765C589A75C">
+				<Item class="Frame" referent="RBXA4BB90E4C2D048D3835DDC08F0FF1500">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -15624,7 +15778,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXFEAEFD0D9D0D46689FA9769973F7C78C">
+					<Item class="UICorner" referent="RBXBB4EFD54E4A6453097B2ECCF18E243B4">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -15638,7 +15792,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXC987222A76BD4B1884EA624076491E12">
+					<Item class="Frame" referent="RBXB59103F16EA84EFFBAC8F37E54C97125">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -15702,7 +15856,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXE07CB0B9484341CB80D4B304CA687CBD">
+					<Item class="Frame" referent="RBXC58BCF83C6194B0A8414668C93D5297E">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -15766,7 +15920,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBX5749E3D2B9104E8C87770768F7EBD697">
+					<Item class="TextButton" referent="RBX1AB5D07EDA8F4422942A24673AA14201">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -15868,7 +16022,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX72851222C0E8481B86314AA2DAAA6790">
+				<Item class="Frame" referent="RBXA6B4346B68A5407798A9B24E1F616589">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -15931,7 +16085,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXC6EA03E1918643DCA3156D389CBADF25">
+					<Item class="UICorner" referent="RBX0CB6E3D964B74B6381E62AFA334351F8">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -15945,7 +16099,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXBDF01045E03746DFA69CBB01B8021365">
+					<Item class="Frame" referent="RBXB64706EEA6854513995FDD155E61ED7C">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -16009,7 +16163,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXA0BC424258664BE0806AB4B04D6B140F">
+					<Item class="Frame" referent="RBX77062253B9F9471DACCDFC2426BB7DBF">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">true</bool>
@@ -16073,7 +16227,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXD50D68D659F443EDB6F9C31784B5EB39">
+					<Item class="TextButton" referent="RBXD7CB8405DCE64147B432C8F59671FD9E">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -16175,7 +16329,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX546E256DF7B6491291A890499A642054">
+				<Item class="Frame" referent="RBXED073DFEFAFA4A31B2EF1332D7F4396F">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -16238,7 +16392,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBXC49940333E374D46AFE66A63A10BDEE9">
+					<Item class="Frame" referent="RBX35311EDC9E3F47C7A87576074D1BFE7E">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -16302,7 +16456,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextLabel" referent="RBXC54380B478C5424C9D0C7C92F5899FD7">
+					<Item class="TextLabel" referent="RBXE29111C43CC64C2B8C5EE7F462C9C685">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -16396,7 +16550,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX9385B5501B9840D9A855B3CDC4F46C88">
+						<Item class="UICorner" referent="RBXCB765C368F05463D9D194DE1EAA50799">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.0250000004</S>
@@ -16411,7 +16565,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="ScrollingFrame" referent="RBX11491D06DDEE49C88B280E1AA949B37C">
+					<Item class="ScrollingFrame" referent="RBXAB3D53D1964C48829CB1AD93E8BF8D84">
 						<Properties>
 							<token name="AutomaticCanvasSize">0</token>
 							<Content name="BottomImage"><url>rbxasset://textures/ui/Scroll/scroll-bottom.png</url></Content>
@@ -16500,7 +16654,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX3798D5A6C45840E09127DD1438F9A63B">
+						<Item class="UICorner" referent="RBX94E38084565F46C0B89B3FA2DE791344">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.0250000004</S>
@@ -16514,7 +16668,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIStroke" referent="RBXAF2204B2C7F0451B945F80EB7726F5E4">
+						<Item class="UIStroke" referent="RBXB17507EE76CC4EEBAA7639C2F2638550">
 							<Properties>
 								<token name="ApplyStrokeMode">1</token>
 								<UDim name="BorderOffset">
@@ -16541,7 +16695,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBX2551C6CA2C6F4CA2AB3687648959E56D">
+						<Item class="TextLabel" referent="RBX35CB57CC5C9843148E824E495DECEC0F">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -16637,7 +16791,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="TextButton" referent="RBX66067BDADCEC44DE8F1102FEEB2CCF59">
+					<Item class="TextButton" referent="RBX1C1A06C5B5F24FA095388D995062801F">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -16737,7 +16891,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="ImageLabel" referent="RBXC6530EB0187C43F88ADBE6F9C505D956">
+						<Item class="ImageLabel" referent="RBXD80B6E7E42934DC8B263D72FD0B8F8ED">
 							<Properties>
 								<Content name="Image"><url>rbxassetid://153287088</url></Content>
 								<Color3 name="ImageColor3">
@@ -16833,7 +16987,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBXF8482253C2CD4AF4AA9A6D3CEFC7A3CE">
+							<Item class="UICorner" referent="RBX6CA9767BA3424B7DA0872F6D2DD67D50">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.100000001</S>
@@ -16847,7 +17001,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBX5AE5545C60944CB4AE8103D4360208FB">
+							<Item class="TextLabel" referent="RBX320437C324234BC69BD04F1281AE8623">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -16941,7 +17095,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UIAspectRatioConstraint" referent="RBX01300F24CC0947DFAC24B9F0B8147E2D">
+							<Item class="UIAspectRatioConstraint" referent="RBX8A9C4776E6E6458C90B3DC1DEA74E1BE">
 								<Properties>
 									<float name="AspectRatio">1</float>
 									<token name="AspectType">0</token>
@@ -16956,7 +17110,7 @@ end
 							</Item>
 						</Item>
 					</Item>
-					<Item class="TextButton" referent="RBXE5F9EF5E2E0248019274A4D5754F6059">
+					<Item class="TextButton" referent="RBX5BC04DD4DBEF43619F915B564ED5336D">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -17056,7 +17210,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="Frame" referent="RBX5EFB29C0547C47DBB48B74E1039B246A">
+						<Item class="Frame" referent="RBX25F6E8E4744E4E17BB99D1FFE7774FA7">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -17120,7 +17274,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="Frame" referent="RBX610AB1A35A0C468BB451FD25EBEB359E">
+						<Item class="Frame" referent="RBXC4174308F6A445F7A31CADFE47F84BA2">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -17184,7 +17338,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBX9855044A08424461AC56C03C6DB32455">
+						<Item class="TextLabel" referent="RBXB78473D84D844C8EB49A704C8F93E4F5">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -17278,7 +17432,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBXBA3594979F5040AEA432ECFA09D16255">
+							<Item class="UICorner" referent="RBX9141E1B2AD264B24BA43D183258C71F6">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.25</S>
@@ -17296,7 +17450,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXDA22DFBB83734B73A60EDC9B84F1BD96">
+			<Item class="Frame" referent="RBX8CD444A0932D4748BE649C396669E164">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -17359,7 +17513,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="Frame" referent="RBXF7AF4C5252804880A0628363F38DAE4C">
+				<Item class="Frame" referent="RBX57635AAEF39C48A284DE2E288A79A922">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -17422,7 +17576,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXDA6CDC16CA3544A8A501638D2DA7E876">
+					<Item class="UICorner" referent="RBXF3316D5176424305AC88A1585743224F">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -17436,7 +17590,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX44051BF1BC4143E4BFD33FF988EB39BA">
+					<Item class="Frame" referent="RBX0191FC4F5C314DBAB973E45AEF2CCE1C">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -17500,7 +17654,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXEE63311F22184DF2A840AD8390FDE655">
+					<Item class="Frame" referent="RBX9632CC1275A74F2B87C544B5531D2E79">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -17564,7 +17718,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXE3F0D38D9B7846F38DE7968C647B2554">
+					<Item class="TextButton" referent="RBX05325248855447F593A3A472F479ED73">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -17666,7 +17820,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBXD4DEA8C80DA442AE9B654B2CB551DD5F">
+				<Item class="Frame" referent="RBXB1D294F8685946BAB37EAC55416B7B9D">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -17729,7 +17883,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX099E14CEC0E2414B8F0278BC67925C6A">
+					<Item class="UICorner" referent="RBXBF1AFDD5501C4D608CDCC01AEE5352FA">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -17743,7 +17897,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX7AD7A87C3A3E48FE8CC7AFC6CB2C16C6">
+					<Item class="Frame" referent="RBX0DB3DE047CE741FEAE31BCB30510B1EB">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -17807,7 +17961,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX8FA54B4B86DB44E6937A69DDD2170113">
+					<Item class="Frame" referent="RBX3C128CED879D4E70B8DD7767E67FD117">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">true</bool>
@@ -17871,7 +18025,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXE53FAC52BE3040149ADB3357B9DF2A64">
+					<Item class="TextButton" referent="RBX31994630E82545C8988A65E98BD3B076">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -17973,7 +18127,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBXD640FD6A462F489DB492219594C3940D">
+				<Item class="Frame" referent="RBX10BE31A577EB4D4D9716FF433602710C">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -18036,7 +18190,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXE4502E7F283B40A5A500A9F1AC206A18">
+					<Item class="UICorner" referent="RBXD67287A293D1437292E3732914ADCC58">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.0250000004</S>
@@ -18050,7 +18204,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX7EEB0D5272BF4945A6E15332EBD09C53">
+					<Item class="Frame" referent="RBX3C6201CE76204BCE912D632D67FDA3D6">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -18114,7 +18268,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextLabel" referent="RBXAF1F01E670B54723B761B76686C11F87">
+					<Item class="TextLabel" referent="RBXE4BB4E8C62E34507BE0F363AF1172059">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -18209,7 +18363,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="ScrollingFrame" referent="RBXC60139F9B66E4FD2AB8A2EDAEDDC80F7">
+					<Item class="ScrollingFrame" referent="RBX28D84A1C278446169DA1AC197AE8F787">
 						<Properties>
 							<token name="AutomaticCanvasSize">0</token>
 							<Content name="BottomImage"><url>rbxasset://textures/ui/Scroll/scroll-bottom.png</url></Content>
@@ -18298,7 +18452,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX463391A792654A0291351640B1A8CEF3">
+						<Item class="UICorner" referent="RBX88DB790F36E242A19389E086B3B91869">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.0250000004</S>
@@ -18312,7 +18466,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIStroke" referent="RBX03AC444F09E54F2BA5BC41EF84343750">
+						<Item class="UIStroke" referent="RBX8A2E9B44712C45968D1BD755596C0595">
 							<Properties>
 								<token name="ApplyStrokeMode">1</token>
 								<UDim name="BorderOffset">
@@ -18339,7 +18493,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBX9BE992F38DDD4236B236637B994E4E27">
+						<Item class="TextLabel" referent="RBXA7C4491EE88C43DFA4BF9CEE2933D43C">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -18435,7 +18589,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="TextButton" referent="RBX5D845789B1DE48299E4B59B2EB6BBCE3">
+					<Item class="TextButton" referent="RBX2341209BA2814BDA99E1365E0255CF5C">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -18535,7 +18689,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="ImageLabel" referent="RBXC00BDEC771DB45069BA51B113F70E2FE">
+						<Item class="ImageLabel" referent="RBXCF64972354CB4358BD767194C689D7A9">
 							<Properties>
 								<Content name="Image"><url>rbxassetid://153287088</url></Content>
 								<Color3 name="ImageColor3">
@@ -18631,7 +18785,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBX7BB6B824067141ACB49897EDF6AAF286">
+							<Item class="UICorner" referent="RBX197285D92E3D415F85BD8B6862BC77D0">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.100000001</S>
@@ -18645,7 +18799,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBXC646F8387B2C4054A0BDD391EFB01713">
+							<Item class="TextLabel" referent="RBXE5B3CCE47D4E4C4FB44EE706773DD660">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -18739,7 +18893,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UIAspectRatioConstraint" referent="RBXD607490927C041F688BFFA2E5BBF76F7">
+							<Item class="UIAspectRatioConstraint" referent="RBX48E7775E0BDC4540B39E99148E1789F3">
 								<Properties>
 									<float name="AspectRatio">1</float>
 									<token name="AspectType">0</token>
@@ -18754,7 +18908,7 @@ end
 							</Item>
 						</Item>
 					</Item>
-					<Item class="TextButton" referent="RBX0997AAEE5FDA48D78471311099A20E7C">
+					<Item class="TextButton" referent="RBX7EA182B8CC4F490EB0A4D584DDD2521B">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -18854,7 +19008,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="Frame" referent="RBXE1C4B4A4DBF142209059C85163BE16A9">
+						<Item class="Frame" referent="RBXA0A029ADDD244EE7838CDE9678B3E13F">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -18918,7 +19072,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="Frame" referent="RBX8153ABDF55BE4F2FB7FA68CA2E2D1B49">
+						<Item class="Frame" referent="RBXDA16FB85C3694BA18DC8EA139BDC6A36">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -18982,7 +19136,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBX00D23C56F3D94AA0A8C2813E71055756">
+						<Item class="TextLabel" referent="RBX8374FAC7930B4645BEDD7FE516EFC81C">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -19076,7 +19230,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBXBF24F773302B473FBC9344A9FA8150A1">
+							<Item class="UICorner" referent="RBXA91873D58C10446EBD37F97530A509DC">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.25</S>
@@ -19094,7 +19248,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBXCAA40C50BA564162BE748CD115365F53">
+			<Item class="Frame" referent="RBX7CAD6C6B26A14032AF8C75554E3AA0E0">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -19157,7 +19311,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="Frame" referent="RBX3E711AA0D740414F97B527052A8E74A2">
+				<Item class="Frame" referent="RBX406E77A534694AC68E7CE2C874CF4411">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -19220,7 +19374,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX9EFC3EC29A8C4075B661B11E42CCBB87">
+					<Item class="UICorner" referent="RBX752E64A0C13647FBBE46957A410D45F6">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -19234,7 +19388,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX83F009074B004BFB90D6F01A1AE65974">
+					<Item class="Frame" referent="RBX482DED57C3594B10BBBF91106A9700AC">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -19298,7 +19452,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXBEC170F47D2F464DB0B0C5F2D33370B0">
+					<Item class="Frame" referent="RBX2B477E84EED149E9BA312A1FF619233D">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -19362,7 +19516,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBX25E37B1BB17E498AAD9C3E871F0D9916">
+					<Item class="TextButton" referent="RBX82282ECBB12E42D9B9BDE06D34B540E0">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -19464,7 +19618,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX0E291292C9634A45A615CB1EC8A956A1">
+				<Item class="Frame" referent="RBX036CEC248FC94E4C84715A8B166B9DD4">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">true</bool>
@@ -19527,7 +19681,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX9258AF804FE946D98A9D4FD440E386CF">
+					<Item class="UICorner" referent="RBX69C93AD8BE7F4D2FBD3B7E7F30B25BA8">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -19541,7 +19695,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXC45804FBAF8942748AD7B0768A4AB2FD">
+					<Item class="Frame" referent="RBX9CAB964FEC994EAAAEA5E3DD1F59ABB7">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -19605,7 +19759,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXE5CE8459C3864156920DEABB99406932">
+					<Item class="Frame" referent="RBXD3F330AE11D940399B96879650AA210E">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">true</bool>
@@ -19669,7 +19823,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBX8991A984B24A43368C2F48AD2107C86E">
+					<Item class="TextButton" referent="RBXC71FD31351F54E75891B1E518A54EA15">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -19771,7 +19925,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBXF21C1475E42246E183069F567F636537">
+				<Item class="Frame" referent="RBXD39C567D1D784B5B8F7549BB80487926">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -19834,7 +19988,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="ScrollingFrame" referent="RBX40F9E55D44F242E3B503B9E98155EFE9">
+					<Item class="ScrollingFrame" referent="RBX2381A4815C4D42E89D930EE6796F201B">
 						<Properties>
 							<token name="AutomaticCanvasSize">0</token>
 							<Content name="BottomImage"><url>rbxasset://textures/ui/Scroll/scroll-bottom.png</url></Content>
@@ -19923,7 +20077,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX42BD407074F94719A49FBFAB3EAF2650">
+						<Item class="UICorner" referent="RBXEF994E33D5EF40B895EED1CA2F7E59D1">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.0250000004</S>
@@ -19937,7 +20091,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="UIStroke" referent="RBXDA668A9FDF5F4DB5995E076650FD0E1B">
+						<Item class="UIStroke" referent="RBXBE635F8907124B6990185E96F74BE434">
 							<Properties>
 								<token name="ApplyStrokeMode">1</token>
 								<UDim name="BorderOffset">
@@ -19964,7 +20118,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBXC602454439FF4CFE806C0416080D5A97">
+						<Item class="TextLabel" referent="RBX2B9FA40A4A7D4B07875CA32E3D84BC7E">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20060,7 +20214,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="TextButton" referent="RBX4A3FDB7DCA074041A390D86D95C2705C">
+					<Item class="TextButton" referent="RBX084F97070FBE462887C23BF6DC58F0C5">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20160,7 +20314,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="ImageLabel" referent="RBXBF473A11890D43D8881F8860D383E627">
+						<Item class="ImageLabel" referent="RBXC0B91CEA8A8A452BB2DE0FE130029F7E">
 							<Properties>
 								<Content name="Image"><url>rbxassetid://153287088</url></Content>
 								<Color3 name="ImageColor3">
@@ -20256,7 +20410,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBX7616C19C864A4CD99F84D566C8716A71">
+							<Item class="UICorner" referent="RBX8DFA2C9BEA144F0A996A1505C570ADD0">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.100000001</S>
@@ -20270,7 +20424,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBX26F5AE1FB9CE4520A42649B53552FA44">
+							<Item class="TextLabel" referent="RBXBB642FDF29614E6889240A09A3F4F6CE">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20364,7 +20518,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="UIAspectRatioConstraint" referent="RBXA2179AAE55674598AB25A51224E1C88A">
+							<Item class="UIAspectRatioConstraint" referent="RBX6DD71EAEB95745DAA458201DB90D3C60">
 								<Properties>
 									<float name="AspectRatio">1</float>
 									<token name="AspectType">0</token>
@@ -20379,7 +20533,7 @@ end
 							</Item>
 						</Item>
 					</Item>
-					<Item class="UICorner" referent="RBX270568720E634B6287ADC6D235EF1466">
+					<Item class="UICorner" referent="RBX5B3B74A017A140679609358910684CCC">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.0250000004</S>
@@ -20393,7 +20547,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXDFB9204997A5449F8A3BED6EA20A315D">
+					<Item class="Frame" referent="RBX2A7C28D2D6854B26A61986ACD321C6C5">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -20457,7 +20611,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextLabel" referent="RBX4FF8A67EE8CE44C8B02D62B3EE94F1ED">
+					<Item class="TextLabel" referent="RBX44528BFEC9284EADB46E1AAA2AC5D1C5">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20552,7 +20706,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="TextButton" referent="RBXADDE3B2682E642E1AA3224D379B69EC0">
+					<Item class="TextButton" referent="RBX3ACD9D38A137453985DCC11E226D6F4B">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20652,7 +20806,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="Frame" referent="RBXC29057F5B74F436CBC1C453DF23F6257">
+						<Item class="Frame" referent="RBX9C989AFB2AB042D49F67568E34858AD6">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -20716,7 +20870,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="Frame" referent="RBX6EF99EBE6BFB491FB1727FF9541F81D5">
+						<Item class="Frame" referent="RBX3FCC3D6AB72B47BC95D18BB317599489">
 							<Properties>
 								<token name="Style">0</token>
 								<bool name="Active">false</bool>
@@ -20780,7 +20934,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextLabel" referent="RBXF2F3DBF61F65471186CB40846FEE8765">
+						<Item class="TextLabel" referent="RBX9E26E5C3B393455AA59FCF579DC33BBF">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -20874,7 +21028,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UICorner" referent="RBX93E4701113D7403D9EF822872A7A711B">
+							<Item class="UICorner" referent="RBX28340FC0F0194712AB6CB9C4F983F5A8">
 								<Properties>
 									<UDim name="CornerRadius">
 										<S>0.25</S>
@@ -20891,7 +21045,7 @@ end
 						</Item>
 					</Item>
 				</Item>
-				<Item class="Frame" referent="RBX23537B41BE0D43C389D135C7F6869098">
+				<Item class="Frame" referent="RBX9266B63E5603408F9798E24A25DF12F2">
 					<Properties>
 						<token name="Style">0</token>
 						<bool name="Active">false</bool>
@@ -20954,7 +21108,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBXC8935FFDB1294C09B87767AFE280085F">
+					<Item class="UICorner" referent="RBX575E030C00B9417BA1AC05D71E1C93FF">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.25</S>
@@ -20968,7 +21122,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX4ABD81937E9447D79FC2CEDC7E6D7C78">
+					<Item class="Frame" referent="RBXEE731563C67C4A69B97A63B68B5A8D94">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -21032,7 +21186,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX0288764E6B754E67997AB06CB5761BE2">
+					<Item class="Frame" referent="RBXC44F753C8FC642EBAA1CFB6992B124E0">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -21096,7 +21250,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXBE7F3F0630BD431BB03442BD7D8494DA">
+					<Item class="Frame" referent="RBXE80607F42EB943A6B09EC23DEB2673AE">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -21159,7 +21313,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UIListLayout" referent="RBX01C957651F6642DD887794A75D2A1461">
+						<Item class="UIListLayout" referent="RBX46F23A207FA44EF49A4CE4FFD15BFC9D">
 							<Properties>
 								<token name="HorizontalFlex">0</token>
 								<token name="ItemLineAlignment">0</token>
@@ -21181,7 +21335,7 @@ end
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
 						</Item>
-						<Item class="TextButton" referent="RBX964E6225AE664BBAAD30748A835610DB">
+						<Item class="TextButton" referent="RBX400C0E11019148BE836A57F68A2F9C7A">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -21281,7 +21435,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIFlexItem" referent="RBXC9995FFD023E47DABAB536958447DF4B">
+							<Item class="UIFlexItem" referent="RBXA32A34ED83FF4D509054327E5C46DB12">
 								<Properties>
 									<token name="FlexMode">3</token>
 									<float name="GrowRatio">0</float>
@@ -21295,7 +21449,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBXC8D8360ADC1A47A8BA47863FE5CF7967">
+							<Item class="TextLabel" referent="RBX29FADE2B2BEA4024BE8D667D73411642">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -21391,7 +21545,7 @@ end
 								</Properties>
 							</Item>
 						</Item>
-						<Item class="TextButton" referent="RBXA236DCD85B474B8DAE2F181B4AC3C111">
+						<Item class="TextButton" referent="RBX8DDDB06F9420422392723C01171BB5F6">
 							<Properties>
 								<Font name="FontFace">
 									<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
@@ -21491,7 +21645,7 @@ end
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="UIFlexItem" referent="RBX2ADC8100455A4B9EA635405435FCA143">
+							<Item class="UIFlexItem" referent="RBXFF682C79DC45490B98062F7E8C3EC48B">
 								<Properties>
 									<token name="FlexMode">3</token>
 									<float name="GrowRatio">0</float>
@@ -21505,7 +21659,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="TextLabel" referent="RBXD7320382A25E44ED8DC27E0AA911A082">
+							<Item class="TextLabel" referent="RBX4E261DF9917E471D98A73142ABD4B05F">
 								<Properties>
 									<Font name="FontFace">
 										<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -21599,7 +21753,7 @@ end
 									<int64 name="SourceAssetId">-1</int64>
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
-								<Item class="UICorner" referent="RBX521CC0037CF6445C8F0411C67CFA628A">
+								<Item class="UICorner" referent="RBX421A29308B5046F48D4B73D2A3DE1F32">
 									<Properties>
 										<UDim name="CornerRadius">
 											<S>0.25</S>
@@ -21614,7 +21768,7 @@ end
 									</Properties>
 								</Item>
 							</Item>
-							<Item class="Frame" referent="RBX24B27B81FB7F486095A08647F9F188DA">
+							<Item class="Frame" referent="RBXDF8FEC73C37E4688B851A58814F46541">
 								<Properties>
 									<token name="Style">0</token>
 									<bool name="Active">false</bool>
@@ -21678,7 +21832,7 @@ end
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="Frame" referent="RBX9E4C825CE7624F76AAC03EC4ABE8E7D5">
+							<Item class="Frame" referent="RBX65689A1256D84F2CBAA74749E33126BE">
 								<Properties>
 									<token name="Style">0</token>
 									<bool name="Active">false</bool>
@@ -21746,7 +21900,7 @@ end
 					</Item>
 				</Item>
 			</Item>
-			<Item class="Frame" referent="RBX0A0032584CFD423F8828243D887190F6">
+			<Item class="Frame" referent="RBX6263DA9BAFBD4349937B5C88214B5BF2">
 				<Properties>
 					<token name="Style">0</token>
 					<bool name="Active">false</bool>
@@ -21809,7 +21963,7 @@ end
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="TextButton" referent="RBX7CA3A30EF1B042579F7ED225AF3B2A4D">
+				<Item class="TextButton" referent="RBX162F8BA9FCCA486F9B5C1BB6A53C1AA5">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -21909,7 +22063,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBX0DF0966BBEBF4E879C51F6022CC360D2">
+					<Item class="Frame" referent="RBX1DCEFE98C855405192E609593CC3A156">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -21972,7 +22126,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX0A08C7763FBD4F119B4D9C0FA29F2586">
+						<Item class="UICorner" referent="RBX70CCBE90EDD94666937D987CA4512B1F">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.5</S>
@@ -21987,7 +22141,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="Frame" referent="RBXDBA0A6AE0D464A6D8A7C8D083C62A3C9">
+					<Item class="Frame" referent="RBXD9A01C1D86FD4A08A50FE1212ECC18F4">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -22051,7 +22205,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBX1BC76AAE2D74418DA035817DDD56E694">
+					<Item class="Frame" referent="RBX11CC9B3DCC0846199D7CE8CDE6FEB4F0">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -22116,7 +22270,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="TextButton" referent="RBX7DB25D9CB9064968B43AA0E8460C0210">
+				<Item class="TextButton" referent="RBXD9CEF989A75F45FD847436A2AB6BF828">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -22216,7 +22370,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="Frame" referent="RBX33756D202A0B4D568BD1B65835AB71AD">
+					<Item class="Frame" referent="RBX0F9693C2FB5C4BCA8949DF0498DF46C3">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -22279,7 +22433,7 @@ end
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="UICorner" referent="RBX292D575321CE4C7EA8A8C0728747B8F6">
+						<Item class="UICorner" referent="RBX34282B8761934DBA9D8759A6423C7774">
 							<Properties>
 								<UDim name="CornerRadius">
 									<S>0.5</S>
@@ -22294,7 +22448,7 @@ end
 							</Properties>
 						</Item>
 					</Item>
-					<Item class="Frame" referent="RBX6F137B82BA294A4CA889C27B4CEC40DE">
+					<Item class="Frame" referent="RBX015649033062413A9488F121F25266AB">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -22358,7 +22512,7 @@ end
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Frame" referent="RBXF6E378479E6F4B0FAA7CCE1EE580AEB6">
+					<Item class="Frame" referent="RBX106284D10F5E408EB7942281F99E9CD4">
 						<Properties>
 							<token name="Style">0</token>
 							<bool name="Active">false</bool>
@@ -22423,7 +22577,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="ScrollingFrame" referent="RBXCC5014A23C944358B12AD44FB8E2C519">
+				<Item class="ScrollingFrame" referent="RBXE2C70939E6994BA28BE776468DFFE699">
 					<Properties>
 						<token name="AutomaticCanvasSize">0</token>
 						<Content name="BottomImage"><url>rbxasset://textures/ui/Scroll/scroll-bottom.png</url></Content>
@@ -22512,7 +22666,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="TextLabel" referent="RBX6FD0DEA6CE8A427BB01D1F8332D39CE7">
+					<Item class="TextLabel" referent="RBX24E7BD0CF47B456CA678127D30C850D6">
 						<Properties>
 							<Font name="FontFace">
 								<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -22608,7 +22762,7 @@ end
 						</Properties>
 					</Item>
 				</Item>
-				<Item class="TextButton" referent="RBX4598805BB40E4E96A0FC2FD7147DC1A9">
+				<Item class="TextButton" referent="RBXBF53B8C46E4341C384A66888983A51DD">
 					<Properties>
 						<Font name="FontFace">
 							<Family><url>rbxasset://fonts/families/SourceSansPro.json</url></Family>
@@ -22708,7 +22862,7 @@ end
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="UICorner" referent="RBX3257C495CA0347D9A42BDA811F839959">
+					<Item class="UICorner" referent="RBX72934398BE8047AA84B2332C8E6C61C6">
 						<Properties>
 							<UDim name="CornerRadius">
 								<S>0.5</S>
