@@ -231,6 +231,28 @@ return {
 				};
 			};
 			{
+				Name = "SaveStyleRule";
+				DisplayName = "Save StyleRule";
+				Description = "Whether should :GetProperties() data be saved or not?";
+				Type = "boolean";
+				Tree = {
+					{
+						Name = "Style_Sheet_Bulk_Threshold";
+						DisplayName = "SetProperties Threshold";
+						Description = "When more than X property, use SetProperties instead of SetProperty calls";
+						Type="number";
+						Tree = {
+							{
+								Name = "Style_Sheet_ForceBrackets";
+								DisplayName = "Force Brackets [\"\"]";
+								Type = "boolean";
+							};
+						};
+					};
+				};
+				
+			};
+			{
 				Name = "SaveUnions";
 				DisplayName = "Save Unions";
 				Description = "Should UnionOperation/IntersectionOperation be compiled? (if disabled will be treated as a regular Part by compiler)";
