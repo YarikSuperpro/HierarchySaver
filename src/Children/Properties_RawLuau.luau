@@ -85,6 +85,12 @@ return {
 				Type = "boolean";
 			};
 			{
+				Name = "RL_2ndArgRegardless";
+				DisplayName = "2nd arg Regardless";
+				Description = "Uses 2nd argument in Instance.new() regardless";
+				Type = "boolean";
+			};
+			{
 				Name = "RL_AttributesTags";
 				DisplayName = "Attributes & Tags";
 				Description = "Should save attributes and tags?";
