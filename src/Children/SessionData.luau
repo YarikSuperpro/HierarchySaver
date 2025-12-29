@@ -132,6 +132,7 @@ local PropertiesThatExist:{[string]:string|number|boolean} = {
 	["SaveStyleRule"] = true;
 	["Style_Sheet_Bulk_Threshold"] = 1;
 	["Style_Sheet_ForceBrackets"] = false;
+	["RL_2ndArgRegardless"] = true;
 	----Hierarchy builder
 	HierarchyBuilderFunctionName="Nestify";
 
