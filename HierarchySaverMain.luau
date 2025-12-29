@@ -23,7 +23,7 @@ type GetAsync = (service:HttpService,url: string, nocache: boolean?, headers: an
 local Toolbar = plugin:CreateToolbar("Hierarchy Saver")
 local Button = Toolbar:CreateButton("Open Hierarchy UI","Open UI","rbxassetid://98396137856895","Open UI")
 Button.ClickableWhenViewportHidden=true
-local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID",DockWidgetPluginGuiInfo.new(
+local Widget:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGuiAsync("Hierarchy Saver ID",DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float,
 	false,
 	false,
@@ -280,7 +280,7 @@ local Classes:Types.FormattedClasses = {}
 
 	local function BuildNewTempWidget():()
 		if CurrentMainDebug_Scroll~=nil then return end
-		local Temp:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("Hierarchy Saver ID_Temp",DockWidgetPluginGuiInfo.new(
+		local Temp:DockWidgetPluginGui = plugin:CreateDockWidgetPluginGuiAsync("Hierarchy Saver ID_Temp",DockWidgetPluginGuiInfo.new(
 			Enum.InitialDockState.Float,
 			false,
 			false,
@@ -1502,7 +1502,7 @@ local function SuccessResult(ret:Types.API_Dump):()
 	local Enums:Types.AllRobloxEnums = ret.Enums
 	for i,v in raw_Classes do
 		--if v.MemoryCategory~="Instances" then continue end
-		if v.Tags~=nil and (table.find(v.Tags,"NotCreatable")~=nil or table.find(v.Tags,"NotScriptable")~=nil) then continue end
+		if v.Tags~=nil and ((table.find::any)(v.Tags,"NotCreatable")~=nil or (table.find::any)(v.Tags,"NotScriptable")~=nil) then continue end
 		local tab:Types.FormattedClass = {}
 		local Superclass:string? = v.Name
 		while Superclass~=nil do
@@ -1515,7 +1515,7 @@ local function SuccessResult(ret:Types.API_Dump):()
 				if vv.MemberType~="Property" then continue end
 				if (type(vv.Security)=="string" and vv.Security~="None") or (type(vv.Security)=="table" and (vv.Security.Write~="None" or vv.Security.Read~="None")) then continue end
 				if vv.ValueType==nil then continue end
-				if vv.Tags~=nil and (table.find(vv.Tags,"ReadOnly")~=nil or table.find(vv.Tags,"NotScriptable")~=nil or table.find(vv.Tags,"Deprecated")~=nil or table.find(vv.Tags,"PluginSecurity")~=nil) then continue end
+				if vv.Tags~=nil and ((table.find::any)(vv.Tags,"ReadOnly")~=nil or (table.find::any)(vv.Tags,"NotScriptable")~=nil or (table.find::any)(vv.Tags,"Deprecated")~=nil or (table.find::any)(vv.Tags,"PluginSecurity")~=nil) then continue end
 				tab[vv.Name]=(vv.ValueType.Category=="Class" and "Instance") or (vv.ValueType.Category=="Enum" and `Enum.{vv.ValueType.Name}`) or (TranslateProperties[vv.ValueType.Name] or vv.ValueType.Name)
 			end
 			Superclass=raw_Classes[search].Superclass
@@ -4084,7 +4084,7 @@ end
 		ScriptEditorService:UpdateSourceAsync(script,function():string return buffer.readstring(buffString,0,buffLen) end)
 		local try,err = ScriptEditorService:OpenScriptDocumentAsync(script)
 		if try==false then warn(err) return end
-		plugin:PromptSaveSelection(name)
+		plugin:PromptSaveSelectionAsync(name)
 		script:Destroy()
 		Selection:Set(OldSelection)
 	end)
@@ -4451,7 +4451,7 @@ end
 				end
 				if type(tab._exec)=="table" and type(tab._exec.AddTag)=="table" then
 					for i,v in tab._exec.AddTag do
-						if table.find(Tags,v)~=nil then Matches+=1 end
+						if (table.find::any)(Tags,v)~=nil then Matches+=1 end
 						MatcheCount+=1
 					end
 				end
@@ -4952,7 +4952,7 @@ end
 		if ss.SaveStyleRule and ins.ClassName=="StyleRule" and next((ins::StyleRule):GetProperties())~=nil then
 			return false
 		end
-		if ss.RL_Referanceless==true and baseImport==nil and next(Attributes)==nil and #Tags==0 then
+		if (ss.RL_Referanceless==true or ss.RL_2ndArgRegardless==true) and baseImport==nil and next(Attributes)==nil and #Tags==0 then
 			local HasProperties:boolean = false 
 			for i,v in properties do
 				local foundBreak:boolean = IsBlocked(ins,i)
@@ -5090,7 +5090,7 @@ end
 			StyleRuleWriteProperties(ins::StyleRule,code,riched_code,Layer,varName,varName)
 		end
 		--Parent
-		if Parent~=nil and IsPropertieLessDoEnd==false then
+		if Parent~=nil and IsPropertieLessDoEnd==false and ss.RL_2ndArgRegardless==false then
 			local i:string = "Parent"
 			if ss.FNC_Properties==true then
 				code..=`\n{string.rep(ss.t,Layer)}{ss.NC_InsSetProperty}({varName}{ss.FuncSeparator}{ConstructorTostring("string",i)}{ss.FuncSeparator}{Parent})`
@@ -5752,8 +5752,8 @@ end
 				riched_code..=`\n{string.rep(ss.t,Layer)}{WriteRichText(ss["end"],ScriptLuauKeyword)})()`
 			end
 		else
-			code..=`{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
-			riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and IsPropertieLessDoEnd==true and `{ss.FuncSeparator}{Parent}`) or ""})`
+			code..=`{ss._Equal}Instance{(ss.IndexingBy=="Dots" and `.new`) or `[{ConstructorTostring("string","new")}]`}({ConstructorTostring("string",Type)}{(Parent~=nil and (IsPropertieLessDoEnd==true or ss.RL_2ndArgRegardless) and `{ss.FuncSeparator}{Parent}`) or ""})`
+			riched_code..=`{ss._Equal}{WriteRichText("Instance",ScriptBuiltInFunction)}{(ss.IndexingBy=="Dots" and `.{WriteRichText("new",ScriptBuiltInFunction)}`) or `[{select(2,ConstructorTostring("string","new"))}]`}({select(2,ConstructorTostring("string",Type))}{(Parent~=nil and (IsPropertieLessDoEnd==true or ss.RL_2ndArgRegardless) and `{ss.FuncSeparator}{Parent}`) or ""})`
 		end
 
 		Luau_DoEndWrite(ins,code,riched_code,varName,IsPropertieLessDoEnd,Layer,Attributes,Tags,properties,baseImport,Parent,RecursiveHierarchyQueue,DirrectAccessToVarAvalible)
