@@ -144,6 +144,7 @@ local function Update():()
 	ss.SaveStyleRule = SessionData["SaveStyleRule"]==true;
 	ss.Style_Sheet_Bulk_Threshold = tonumber(SessionData["Style_Sheet_Bulk_Threshold"]) or 1;
 	ss.Style_Sheet_ForceBrackets = SessionData["Style_Sheet_ForceBrackets"]==true;
+	ss.RL_2ndArgRegardless = SessionData["RL_2ndArgRegardless"]==true;
 end
 Update()
 
